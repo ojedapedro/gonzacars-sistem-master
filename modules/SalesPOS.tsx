@@ -85,7 +85,7 @@ const SalesPOS: React.FC<{ store: any }> = ({ store }) => {
     
     const newSale: Sale = {
       id: Math.random().toString(36).substr(2, 9).toUpperCase(),
-      customerId: selectedCustomer?.id,
+      customerId: selectedCustomer?.id || '',
       date: new Date().toISOString().split('T')[0],
       customerName: selectedCustomer?.name || 'Cliente General',
       items: cart.map(item => ({
