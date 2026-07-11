@@ -1,0 +1,29 @@
+actua como un desarrollador full stack y audita completamente  esta aplicacion, crea le backend para conectarla a una base de datos en firebase. Esta Aplicacion es completamente integral tiene: Escritorio, Base de Datos, Clientes, Reg. Vehículo, Informes, Unidad Comercial, 
+Punto de Venta, Inventario, Compras, Administración, Finanzas, Gastos, Nómina, Usuarios.
+
+Actulizacion de la web app:
+
+Actúa como un Ingeniero de Base de Datos Principal y Arquitecto de Software experto en sistemas ERP transaccionales. Basándote en una arquitectura modular estilo Odoo, necesito que diseñes e implementes el código base para la gestión de datos de nuestro ERP utilizando Python, SQLAlchemy 2.0 (con tipado Mapped), Pydantic v2 y PostgreSQL.
+
+El sistema debe resolver de forma estricta los siguientes requerimientos de diseño transaccional:
+
+1. ESTRATEGIA DE EXTENSIBILIDAD (Herencia de Tablas)
+Muestra código real en SQLAlchemy que implemente la "Estrategia de Tabla por Extensión". Modela una tabla base 'partner' (para clientes/proveedores) dentro de un módulo central. Luego, simula cómo un módulo de "Localización Fiscal" extiende esa tabla creando una tabla satélite 'partner_fiscal_data' vinculada mediante una llave primaria que a la vez es llave foránea (One-to-One), manteniendo el desacoplamiento de módulos.
+
+2. PRECISIÓN FINANCIERA (Cabecera y Líneas de Factura)
+Implemente los modelos de SQLAlchemy para 'account_move' (Cabecera de Factura/Asiento) y 'account_move_line' (Líneas de Detalle).
+- Obliga al uso de tipos de datos 'Numeric(16, 4)' para cantidades y precios unitarios.
+- Incluye propiedades híbridas o métodos para calcular el subtotal por línea y el total general de la factura de manera limpia.
+- Define correctamente la relación con eliminación en cascada ('cascade="all, delete-orphan"').
+
+3. CONTROL DE CONCURRENCIA ASÍNCRONA (FastAPI + SQLAlchemy)
+Escribe una función de servicio asíncrona en Python (usando 'async def' y la sesión asíncrona de SQLAlchemy) para procesar la confirmación de una factura. El código debe:
+- Utilizar un bloqueo pesimista mediante '.with_for_update()' al consultar el registro para evitar condiciones de carrera (race conditions).
+- Cambiar el estado de la factura de 'draft' a 'posted' de forma segura dentro de una transacción robusta con manejo de excepciones (try/except con rollback).
+
+4. TABLA DE AUDITORÍA DINÁMICA (Historial de Cambios)
+Diseña el modelo para una tabla de auditoría global llamada 'ir_audit_log' utilizando el tipo de campo 'JSONB' de PostgreSQL en SQLAlchemy. El modelo debe registrar de forma genérica: 'res_model' (string), 'res_id' (integer), 'user_id' (integer), 'action' (create/write/delete) y 'changes' (el campo JSONB que guardará un diccionario con la estructura {"campo": [valor_viejo, valor_nuevo]}).
+
+Entrega el código limpio, modular, totalmente tipado según los estándares de SQLAlchemy 2.0 y explica brevemente cómo se integran estos componentes para asegurar que no ocurran pérdidas de centavos ni bloqueos masivos en la base de datos.
+
+

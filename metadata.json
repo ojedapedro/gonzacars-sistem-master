@@ -1,0 +1,7 @@
+{
+  "name": "Gonzacars C.A. Management System",
+  "description": "Comprehensive ERP and POS system for Gonzacars C.A., featuring vehicle repairs, inventory management, retail sales, financial reports, expenses, and payroll.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
