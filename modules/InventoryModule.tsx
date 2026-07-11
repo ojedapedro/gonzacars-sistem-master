@@ -31,7 +31,12 @@ const InventoryModule: React.FC<{ store: any }> = ({ store }) => {
 
   // Bulk Import States
   const [showBulkModal, setShowBulkModal] = useState(false);
-  const [bulkPreview, setBulkPreview] = useState<{product: Product, newQuantity: number}[]>([]);
+  const [bulkStep, setBulkStep] = useState<'preview' | 'confirm'>('preview');
+  const [bulkResult, setBulkResult] = useState<{
+    updates: { product: Product; oldQty: number; newQty: number; diff: number }[];
+    newProducts: { name: string; category: string; price: number; cost: number; quantity: number; barcode?: string }[];
+    unchanged: { product: Product }[];
+  } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Derived Data for Filters
@@ -181,98 +186,125 @@ const InventoryModule: React.FC<{ store: any }> = ({ store }) => {
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
-    // Reiniciar el input para permitir volver a seleccionar el mismo archivo
     e.target.value = '';
 
     if (typeof XLSX === 'undefined') {
-        alert("Error: La librería XLSX no está cargada. Verifique su conexión a internet.");
-        return;
+      alert('Error: La librería XLSX no está cargada. Verifique su conexión a internet.');
+      return;
     }
 
     const reader = new FileReader();
     reader.onload = (evt) => {
-        try {
-            const data = evt.target?.result;
-            const workbook = XLSX.read(data, { type: 'array' });
-            const firstSheetName = workbook.SheetNames[0];
-            const worksheet = workbook.Sheets[firstSheetName];
-            
-            // Leer con defval para obtener celdas vacías como strings vacíos
-            const jsonData = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
+      try {
+        const data = evt.target?.result;
+        const workbook = XLSX.read(data, { type: 'array' });
+        const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+        const jsonData = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
 
-            const updates: {product: Product, newQuantity: number}[] = [];
+        const updates: { product: Product; oldQty: number; newQty: number; diff: number }[] = [];
+        const newProducts: { name: string; category: string; price: number; cost: number; quantity: number; barcode?: string }[] = [];
+        const unchanged: { product: Product }[] = [];
+        const processedNames = new Set<string>();
 
-            jsonData.forEach((row: any) => {
-                // LÓGICA DE MAPEO PARA FORMATO "INVENTARIO FÍSICO"
-                // Columnas esperadas: "Código de Barras", "Producto", "Cantidad Contada"
-                
-                const getColumnValue = (target: string) => {
-                    const key = Object.keys(row).find(k => k.trim().toLowerCase() === target.toLowerCase());
-                    return key ? row[key] : undefined;
-                };
+        jsonData.forEach((row: any) => {
+          const getCol = (target: string) => {
+            const key = Object.keys(row).find(k => k.trim().toLowerCase() === target.toLowerCase());
+            return key ? row[key] : undefined;
+          };
 
-                const barcode = getColumnValue('Código de Barras') || getColumnValue('Codigo de Barras');
-                const name = getColumnValue('Producto') || getColumnValue('Nombre');
-                
-                // Buscar la cantidad física ingresada en el Excel
-                let quantityVal = getColumnValue('Cantidad Contada');
+          const barcode = String(getCol('Código de Barras') ?? getCol('Codigo de Barras') ?? '').trim();
+          const name = String(getCol('Producto') ?? getCol('Nombre') ?? '').trim();
+          const quantityRaw = getCol('Cantidad Contada');
+          const category = String(getCol('Categoría') ?? getCol('Categoria') ?? '').trim();
+          const priceRaw = getCol('Precio');
+          const costRaw = getCol('Costo');
 
-                // Si está vacío, intentamos buscar otras columnas comunes por si el usuario editó el header,
-                // pero damos prioridad absoluta a 'Cantidad Contada' del formato oficial.
-                if (quantityVal === undefined || quantityVal === '') {
-                    // Si no hay valor en "Cantidad Contada", IGNORAR LA FILA (asumimos no contado)
-                    return; 
-                }
+          if (!name) return;
+          if (processedNames.has(name.toLowerCase())) return;
+          processedNames.add(name.toLowerCase());
 
-                const quantity = Number(String(quantityVal).trim());
-                if (isNaN(quantity)) return;
+          // Only process rows where a quantity was explicitly entered
+          const hasQty = quantityRaw !== undefined && quantityRaw !== '';
+          const quantity = hasQty ? Number(String(quantityRaw).trim()) : NaN;
 
-                let product: Product | undefined;
+          // Try to match against existing inventory
+          let product: Product | undefined;
+          if (barcode) {
+            product = (store.inventory as Product[]).find(p => String(p.barcode).trim() === barcode);
+          }
+          if (!product && name) {
+            product = (store.inventory as Product[]).find(p => p.name.trim().toLowerCase() === name.toLowerCase());
+          }
 
-                // 1. Buscar por Código de Barras
-                if (barcode) {
-                    const searchBarcode = String(barcode).trim();
-                    product = store.inventory.find((p: Product) => String(p.barcode).trim() === searchBarcode);
-                }
-
-                // 2. Buscar por Nombre
-                if (!product && name) {
-                    const cleanName = String(name).trim().toLowerCase();
-                    product = store.inventory.find((p: Product) => p.name.trim().toLowerCase() === cleanName);
-                }
-
-                if (product) {
-                    updates.push({ product, newQuantity: quantity });
-                }
-            });
-
-            if (updates.length === 0) {
-                alert("Archivo procesado pero no se encontraron productos para actualizar.\n\nAsegúrese de:\n1. Usar el formato 'Descargar Excel'.\n2. Ingresar valores en la columna 'Cantidad Contada'.\n3. No modificar los nombres de los productos o códigos.");
+          if (product) {
+            if (!hasQty || isNaN(quantity)) {
+              unchanged.push({ product });
+            } else if (quantity === product.quantity) {
+              unchanged.push({ product });
             } else {
-                setBulkPreview(updates);
+              updates.push({ product, oldQty: product.quantity, newQty: quantity, diff: quantity - product.quantity });
             }
+          } else {
+            // New product — only add if it has a quantity specified
+            if (hasQty && !isNaN(quantity) && name) {
+              newProducts.push({
+                name,
+                category: category || 'Sin Categoría',
+                price: Number(priceRaw) || 0,
+                cost: Number(costRaw) || 0,
+                quantity,
+                barcode: barcode || undefined
+              });
+            }
+          }
+        });
 
-        } catch (error) {
-            console.error("Error parsing file:", error);
-            alert("Error al procesar el archivo. Asegúrese de usar un formato Excel (.xlsx) válido.");
+        if (updates.length === 0 && newProducts.length === 0 && unchanged.length === 0) {
+          alert('Archivo procesado pero no se encontraron datos válidos.\n\nAsegúrese de usar el formato oficial descargado y completar la columna "Cantidad Contada".');
+          return;
         }
+
+        setBulkResult({ updates, newProducts, unchanged });
+        setBulkStep('preview');
+        setShowBulkModal(true);
+      } catch (err) {
+        console.error('Error parsing file:', err);
+        alert('Error al procesar el archivo. Asegúrese de usar un archivo Excel (.xlsx) válido.');
+      }
     };
     reader.readAsArrayBuffer(file);
   };
 
-  const processBulkUpdate = () => {
-    if (bulkPreview.length === 0) return;
-    
-    const updates = bulkPreview.map(item => ({
-        id: item.product.id,
-        quantity: item.newQuantity
-    }));
+  const processBulkUpdate = async () => {
+    if (!bulkResult) return;
+    const { updates, newProducts } = bulkResult;
 
-    store.updateStockBatch(updates);
-    alert(`${updates.length} productos actualizados correctamente.`);
+    // 1. Apply quantity updates to existing products
+    if (updates.length > 0) {
+      const stockUpdates = updates.map(u => ({ id: u.product.id, quantity: u.newQty }));
+      store.updateStockBatch(stockUpdates);
+    }
+
+    // 2. Add new products to inventory
+    for (const np of newProducts) {
+      const newProduct: Product = {
+        id: Math.random().toString(36).substr(2, 9),
+        barcode: np.barcode || store.generateBarcode(),
+        name: np.name,
+        category: np.category,
+        quantity: np.quantity,
+        cost: np.cost,
+        price: np.price,
+        lastEntry: new Date().toISOString().split('T')[0]
+      };
+      // Use store's saveToFirebase indirectly via setInventory
+      store.setInventory((prev: Product[]) => [...prev, newProduct]);
+      // Also persist to Firebase if not demo
+      if (store.saveToFirebase) await store.saveToFirebase('Inventory', newProduct);
+    }
+
     setShowBulkModal(false);
-    setBulkPreview([]);
+    setBulkResult(null);
   };
 
   const handleGlobalAudit = () => {
@@ -552,93 +584,184 @@ const InventoryModule: React.FC<{ store: any }> = ({ store }) => {
         )}
       </div>
 
-      {/* MODAL BULK IMPORT */}
+      {/* MODAL BULK IMPORT — INTELIGENTE */}
       {showBulkModal && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
-          <div className="bg-metal-mid rounded-2xl shadow-2xl max-w-2xl w-full flex flex-col max-h-[85vh] overflow-hidden animate-in zoom-in duration-300">
-             <div className="p-8 bg-slate-950 text-white flex justify-between items-start">
-                <div>
-                  <h3 className="text-2xl font-black uppercase tracking-tight flex items-center gap-3">
-                     <FileSpreadsheet className="text-emerald-500" /> Carga Masiva de Stock
-                  </h3>
-                  <p className="text-chrome-500 text-xs font-bold uppercase tracking-widest mt-1">Importar inventario físico</p>
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
+          <div className="bg-metal-mid rounded-2xl shadow-2xl w-full max-w-4xl flex flex-col max-h-[90vh] overflow-hidden border border-metal-border">
+
+            {/* Header */}
+            <div className="p-8 bg-gradient-to-r from-emerald-950 to-slate-950 text-white flex justify-between items-center shrink-0">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-emerald-500/20 border border-emerald-500/30 rounded-2xl flex items-center justify-center">
+                  <FileSpreadsheet size={24} className="text-emerald-400"/>
                 </div>
-                <button onClick={() => setShowBulkModal(false)} className="text-chrome-500 hover:text-white transition-colors">
-                   <X size={24} />
+                <div>
+                  <h3 className="text-2xl font-black uppercase tracking-tight">Carga Masiva Inteligente</h3>
+                  <p className="text-emerald-400/70 text-[10px] font-black uppercase tracking-widest mt-0.5">
+                    {!bulkResult ? 'Sube tu archivo Excel para comparar con el inventario actual' :
+                     `${bulkResult.updates.length} actualizaciones · ${bulkResult.newProducts.length} nuevos · ${bulkResult.unchanged.length} sin cambios`}
+                  </p>
+                </div>
+              </div>
+              <button onClick={() => { setShowBulkModal(false); setBulkResult(null); }} className="text-chrome-500 hover:text-white transition-colors p-2">
+                <X size={24}/>
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="flex-1 overflow-y-auto p-8 custom-scrollbar space-y-6">
+
+              {/* Step 1: Upload zone */}
+              {!bulkResult && (
+                <div className="flex flex-col items-center justify-center py-16 border-2 border-dashed border-metal-border rounded-2xl bg-metal-dark/50 gap-4">
+                  <div className="w-20 h-20 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl flex items-center justify-center">
+                    <UploadCloud size={40} className="text-emerald-400"/>
+                  </div>
+                  <div className="text-center">
+                    <h4 className="text-lg font-black text-chrome-100 uppercase">Selecciona tu archivo Excel</h4>
+                    <p className="text-xs text-chrome-500 font-medium mt-1 max-w-sm">
+                      Usa <strong>"Descargar Excel"</strong> para obtener la plantilla. Rellena <strong>"Cantidad Contada"</strong> y sube el archivo aquí.
+                    </p>
+                    <p className="text-[10px] text-chrome-500 mt-2">Productos nuevos serán detectados automáticamente si tienen cantidad.</p>
+                  </div>
+                  <input type="file" accept=".csv,.xlsx,.xls" ref={fileInputRef} onChange={handleFileUpload} className="hidden"/>
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    className="btn-chrome px-10 py-3 rounded-xl font-black uppercase text-xs tracking-widest shadow-lg hover:bg-blue-700 transition-all active:scale-95"
+                  >
+                    Seleccionar Archivo
+                  </button>
+                </div>
+              )}
+
+              {/* Step 2: Preview results */}
+              {bulkResult && (
+                <div className="space-y-6">
+
+                  {/* Summary cards */}
+                  <div className="grid grid-cols-3 gap-4">
+                    <div className="bg-blue-500/10 border border-blue-500/20 rounded-2xl p-4 text-center">
+                      <p className="text-3xl font-black text-blue-400">{bulkResult.updates.length}</p>
+                      <p className="text-[10px] font-black text-blue-400/70 uppercase tracking-widest mt-1">Stock a Actualizar</p>
+                    </div>
+                    <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-2xl p-4 text-center">
+                      <p className="text-3xl font-black text-emerald-400">{bulkResult.newProducts.length}</p>
+                      <p className="text-[10px] font-black text-emerald-400/70 uppercase tracking-widest mt-1">Productos Nuevos</p>
+                    </div>
+                    <div className="bg-metal-dark border border-metal-border rounded-2xl p-4 text-center">
+                      <p className="text-3xl font-black text-chrome-400">{bulkResult.unchanged.length}</p>
+                      <p className="text-[10px] font-black text-chrome-500 uppercase tracking-widest mt-1">Sin Cambios</p>
+                    </div>
+                  </div>
+
+                  {/* Updates table */}
+                  {bulkResult.updates.length > 0 && (
+                    <div>
+                      <h4 className="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+                        <TrendingUp size={14}/> Actualizaciones de Stock ({bulkResult.updates.length})
+                      </h4>
+                      <div className="border border-metal-border rounded-2xl overflow-hidden">
+                        <table className="w-full text-left text-xs">
+                          <thead className="bg-metal-dark border-b border-metal-border">
+                            <tr>
+                              <th className="px-5 py-3 font-black text-chrome-400 uppercase tracking-widest">Producto</th>
+                              <th className="px-5 py-3 font-black text-chrome-400 uppercase tracking-widest text-center">Stock Sistema</th>
+                              <th className="px-5 py-3 font-black text-chrome-400 uppercase tracking-widest text-center">Stock Físico</th>
+                              <th className="px-5 py-3 font-black text-chrome-400 uppercase tracking-widest text-right">Diferencia</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-metal-border">
+                            {bulkResult.updates.map((item, idx) => (
+                              <tr key={idx} className={item.diff < 0 ? 'bg-red-500/5' : 'bg-emerald-500/5'}>
+                                <td className="px-5 py-3 font-bold text-chrome-100 max-w-[220px] truncate">{item.product.name}</td>
+                                <td className="px-5 py-3 text-center text-chrome-400 font-bold">{item.oldQty}</td>
+                                <td className="px-5 py-3 text-center font-black text-blue-400">{item.newQty}</td>
+                                <td className={`px-5 py-3 text-right font-black text-lg ${item.diff > 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                                  {item.diff > 0 ? '+' : ''}{item.diff}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* New products table */}
+                  {bulkResult.newProducts.length > 0 && (
+                    <div>
+                      <h4 className="text-[10px] font-black text-emerald-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+                        <CheckCircle size={14}/> Productos Nuevos a Agregar ({bulkResult.newProducts.length})
+                      </h4>
+                      <div className="border border-emerald-500/20 rounded-2xl overflow-hidden">
+                        <table className="w-full text-left text-xs">
+                          <thead className="bg-emerald-950/40 border-b border-emerald-500/20">
+                            <tr>
+                              <th className="px-5 py-3 font-black text-emerald-400/70 uppercase tracking-widest">Nombre</th>
+                              <th className="px-5 py-3 font-black text-emerald-400/70 uppercase tracking-widest">Categoría</th>
+                              <th className="px-5 py-3 font-black text-emerald-400/70 uppercase tracking-widest text-center">Cantidad</th>
+                              <th className="px-5 py-3 font-black text-emerald-400/70 uppercase tracking-widest text-right">Precio</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-emerald-500/10">
+                            {bulkResult.newProducts.map((np, idx) => (
+                              <tr key={idx} className="bg-emerald-500/5">
+                                <td className="px-5 py-3 font-bold text-chrome-100 max-w-[200px] truncate">{np.name}</td>
+                                <td className="px-5 py-3 text-chrome-400">{np.category}</td>
+                                <td className="px-5 py-3 text-center font-black text-emerald-400">{np.quantity}</td>
+                                <td className="px-5 py-3 text-right text-chrome-400">${np.price.toFixed(2)}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                      <p className="text-[10px] text-emerald-500/70 font-bold mt-2 flex items-center gap-1">
+                        <AlertCircle size={11}/> Se generará un código de barras automático para productos nuevos sin código.
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Unchanged info */}
+                  {bulkResult.unchanged.length > 0 && (
+                    <div className="bg-metal-dark/50 border border-metal-border rounded-2xl p-4 flex items-center gap-3">
+                      <CheckCircle size={18} className="text-chrome-500 shrink-0"/>
+                      <p className="text-[11px] font-bold text-chrome-400">
+                        <strong className="text-chrome-200">{bulkResult.unchanged.length} productos</strong> ya tienen la misma cantidad o no tenían "Cantidad Contada" — no se modificarán.
+                      </p>
+                    </div>
+                  )}
+
+                  <div className="text-center">
+                    <button
+                      onClick={() => { setBulkResult(null); setTimeout(() => fileInputRef.current?.click(), 50); }}
+                      className="text-xs font-black text-chrome-500 uppercase tracking-widest hover:text-blue-400 transition-colors underline underline-offset-4"
+                    >
+                      Cambiar archivo
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            {bulkResult && (
+              <div className="p-6 border-t border-metal-border bg-metal-dark shrink-0 flex gap-4">
+                <button
+                  onClick={() => { setShowBulkModal(false); setBulkResult(null); }}
+                  className="flex-1 py-4 text-chrome-500 font-black uppercase text-[10px] tracking-widest hover:text-chrome-200 transition-colors"
+                >
+                  Cancelar
                 </button>
-             </div>
-
-             <div className="p-8 flex-1 overflow-y-auto custom-scrollbar">
-                {bulkPreview.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-10 border-4 border-dashed border-metal-border rounded-[2rem] bg-metal-dark/50">
-                        <UploadCloud size={64} className="text-chrome-500 mb-4" />
-                        <h4 className="text-lg font-black text-chrome-200 uppercase">Subir Archivo de Inventario</h4>
-                        <p className="text-xs text-chrome-500 font-medium mb-6">Compatible con formato de descarga Excel ("Cantidad Contada")</p>
-                        <input 
-                            type="file" 
-                            accept=".csv, .xlsx, .xls"
-                            ref={fileInputRef}
-                            onChange={handleFileUpload}
-                            className="hidden"
-                        />
-                        <button 
-                            onClick={() => fileInputRef.current?.click()}
-                            className="btn-chrome px-8 py-3 rounded-xl font-black uppercase text-xs tracking-widest hover:bg-blue-700 shadow-lg"
-                        >
-                            Seleccionar Archivo
-                        </button>
-                    </div>
-                ) : (
-                    <div className="space-y-6">
-                        <div className="flex items-center justify-between bg-emerald-50 p-4 rounded-xl border border-emerald-100">
-                            <div className="flex items-center gap-3 text-emerald-700">
-                                <CheckCircle size={20} />
-                                <span className="font-bold text-sm">Se encontraron {bulkPreview.length} productos válidos</span>
-                            </div>
-                            <button onClick={() => setBulkPreview([])} className="text-xs font-black uppercase text-emerald-600 hover:text-emerald-800">
-                                Cambiar Archivo
-                            </button>
-                        </div>
-
-                        <div className="border border-metal-border rounded-2xl overflow-hidden">
-                            <table className="w-full text-left text-xs">
-                                <thead className="bg-metal-dark border-b border-metal-border">
-                                    <tr>
-                                        <th className="px-4 py-3 font-black text-chrome-400 uppercase">Producto</th>
-                                        <th className="px-4 py-3 font-black text-chrome-400 uppercase text-center">Stock Actual</th>
-                                        <th className="px-4 py-3 font-black text-chrome-400 uppercase text-center">Nuevo Stock</th>
-                                        <th className="px-4 py-3 font-black text-chrome-400 uppercase text-right">Diferencia</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-slate-100">
-                                    {bulkPreview.map((item, idx) => {
-                                        const diff = item.newQuantity - item.product.quantity;
-                                        return (
-                                            <tr key={idx}>
-                                                <td className="px-4 py-3 font-bold text-chrome-200 truncate max-w-[200px]">{item.product.name}</td>
-                                                <td className="px-4 py-3 text-center text-chrome-400">{item.product.quantity}</td>
-                                                <td className="px-4 py-3 text-center font-black text-blue-600">{item.newQuantity}</td>
-                                                <td className={`px-4 py-3 text-right font-bold ${diff > 0 ? 'text-emerald-500' : diff < 0 ? 'text-red-500' : 'text-chrome-500'}`}>
-                                                    {diff > 0 ? '+' : ''}{diff}
-                                                </td>
-                                            </tr>
-                                        );
-                                    })}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                )}
-             </div>
-
-             {bulkPreview.length > 0 && (
-                 <div className="p-6 border-t border-metal-border bg-metal-dark flex gap-4">
-                     <button onClick={() => setBulkPreview([])} className="flex-1 py-4 text-chrome-500 font-black uppercase text-xs tracking-widest hover:text-chrome-200">Cancelar</button>
-                     <button onClick={processBulkUpdate} className="flex-[2] btn-chrome py-4 rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-black shadow-xl">
-                         Confirmar Actualización Masiva
-                     </button>
-                 </div>
-             )}
+                <button
+                  onClick={processBulkUpdate}
+                  disabled={bulkResult.updates.length === 0 && bulkResult.newProducts.length === 0}
+                  className="flex-[2] bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 disabled:cursor-not-allowed text-white py-4 rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-lg shadow-emerald-600/25 transition-all active:scale-95 flex items-center justify-center gap-2"
+                >
+                  <CheckCircle size={16}/>
+                  Confirmar: {bulkResult.updates.length} actualizaciones + {bulkResult.newProducts.length} nuevos
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}
