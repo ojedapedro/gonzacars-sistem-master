@@ -124,12 +124,29 @@ const FinanceModule: React.FC<{ store: any }> = ({ store }) => {
   const handleAiAudit = async () => {
     setIsAiLoading(true);
     try {
+      let sales = totalRevenue;
+      let purchases = totalPurchases;
+      let expenses = totalExpenses;
+      let bal = balance;
+      let period = viewMode === 'general' ? 'Historial General' : `Diario (${filterDate})`;
+
+      if (viewMode === 'history') {
+        const hRev = filteredHistory.reduce((acc, d) => acc + d.revenue, 0);
+        const hExp = filteredHistory.reduce((acc, d) => acc + d.expenses, 0);
+        sales = hRev;
+        purchases = 0; // We combine purchases and expenses in history view as 'Egresos'
+        expenses = hExp;
+        bal = hRev - hExp;
+        if (historyStart && historyEnd) period = `Rango de fechas: ${historyStart} al ${historyEnd} (Semanal/Mensual)`;
+        else period = 'Todo el historial de fechas';
+      }
+
       const analysis = await generateFinanceAudit({
-        sales: totalRevenue, 
-        purchases: totalPurchases,
-        expenses: totalExpenses,
-        balance: balance,
-        period: viewMode === 'general' ? 'Historial General' : `Fecha: ${filterDate}`
+        sales: sales, 
+        purchases: purchases,
+        expenses: expenses,
+        balance: bal,
+        period: period
       });
       setAiAnalysis(analysis || null);
     } catch (error) {
@@ -182,11 +199,9 @@ const FinanceModule: React.FC<{ store: any }> = ({ store }) => {
           {viewMode === 'daily' && (
             <input type="date" className="px-4 py-2 bg-metal-dark border border-metal-border rounded-xl text-xs font-black outline-none" value={filterDate} onChange={(e) => setFilterDate(e.target.value)} />
           )}
-          {viewMode !== 'history' && (
-            <button onClick={handleAiAudit} disabled={isAiLoading} className="btn-chrome px-6 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 hover:bg-blue-700 shadow-lg disabled:opacity-50">
-                {isAiLoading ? <Loader2 size={14} className="animate-spin"/> : <Sparkles size={14} className="text-blue-200"/>} Auditoría IA
-            </button>
-          )}
+          <button onClick={handleAiAudit} disabled={isAiLoading} className="btn-chrome px-6 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 hover:bg-blue-700 shadow-lg disabled:opacity-50">
+              {isAiLoading ? <Loader2 size={14} className="animate-spin"/> : <Sparkles size={14} className="text-blue-200"/>} Análisis Financiero IA
+          </button>
         </div>
       </div>
 

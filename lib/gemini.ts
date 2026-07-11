@@ -21,7 +21,7 @@ export const generateFinanceAudit = async (data: any) => {
   const ai = getGeminiClient();
   const response = await ai.models.generateContent({
     model: 'gemini-1.5-pro',
-    contents: `Analiza los siguientes datos financieros de un taller mecánico y tienda de repuestos llamado Gonzacars C.A. Proporciona un análisis estratégico breve (3 párrafos) con recomendaciones de ahorro y salud financiera para el periodo indicado (${data.period}): 
+    contents: `Analiza los siguientes datos financieros de un taller mecánico y tienda de repuestos llamado Gonzacars C.A. Proporciona un análisis financiero detallado del ejercicio económico según el periodo indicado (${data.period}). Tu respuesta debe incluir recomendaciones para optimizar el ahorro y la salud financiera del negocio: 
     Ventas totales: $${data.sales}, 
     Compras totales: $${data.purchases}, 
     Gastos operativos: $${data.expenses},
