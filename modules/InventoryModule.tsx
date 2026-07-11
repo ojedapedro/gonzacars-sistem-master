@@ -282,10 +282,10 @@ const InventoryModule: React.FC<{ store: any }> = ({ store }) => {
     // 1. Apply quantity updates to existing products
     if (updates.length > 0) {
       const stockUpdates = updates.map(u => ({ id: u.product.id, quantity: u.newQty }));
-      store.updateStockBatch(stockUpdates);
+      await store.updateStockBatch(stockUpdates);
     }
 
-    // 2. Add new products to inventory
+    // 2. Add new products to inventory (persists to Firebase)
     for (const np of newProducts) {
       const newProduct: Product = {
         id: Math.random().toString(36).substr(2, 9),
@@ -297,10 +297,7 @@ const InventoryModule: React.FC<{ store: any }> = ({ store }) => {
         price: np.price,
         lastEntry: new Date().toISOString().split('T')[0]
       };
-      // Use store's saveToFirebase indirectly via setInventory
-      store.setInventory((prev: Product[]) => [...prev, newProduct]);
-      // Also persist to Firebase if not demo
-      if (store.saveToFirebase) await store.saveToFirebase('Inventory', newProduct);
+      await store.addProduct(newProduct);
     }
 
     setShowBulkModal(false);

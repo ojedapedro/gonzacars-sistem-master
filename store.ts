@@ -459,6 +459,14 @@ export const useGonzacarsStore = () => {
 
   // --- INVENTORY MODULAR SERVICES INTEGRATION ---
 
+  const addProduct = async (product: Product) => {
+    const newProduct = { ...product, id: product.id || Math.random().toString(36).substr(2, 9) };
+    setInventory(prev => [...prev, newProduct]);
+    if (!isDemoMode) {
+      await saveToFirebase('Inventory', newProduct);
+    }
+  };
+
   const updateInventoryPrice = async (id: string, newPrice: number) => {
     const item = inventory.find(p => p.id === id);
     if (item) {
@@ -549,7 +557,7 @@ export const useGonzacarsStore = () => {
     users, addUser, updateUser, deleteUser,
     exchangeRate, setExchangeRate: updateExchangeRate,
     customers, addCustomer, updateCustomer, deleteCustomer,
-    inventory, setInventory, updateInventoryPrice, updateProductName, updateInventoryQuantity, updateStockBatch, updateBarcode, 
+    inventory, setInventory, addProduct, updateInventoryPrice, updateProductName, updateInventoryQuantity, updateStockBatch, updateBarcode, 
     generateBarcode,
     repairs, setRepairs, addRepair, updateRepair, deleteRepair, deleteVehicleByPlate,
     sales, setSales, addSale,
