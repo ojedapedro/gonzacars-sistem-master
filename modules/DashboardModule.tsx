@@ -353,14 +353,14 @@ const KpiCard: React.FC<KpiCardProps> = ({ title, value, icon, accentColor = 'bl
   };
 
   return (
-    <div className="stats-card metallic-shine p-5 rounded-2xl surface-raised border border-metal-border relative overflow-hidden group hover:border-chrome-500/30 transition-all">
+    <div className="stats-card metallic-shine hover-lift p-5 rounded-2xl glass-panel border border-metal-border relative overflow-hidden group hover:border-chrome-500/30 transition-all">
       <div className="flex justify-between items-start mb-4 relative z-10">
         <p className="text-[11px] font-black text-chrome-400 uppercase tracking-widest leading-tight">{title}</p>
         <div className="p-2.5 rounded-xl transition-transform group-hover:scale-110" style={{ background: glowColors[accentColor] || glowColors.blue, border: '1px solid rgba(255,255,255,0.04)' }}>
           {icon}
         </div>
       </div>
-      <h3 className="text-4xl font-black text-chrome-100 tracking-tight leading-none relative z-10" style={{ fontFamily: 'Outfit, sans-serif' }}>
+      <h3 className="text-4xl font-black tracking-tight leading-none relative z-10 text-gradient" style={{ fontFamily: 'Outfit, sans-serif' }}>
         {value}
       </h3>
       {hasDelta && (

@@ -15,6 +15,7 @@ const FinanceModule: React.FC<{ store: any }> = ({ store }) => {
 
   const [aiAnalysis, setAiAnalysis] = useState<string | null>(null);
   const [isAiLoading, setIsAiLoading] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
 
   // IA Modal State
   const [showAiModal, setShowAiModal] = useState(false);
@@ -102,15 +103,17 @@ const FinanceModule: React.FC<{ store: any }> = ({ store }) => {
         date,
         revenue,
         expenses,
+        purchases: dayPurchases,
+        opExpenses: dayExpenses,
         balance: revenue - expenses,
         pos: daySales,
         workshop: dayWorkshop
       };
-    }).filter(item => item !== null) as any[];
+    }).filter(Boolean);
 
-    // Ordenar descendente por fecha
-    return history.sort((a, b) => b.date.localeCompare(a.date));
-  }, [store.sales, store.repairs, store.purchases, store.expenses]);
+    // Ordenar de más reciente a más antiguo
+    return history.sort((a, b) => new Date(b!.date).getTime() - new Date(a!.date).getTime());
+  }, [store.sales, store.purchases, store.expenses, store.repairs]);
 
   // 4. Filtrar Historial por Rango Seleccionado
   const filteredHistory = useMemo(() => {
@@ -140,10 +143,12 @@ const FinanceModule: React.FC<{ store: any }> = ({ store }) => {
 
       if (aiPeriodType === 'daily') {
         const dRev = historyData.find(d => d.date === aiDate)?.revenue || 0;
-        const dExp = historyData.find(d => d.date === aiDate)?.expenses || 0;
+        const dPur = historyData.find(d => d.date === aiDate)?.purchases || 0;
+        const dExp = historyData.find(d => d.date === aiDate)?.opExpenses || 0;
         sales = dRev;
+        purchases = dPur;
         expenses = dExp;
-        bal = dRev - dExp;
+        bal = dRev - (dPur + dExp);
         period = `Diario (${aiDate})`;
       } else if (aiPeriodType === 'range') {
         const relevantHistory = historyData.filter(day => {
@@ -152,18 +157,22 @@ const FinanceModule: React.FC<{ store: any }> = ({ store }) => {
           return true;
         });
         const hRev = relevantHistory.reduce((acc, d) => acc + d.revenue, 0);
-        const hExp = relevantHistory.reduce((acc, d) => acc + d.expenses, 0);
+        const hPur = relevantHistory.reduce((acc, d) => acc + d.purchases, 0);
+        const hExp = relevantHistory.reduce((acc, d) => acc + d.opExpenses, 0);
         sales = hRev;
+        purchases = hPur;
         expenses = hExp;
-        bal = hRev - hExp;
+        bal = hRev - (hPur + hExp);
         if (aiStartDate && aiEndDate) period = `Rango de fechas: ${aiStartDate} al ${aiEndDate} (Semanal/Mensual)`;
         else period = 'Rango personalizado';
       } else {
         const hRev = historyData.reduce((acc, d) => acc + d.revenue, 0);
-        const hExp = historyData.reduce((acc, d) => acc + d.expenses, 0);
+        const hPur = historyData.reduce((acc, d) => acc + d.purchases, 0);
+        const hExp = historyData.reduce((acc, d) => acc + d.opExpenses, 0);
         sales = hRev;
+        purchases = hPur;
         expenses = hExp;
-        bal = hRev - hExp;
+        bal = hRev - (hPur + hExp);
         period = 'Historial General (Todo el tiempo)';
       }
 
@@ -175,11 +184,18 @@ const FinanceModule: React.FC<{ store: any }> = ({ store }) => {
         period: period
       });
       setAiAnalysis(analysis || null);
-    } catch (error) {
+      setAiError(null);
+    } catch (error: any) {
       console.error("AI Audit Error:", error);
+      setAiError(error.message || "Error al conectar con la Inteligencia Artificial. Verifica tu API Key o conexión a internet.");
     } finally {
       setIsAiLoading(false);
     }
+  };
+
+  const openAiModal = () => {
+    setShowAiModal(true);
+    setAiError(null);
   };
 
   const chartData = [
@@ -225,7 +241,7 @@ const FinanceModule: React.FC<{ store: any }> = ({ store }) => {
           {viewMode === 'daily' && (
             <input type="date" className="px-4 py-2 bg-metal-dark border border-metal-border rounded-xl text-xs font-black outline-none" value={filterDate} onChange={(e) => setFilterDate(e.target.value)} />
           )}
-          <button onClick={() => setShowAiModal(true)} disabled={isAiLoading} className="btn-chrome px-6 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 hover:bg-blue-700 shadow-lg disabled:opacity-50">
+          <button onClick={openAiModal} disabled={isAiLoading} className="btn-chrome px-6 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 hover:bg-blue-700 shadow-lg disabled:opacity-50">
               {isAiLoading ? <Loader2 size={14} className="animate-spin"/> : <Sparkles size={14} className="text-blue-200"/>} Análisis Financiero IA
           </button>
         </div>
@@ -344,7 +360,19 @@ const FinanceModule: React.FC<{ store: any }> = ({ store }) => {
             <StatCard title="Balance Neto" amount={balance} icon={<DollarSign className="text-blue-500"/>} rate={store.exchangeRate} isBalance/>
           </div>
 
-          {aiAnalysis && (
+          {aiError && (
+            <div className="bg-red-500/10 p-6 rounded-2xl border border-red-500/30 mb-8 shadow-sm flex items-start gap-4 animate-in fade-in duration-300">
+               <div className="p-2 bg-red-500/20 rounded-full shrink-0">
+                  <X size={20} className="text-red-500" />
+               </div>
+               <div>
+                  <h4 className="text-sm font-black text-red-500 uppercase tracking-widest mb-1">Error de Diagnóstico</h4>
+                  <p className="text-xs text-red-400 font-medium">{aiError}</p>
+               </div>
+            </div>
+          )}
+
+          {aiAnalysis && !aiError && (
             <div className="bg-metal-mid p-8 rounded-2xl border border-blue-100 mb-8 shadow-xl relative overflow-hidden animate-in fade-in duration-500">
               <h4 className="text-xs font-black text-blue-800 uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
                 <Sparkles size={18} className="text-blue-500" /> Diagnóstico Financiero Estratégico

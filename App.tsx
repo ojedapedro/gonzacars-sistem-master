@@ -238,16 +238,16 @@ const App: React.FC = () => {
         <div className="absolute top-[40%] right-[20%] w-[20%] h-[20%] bg-blue-400/5 rounded-full blur-[80px] pointer-events-none" />
 
         <div className="w-full max-w-md relative z-10 animate-scale-in">
-          <div className="glass-card-dark rounded-2xl overflow-hidden" style={{ boxShadow: '0 16px 64px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.05)' }}>
+          <div className="glass-panel rounded-2xl overflow-hidden glow-box">
             {/* Header */}
             <div className="p-8 lg:p-10 text-center border-b border-white/5">
               <div className="w-20 h-20 lg:w-24 lg:h-24 bg-white/5 rounded-2xl flex items-center justify-center mx-auto mb-5 border border-white/8 p-2.5" style={{ boxShadow: '0 8px 24px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05)' }}>
                 <img src={LOGO_URL} alt="Gonzacars Logo" className="w-full h-full object-contain" />
               </div>
-              <h1 className="text-3xl font-black text-white uppercase tracking-tight leading-none" style={{ fontFamily: 'Outfit, sans-serif' }}>
+              <h1 className="text-3xl font-black uppercase tracking-tight leading-none text-gradient" style={{ fontFamily: 'Outfit, sans-serif' }}>
                 Gonzacars C.A.
               </h1>
-              <p className="text-chrome-500 font-semibold uppercase text-[10px] tracking-[0.25em] mt-2">
+              <p className="text-chrome-400 font-semibold uppercase text-[10px] tracking-[0.25em] mt-2">
                 Sistema de Gestión Integral
               </p>
               {store.isDemoMode && (
@@ -304,7 +304,7 @@ const App: React.FC = () => {
               <button
                 type="submit"
                 disabled={loginLoading}
-                className="btn-chrome w-full py-4 rounded-xl font-black uppercase text-xs tracking-[0.2em] flex items-center justify-center gap-3 transition-all active:scale-95 disabled:opacity-70"
+                className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3.5 px-4 rounded-xl transition-all shadow-[0_0_20px_rgba(59,130,246,0.3)] hover:shadow-[0_0_30px_rgba(59,130,246,0.5)] active:scale-95 disabled:opacity-50 mt-2 flex justify-center items-center gap-2 btn-pulse"
               >
                 {loginLoading ? (
                   <><RefreshCw size={16} className="animate-spin" /> Verificando…</>
@@ -376,11 +376,9 @@ const App: React.FC = () => {
       )}
 
       {/* SIDEBAR — Floating Panel */}
-      <aside className={`
-        fixed inset-y-0 left-0 z-50 w-[280px] flex flex-col transition-transform duration-300 ease-in-out lg:static lg:translate-x-0
-        ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}
-        ${store.isDemoMode ? 'top-7' : ''}
-      `}>
+      <div 
+        className={`fixed inset-y-0 left-0 z-40 w-72 glass-panel shadow-2xl transform transition-transform duration-300 ease-in-out lg:translate-x-0 ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'} ${store.isDemoMode ? 'top-7' : ''}`}
+      >
         <div className={`flex flex-col h-full m-2.5 rounded-2xl sidebar-panel overflow-hidden ${store.isDemoMode ? 'mt-0' : ''}`}>
           {/* Logo */}
           <div className="px-5 pt-5 pb-4 flex items-center justify-between">
@@ -440,12 +438,12 @@ const App: React.FC = () => {
             </button>
           </div>
         </div>
-      </aside>
+      </div>
 
       {/* MAIN CONTENT */}
       <main className="flex-1 flex flex-col overflow-hidden relative w-full" style={{ marginTop: store.isDemoMode ? '28px' : '0' }}>
         {/* Top Header */}
-        <header className="h-[56px] flex items-center justify-between px-4 lg:px-6 no-print z-10 shrink-0 border-b border-metal-border" style={{ background: 'linear-gradient(180deg, #10131a, #0c0e14)' }}>
+        <header className="h-[56px] flex items-center justify-between px-4 lg:px-6 no-print z-10 shrink-0 border-b border-metal-border/50 glass-panel">
           <div className="flex items-center gap-3">
             <button
               onClick={() => setIsMobileMenuOpen(true)}
@@ -481,7 +479,7 @@ const App: React.FC = () => {
         </header>
 
         {/* Module Area */}
-        <div key={activeTab} className="flex-1 overflow-y-auto animate-fade-in-up" style={{ background: '#0a0c12' }}>
+        <div key={activeTab} className="flex-1 overflow-y-auto animate-fade-in-up" style={{ background: 'var(--metal-darkest)' }}>
           {renderModule()}
         </div>
       </main>
