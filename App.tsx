@@ -441,7 +441,7 @@ const App: React.FC = () => {
       </div>
 
       {/* MAIN CONTENT */}
-      <main className="flex-1 flex flex-col overflow-hidden relative w-full" style={{ marginTop: store.isDemoMode ? '28px' : '0' }}>
+      <main className="flex-1 flex flex-col overflow-hidden relative w-full lg:pl-72" style={{ marginTop: store.isDemoMode ? '28px' : '0' }}>
         {/* Top Header */}
         <header className="h-[56px] flex items-center justify-between px-4 lg:px-6 no-print z-10 shrink-0 border-b border-metal-border/50 glass-panel">
           <div className="flex items-center gap-3">
