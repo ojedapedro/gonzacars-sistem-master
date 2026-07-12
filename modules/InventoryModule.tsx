@@ -441,7 +441,8 @@ const InventoryModule: React.FC<{ store: any }> = ({ store }) => {
       </div>
 
       <div className="bg-metal-mid rounded-2xl shadow-sm border border-metal-border overflow-hidden">
-        <table className="w-full text-left">
+        <div className="w-full overflow-x-auto custom-scrollbar">
+        <table className="w-full text-left min-w-[800px]">
           <thead>
             <tr className="bg-metal-dark border-b border-metal-border">
               <th className="px-8 py-5 text-[10px] font-black text-chrome-500 uppercase tracking-widest cursor-pointer hover:bg-metal-mid transition-colors" onClick={() => handleSort('barcode')}>
@@ -570,6 +571,7 @@ const InventoryModule: React.FC<{ store: any }> = ({ store }) => {
             ))}
           </tbody>
         </table>
+        </div>
         
         {filtered.length === 0 && (
           <div className="py-32 text-center">
@@ -657,8 +659,8 @@ const InventoryModule: React.FC<{ store: any }> = ({ store }) => {
                       <h4 className="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-3 flex items-center gap-2">
                         <TrendingUp size={14}/> Actualizaciones de Stock ({bulkResult.updates.length})
                       </h4>
-                      <div className="border border-metal-border rounded-2xl overflow-hidden">
-                        <table className="w-full text-left text-xs">
+                      <div className="flex-1 bg-metal-dark/30 rounded-xl p-4 border border-metal-border overflow-x-auto custom-scrollbar">
+                        <table className="w-full text-left text-xs min-w-[300px]">
                           <thead className="bg-metal-dark border-b border-metal-border">
                             <tr>
                               <th className="px-5 py-3 font-black text-chrome-400 uppercase tracking-widest">Producto</th>
@@ -808,16 +810,16 @@ const InventoryModule: React.FC<{ store: any }> = ({ store }) => {
                           <p className="text-3xl font-black text-emerald-600 tracking-tighter">${selectedProduct.cost.toFixed(2)}</p>
                        </div>
                     </div>
-
                     <div className="bg-metal-mid rounded-[2rem] border border-metal-border overflow-hidden shadow-sm">
-                      <table className="w-full text-left">
-                        <thead>
-                          <tr className="bg-metal-dark border-b border-metal-border">
-                            <th className="px-6 py-4 text-[9px] font-black text-chrome-500 uppercase tracking-widest">Fecha</th>
-                            <th className="px-6 py-4 text-[9px] font-black text-chrome-500 uppercase tracking-widest text-center">Tipo</th>
-                            <th className="px-6 py-4 text-[9px] font-black text-chrome-500 uppercase tracking-widest">Referencia / Documento</th>
-                            <th className="px-6 py-4 text-[9px] font-black text-chrome-500 uppercase tracking-widest text-center">Cantidad</th>
-                            <th className="px-6 py-4 text-[9px] font-black text-chrome-500 uppercase tracking-widest text-right">Valor Unit.</th>
+                      <div className="flex-1 overflow-x-auto custom-scrollbar">
+                        <table className="w-full text-left min-w-[600px]">
+                          <thead>
+                            <tr className="bg-metal-dark border-b border-metal-border">
+                              <th className="px-6 py-4 text-[9px] font-black text-chrome-500 uppercase tracking-widest">Fecha</th>
+                              <th className="px-6 py-4 text-[9px] font-black text-chrome-500 uppercase tracking-widest text-center">Tipo</th>
+                              <th className="px-6 py-4 text-[9px] font-black text-chrome-500 uppercase tracking-widest">Referencia / Documento</th>
+                              <th className="px-6 py-4 text-[9px] font-black text-chrome-500 uppercase tracking-widest text-center">Cantidad</th>
+                              <th className="px-6 py-4 text-[9px] font-black text-chrome-500 uppercase tracking-widest text-right">Valor Unit.</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-metal-border">
@@ -854,6 +856,7 @@ const InventoryModule: React.FC<{ store: any }> = ({ store }) => {
                       </table>
                     </div>
                   </div>
+                </div>
                 ) : (
                   <div className="py-24 text-center">
                      <div className="w-16 h-16 bg-metal-mid rounded-2xl flex items-center justify-center mx-auto mb-4 text-chrome-500">

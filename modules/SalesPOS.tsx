@@ -38,6 +38,7 @@ const SalesPOS: React.FC<{ store: any }> = ({ store }) => {
   const [showDailyReport, setShowDailyReport] = useState(false);
   const [lastSale, setLastSale] = useState<Sale | null>(null);
   const [showReceiptModal, setShowReceiptModal] = useState(false);
+  const [showMobileCart, setShowMobileCart] = useState(false);
   const barcodeRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -166,9 +167,9 @@ const SalesPOS: React.FC<{ store: any }> = ({ store }) => {
   };
 
   return (
-    <div className="flex h-full relative">
-      <div className="flex flex-1 h-full print:hidden">
-        <div className="flex-1 p-8 border-r border-metal-border overflow-y-auto custom-scrollbar bg-metal-dark/30">
+    <div className="flex flex-col lg:flex-row h-full relative overflow-hidden">
+      <div className="flex flex-1 h-full print:hidden overflow-y-auto custom-scrollbar">
+        <div className="flex-1 p-4 lg:p-8 lg:border-r border-metal-border bg-metal-dark/30 pb-24 lg:pb-8">
           <div className="mb-6 flex gap-4">
             <div className="relative flex-1">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-chrome-500" size={18}/>
@@ -194,7 +195,7 @@ const SalesPOS: React.FC<{ store: any }> = ({ store }) => {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {filteredProducts.map((p: Product) => (
               <button 
                 key={p.id}
@@ -221,8 +222,26 @@ const SalesPOS: React.FC<{ store: any }> = ({ store }) => {
           </div>
         </div>
 
-        <div className="w-[400px] bg-metal-mid p-8 flex flex-col shadow-2xl border-l border-metal-border relative z-20">
-          <div className="flex items-center justify-between mb-8">
+      {/* Floating Action Button (Mobile Only) */}
+      {!showMobileCart && (
+        <button
+          onClick={() => setShowMobileCart(true)}
+          className="lg:hidden fixed bottom-6 right-6 w-16 h-16 bg-blue-600 rounded-full shadow-[0_8px_30px_rgba(37,99,235,0.5)] flex items-center justify-center text-white z-30 animate-bounce hover:bg-blue-500 transition-colors"
+        >
+          <div className="relative">
+            <ShoppingCart size={28} />
+            {cart.length > 0 && (
+              <span className="absolute -top-2 -right-3 bg-red-500 text-white text-[10px] font-black w-6 h-6 rounded-full flex items-center justify-center border-2 border-metal-darkest">
+                {cart.reduce((a, b) => a + b.quantity, 0)}
+              </span>
+            )}
+          </div>
+        </button>
+      )}
+
+      {/* Cart Sidebar */}
+      <div className={`w-full lg:w-[400px] bg-metal-mid p-6 lg:p-8 flex flex-col shadow-2xl lg:border-l border-metal-border relative z-40 fixed inset-0 lg:static transition-transform duration-300 ${showMobileCart ? 'translate-y-0' : 'translate-y-full lg:translate-y-0'}`}>
+        <div className="flex items-center justify-between mb-8">
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 bg-metal-darkest rounded-2xl flex items-center justify-center text-white shadow-xl shadow-black/30 p-2">
                 <img src={LOGO_URL} alt="Logo" className="w-full h-full object-contain" />
@@ -248,6 +267,12 @@ const SalesPOS: React.FC<{ store: any }> = ({ store }) => {
                 title="Reporte de Caja Diario"
               >
                 <ClipboardList size={22} />
+              </button>
+              <button
+                onClick={() => setShowMobileCart(false)}
+                className="lg:hidden w-10 h-10 flex items-center justify-center rounded-xl text-chrome-500 hover:bg-metal-dark hover:text-red-400 transition-all border border-metal-border"
+              >
+                <X size={22} />
               </button>
             </div>
           </div>
