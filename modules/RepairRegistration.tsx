@@ -6,12 +6,12 @@ import { improveDiagnosis } from '../lib/gemini';
 
 /* ─── Status badge config ─── */
 const STATUS_CONFIG: Record<ServiceStatus, { label: string; color: string; bg: string; dot: string }> = {
-  'Ingresado':            { label: 'Ingresado',            color: 'text-blue-700',   bg: 'bg-blue-50 border-blue-200',   dot: 'bg-blue-500' },
-  'En Diagnóstico':       { label: 'En Diagnóstico',       color: 'text-yellow-700', bg: 'bg-yellow-50 border-yellow-200', dot: 'bg-yellow-500' },
-  'En Reparación':        { label: 'En Reparación',        color: 'text-orange-700', bg: 'bg-orange-50 border-orange-200', dot: 'bg-orange-500' },
-  'Esperando Repuestos':  { label: 'Esperando Repuestos',  color: 'text-purple-700', bg: 'bg-purple-50 border-purple-200', dot: 'bg-purple-500' },
-  'Finalizado':           { label: 'Finalizado',           color: 'text-emerald-700',bg: 'bg-emerald-50 border-emerald-200', dot: 'bg-emerald-500' },
-  'Entregado':            { label: 'Entregado',            color: 'text-chrome-200',  bg: 'bg-metal-dark border-metal-border',  dot: 'bg-metal-dark0' },
+  'Ingresado':            { label: 'Ingresado',            color: 'text-blue-400',    bg: 'bg-blue-500/10 border-blue-500/30',    dot: 'bg-blue-400' },
+  'En Diagnóstico':       { label: 'En Diagnóstico',       color: 'text-yellow-400',  bg: 'bg-yellow-500/10 border-yellow-500/30', dot: 'bg-yellow-400' },
+  'En Reparación':        { label: 'En Reparación',        color: 'text-orange-400',  bg: 'bg-orange-500/10 border-orange-500/30', dot: 'bg-orange-400' },
+  'Esperando Repuestos':  { label: 'Esperando Repuestos',  color: 'text-purple-400',  bg: 'bg-purple-500/10 border-purple-500/30', dot: 'bg-purple-400' },
+  'Finalizado':           { label: 'Finalizado',           color: 'text-emerald-400', bg: 'bg-emerald-500/10 border-emerald-500/30', dot: 'bg-emerald-400' },
+  'Entregado':            { label: 'Entregado',            color: 'text-chrome-200',  bg: 'bg-metal-dark border-metal-border',  dot: 'bg-metal-dark' },
 };
 
 interface SectionProps {
@@ -293,7 +293,7 @@ const RepairRegistration: React.FC<{ store: any; toast?: any }> = ({ store, toas
                 type="button"
                 onClick={handleAiImprove}
                 disabled={isAiLoading || !formData.diagnosis || formData.diagnosis.length < 5}
-                className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider text-purple-700 bg-purple-50 hover:bg-purple-100 border border-purple-200 px-3 py-1.5 rounded-full transition-all disabled:opacity-40"
+                className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider text-purple-400 bg-purple-500/10 hover:bg-purple-500/15 border border-purple-500/20 px-3 py-1.5 rounded-full transition-all disabled:opacity-40"
               >
                 {isAiLoading
                   ? <><Loader2 size={11} className="animate-spin"/> Procesando…</>
@@ -337,7 +337,7 @@ const RepairRegistration: React.FC<{ store: any; toast?: any }> = ({ store, toas
               ))}
 
               {photoCount < 4 && !isCompressing && (
-                <label className="cursor-pointer flex flex-col items-center justify-center aspect-square border-2 border-dashed border-metal-border hover:border-cyan-400 rounded-xl hover:bg-cyan-50/50 transition-all text-chrome-500 hover:text-cyan-600 group bg-metal-mid/50">
+                <label className="cursor-pointer flex flex-col items-center justify-center aspect-square border-2 border-dashed border-metal-border hover:border-cyan-400 rounded-xl hover:bg-cyan-500/10 transition-all text-chrome-500 hover:text-cyan-400 group bg-metal-mid/50">
                   <Plus size={22} className="mb-1 group-hover:scale-110 transition-transform"/>
                   <span className="text-[9px] font-black uppercase">Foto {photoCount + 1}</span>
                   <input type="file" accept="image/*" capture="environment" className="hidden" onChange={handlePhotoUpload}/>
@@ -369,7 +369,7 @@ const RepairRegistration: React.FC<{ store: any; toast?: any }> = ({ store, toas
         <button
           type="submit"
           disabled={isCompressing || isSubmitting}
-          className="w-full bg-blue-600 hover:bg-blue-500 disabled:opacity-60 text-white py-4 rounded-2xl font-black uppercase tracking-[0.15em] text-sm flex items-center justify-center gap-3 shadow-2xl shadow-blue-600/30 transition-all active:scale-[0.98]"
+          className="btn-chrome w-full py-4 rounded-2xl font-black uppercase tracking-[0.15em] text-sm flex items-center justify-center gap-3 shadow-2xl shadow-blue-600/30 transition-all active:scale-[0.98]"
         >
           {isSubmitting
             ? <><Loader2 className="animate-spin" size={20}/> Registrando…</>

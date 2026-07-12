@@ -429,7 +429,7 @@ const InventoryModule: React.FC<{ store: any }> = ({ store }) => {
         {(categoryFilter || supplierFilter) && (
           <button 
             onClick={() => { setCategoryFilter(''); setSupplierFilter(''); }}
-            className="flex items-center gap-1 text-[10px] font-black uppercase tracking-widest text-red-500 hover:bg-red-50 px-3 py-2 rounded-xl transition-all"
+            className="flex items-center gap-1 text-[10px] font-black uppercase tracking-widest text-red-400 hover:bg-red-500/10 px-3 py-2 rounded-xl transition-all"
           >
             <X size={12} /> Limpiar
           </button>
@@ -462,14 +462,14 @@ const InventoryModule: React.FC<{ store: any }> = ({ store }) => {
               <th className="px-8 py-5 text-[10px] font-black text-chrome-500 uppercase tracking-widest text-center">Acciones</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100 font-medium">
+          <tbody className="divide-y divide-metal-border font-medium">
             {filtered.map((p: Product) => (
               <tr key={p.id} className="hover:bg-metal-dark/50 transition-colors group">
                 <td className="px-8 py-5">
                   {editingBarcodeId === p.id ? (
                     <div className="flex items-center gap-2">
                       <input 
-                        className="w-32 text-xs p-2 border border-blue-200 rounded-lg outline-none font-mono font-bold"
+                        className="w-32 text-xs p-2 border border-blue-500/30 rounded-lg outline-none font-mono font-bold"
                         value={newBarcode}
                         onChange={(e) => setNewBarcode(e.target.value)}
                         onBlur={() => handleBarcodeUpdate(p.id)}
@@ -489,7 +489,7 @@ const InventoryModule: React.FC<{ store: any }> = ({ store }) => {
                 <td className="px-8 py-5">
                   {editingNameId === p.id ? (
                     <input 
-                      className="w-full text-sm font-black text-chrome-100 uppercase p-2 border border-blue-200 rounded-lg outline-none"
+                      className="w-full text-sm font-black text-chrome-100 uppercase p-2 border border-blue-500/30 rounded-lg outline-none"
                       value={newName}
                       onChange={(e) => setNewName(e.target.value)}
                       onBlur={() => handleNameUpdate(p.id)}
@@ -510,7 +510,7 @@ const InventoryModule: React.FC<{ store: any }> = ({ store }) => {
                   <div className="flex items-center justify-center gap-2">
                     <input 
                       type="number" 
-                      className={`w-16 px-2 py-1.5 border rounded-xl text-xs font-black text-center outline-none transition-all ${p.quantity <= 5 ? 'bg-red-50 border-red-200 text-red-600 focus:ring-4 focus:ring-red-50' : 'bg-metal-dark border-metal-border text-chrome-200 focus:ring-4 focus:ring-blue-500/15'}`}
+                      className={`w-16 px-2 py-1.5 border rounded-xl text-xs font-black text-center outline-none transition-all ${p.quantity <= 5 ? 'bg-red-500/10 border-red-500/30 text-red-400 focus:ring-4 focus:ring-red-500/15' : 'bg-metal-dark border-metal-border text-chrome-200 focus:ring-4 focus:ring-blue-500/15'}`}
                       value={p.quantity}
                       onChange={(e) => handleQuantityUpdate(p.id, Number(e.target.value))}
                     />
@@ -523,7 +523,7 @@ const InventoryModule: React.FC<{ store: any }> = ({ store }) => {
                     <input 
                       type="number" 
                       step="0.01" 
-                      className="w-24 px-3 py-1.5 border border-blue-200 rounded-lg focus:ring-4 focus:ring-blue-500/15 outline-none font-black text-right text-sm"
+                      className="w-24 px-3 py-1.5 border border-blue-500/30 rounded-lg focus:ring-4 focus:ring-blue-500/15 outline-none font-black text-right text-sm"
                       value={newPrice}
                       onChange={(e) => setNewPrice(Number(e.target.value))}
                       autoFocus
@@ -539,28 +539,28 @@ const InventoryModule: React.FC<{ store: any }> = ({ store }) => {
                     <button 
                       onClick={() => { setEditingId(p.id); setNewPrice(p.price); }} 
                       title="Editar Precio"
-                      className="p-2 text-chrome-500 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all"
+                      className="p-2 text-chrome-500 hover:text-blue-400 hover:bg-blue-500/10 rounded-xl transition-all"
                     >
                       <Edit3 size={18}/>
                     </button>
                     <button 
                       onClick={() => openHistory(p)} 
                       title="Auditoría de Movimientos (Kardex)"
-                      className="p-2 text-chrome-500 hover:text-emerald-600 hover:bg-emerald-50 rounded-xl transition-all"
+                      className="p-2 text-chrome-500 hover:text-emerald-400 hover:bg-emerald-500/10 rounded-xl transition-all"
                     >
                       <History size={18}/>
                     </button>
                     <button 
                       onClick={() => openAudit(p)} 
                       title="Conteo Físico (Ajuste de Inventario)"
-                      className="p-2 text-chrome-500 hover:text-orange-600 hover:bg-orange-50 rounded-xl transition-all"
+                      className="p-2 text-chrome-500 hover:text-orange-400 hover:bg-orange-500/10 rounded-xl transition-all"
                     >
                       <ClipboardCheck size={18}/>
                     </button>
                     <button 
                       onClick={() => regenerateBarcode(p.id)} 
                       title="Regenerar Código"
-                      className="p-2 text-chrome-500 hover:text-purple-600 hover:bg-purple-50 rounded-xl transition-all"
+                      className="p-2 text-chrome-500 hover:text-purple-400 hover:bg-purple-500/10 rounded-xl transition-all"
                     >
                       <RotateCw size={18}/>
                     </button>
@@ -583,11 +583,11 @@ const InventoryModule: React.FC<{ store: any }> = ({ store }) => {
 
       {/* MODAL BULK IMPORT — INTELIGENTE */}
       {showBulkModal && (
-        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
           <div className="bg-metal-mid rounded-2xl shadow-2xl w-full max-w-4xl flex flex-col max-h-[90vh] overflow-hidden border border-metal-border">
 
             {/* Header */}
-            <div className="p-8 bg-gradient-to-r from-emerald-950 to-slate-950 text-white flex justify-between items-center shrink-0">
+            <div className="p-8 bg-gradient-to-r from-emerald-900/40 to-metal-darkest text-white flex justify-between items-center shrink-0">
               <div className="flex items-center gap-4">
                 <div className="w-12 h-12 bg-emerald-500/20 border border-emerald-500/30 rounded-2xl flex items-center justify-center">
                   <FileSpreadsheet size={24} className="text-emerald-400"/>
@@ -767,7 +767,7 @@ const InventoryModule: React.FC<{ store: any }> = ({ store }) => {
       {showHistoryModal && selectedProduct && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
           <div className="bg-metal-mid rounded-2xl shadow-2xl max-w-4xl w-full flex flex-col max-h-[90vh] overflow-hidden animate-in zoom-in duration-300">
-            <div className="p-10 bg-slate-950 text-white flex justify-between items-start relative overflow-hidden">
+            <div className="p-10 bg-metal-darkest text-white flex justify-between items-start relative overflow-hidden">
                <div className="absolute top-0 right-0 p-10 opacity-5">
                   <History size={150} />
                </div>
@@ -820,7 +820,7 @@ const InventoryModule: React.FC<{ store: any }> = ({ store }) => {
                             <th className="px-6 py-4 text-[9px] font-black text-chrome-500 uppercase tracking-widest text-right">Valor Unit.</th>
                           </tr>
                         </thead>
-                        <tbody className="divide-y divide-slate-50">
+                        <tbody className="divide-y divide-metal-border">
                           {history.map((h) => (
                             <tr key={`${h.type}-${h.id}`} className="hover:bg-metal-dark/80 transition-colors group">
                               <td className="px-6 py-4 whitespace-nowrap">
@@ -830,7 +830,7 @@ const InventoryModule: React.FC<{ store: any }> = ({ store }) => {
                                 </div>
                               </td>
                               <td className="px-6 py-4 text-center">
-                                <span className={`flex items-center justify-center gap-1 text-[9px] font-black uppercase tracking-widest px-3 py-1 rounded-full border ${h.type === 'ENTRADA' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-red-50 text-red-600 border-red-100'}`}>
+                                <span className={`flex items-center justify-center gap-1 text-[9px] font-black uppercase tracking-widest px-3 py-1 rounded-full border ${h.type === 'ENTRADA' ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/20' : 'bg-red-500/15 text-red-400 border-red-500/20'}`}>
                                    {h.type === 'ENTRADA' ? <TrendingUp size={10} /> : <TrendingDown size={10} />} {h.type}
                                 </span>
                               </td>
@@ -874,7 +874,7 @@ const InventoryModule: React.FC<{ store: any }> = ({ store }) => {
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
           <div className="bg-metal-mid rounded-2xl shadow-2xl max-w-md w-full overflow-hidden animate-in zoom-in duration-300 border border-metal-border">
              <div className="p-8 bg-metal-mid border-b border-metal-border text-center relative">
-                <div className="w-16 h-16 bg-orange-50 rounded-2xl flex items-center justify-center mx-auto mb-4 text-orange-500">
+                <div className="w-16 h-16 bg-orange-500/10 rounded-2xl flex items-center justify-center mx-auto mb-4 text-orange-400">
                    <ClipboardCheck size={32} />
                 </div>
                 <h3 className="text-2xl font-black text-chrome-100 uppercase tracking-tight">Ajuste de Stock</h3>
@@ -921,7 +921,7 @@ const InventoryModule: React.FC<{ store: any }> = ({ store }) => {
                 </div>
 
                 {physicalCount !== selectedProduct.quantity && (
-                    <div className="flex items-start gap-2 bg-orange-50 p-3 rounded-xl">
+                    <div className="flex items-start gap-2 bg-orange-500/10 p-3 rounded-xl">
                         <AlertTriangle size={16} className="text-orange-500 mt-0.5 shrink-0"/>
                         <p className="text-[10px] font-bold text-orange-800 leading-tight">
                             Esta acción modificará el inventario permanentemente. Asegúrese de que el conteo es correcto.

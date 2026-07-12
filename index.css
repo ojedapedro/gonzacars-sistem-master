@@ -87,6 +87,18 @@ h1, h2, h3, h4, h5, h6 {
 }
 *::-webkit-scrollbar-thumb:hover { background: var(--chrome-500); }
 
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: var(--metal-lighter) transparent;
+}
+.custom-scrollbar::-webkit-scrollbar { width: 5px; height: 5px; }
+.custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: var(--metal-lighter);
+  border-radius: 99px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover { background: var(--chrome-400); }
+
 /* ---------- Keyframe Animations ---------- */
 @keyframes fadeInUp {
   from { opacity: 0; transform: translateY(16px); }

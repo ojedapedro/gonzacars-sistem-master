@@ -186,7 +186,7 @@ const SalesPOS: React.FC<{ store: any }> = ({ store }) => {
                 ref={barcodeRef}
                 type="text" 
                 placeholder="Escanear Código..." 
-                className="w-full pl-12 pr-4 py-3 border-2 border-blue-100 rounded-2xl outline-none focus:ring-4 focus:ring-blue-500/15 bg-blue-50/30 font-mono text-sm font-bold"
+                className="w-full pl-12 pr-4 py-3 border-2 border-blue-500/30 rounded-2xl outline-none focus:ring-4 focus:ring-blue-500/15 bg-blue-500/5 font-mono text-sm font-bold"
                 value={barcodeInput}
                 onChange={(e) => setBarcodeInput(e.target.value)}
                 autoFocus
@@ -206,16 +206,16 @@ const SalesPOS: React.FC<{ store: any }> = ({ store }) => {
                     <span className="text-[9px] bg-metal-mid px-2.5 py-1 rounded-full font-black uppercase text-chrome-400 tracking-widest">{p.category}</span>
                     {p.quantity <= 5 && <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>}
                   </div>
-                  <h4 className="font-bold text-chrome-100 mt-3 truncate group-hover:text-blue-600 uppercase text-xs tracking-tight">{p.name}</h4>
+                  <h4 className="font-bold text-chrome-100 mt-3 truncate group-hover:text-blue-400 uppercase text-xs tracking-tight">{p.name}</h4>
                   <p className="text-[10px] text-chrome-500 font-bold uppercase mt-1">Stock: {p.quantity} unid.</p>
                 </div>
                 <div className="mt-6 flex items-end justify-between relative z-10">
-                  <p className="font-black text-blue-600 text-2xl tracking-tighter">${Number(p.price || 0).toFixed(2)}</p>
+                  <p className="font-black text-blue-400 text-2xl tracking-tighter">${Number(p.price || 0).toFixed(2)}</p>
                   <div className="w-8 h-8 rounded-xl bg-metal-dark flex items-center justify-center text-chrome-500 group-hover:bg-blue-600 group-hover:text-white transition-colors">
                     <Plus size={16} />
                   </div>
                 </div>
-                <div className="absolute top-0 right-0 w-24 h-24 bg-blue-50 rounded-full -translate-y-12 translate-x-12 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500/5 rounded-full -translate-y-12 translate-x-12 opacity-0 group-hover:opacity-100 transition-opacity"></div>
               </button>
             ))}
           </div>
@@ -224,7 +224,7 @@ const SalesPOS: React.FC<{ store: any }> = ({ store }) => {
         <div className="w-[400px] bg-metal-mid p-8 flex flex-col shadow-2xl border-l border-metal-border relative z-20">
           <div className="flex items-center justify-between mb-8">
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-slate-900 rounded-2xl flex items-center justify-center text-white shadow-xl shadow-metal-border p-2">
+              <div className="w-12 h-12 bg-metal-darkest rounded-2xl flex items-center justify-center text-white shadow-xl shadow-black/30 p-2">
                 <img src={LOGO_URL} alt="Logo" className="w-full h-full object-contain" />
               </div>
               <div>
@@ -236,7 +236,7 @@ const SalesPOS: React.FC<{ store: any }> = ({ store }) => {
               {lastSale && (
                 <button 
                   onClick={() => setShowReceiptModal(true)}
-                  className="w-10 h-10 flex items-center justify-center rounded-xl text-blue-600 bg-blue-50 hover:bg-blue-100 transition-all border border-blue-100"
+                  className="w-10 h-10 flex items-center justify-center rounded-xl text-blue-400 bg-blue-500/10 hover:bg-blue-500/15 transition-all border border-blue-500/20"
                   title="Re-imprimir última venta"
                 >
                   <FileText size={20} />
@@ -315,7 +315,7 @@ const SalesPOS: React.FC<{ store: any }> = ({ store }) => {
 
             <button 
               onClick={() => setIvaEnabled(!ivaEnabled)}
-              className={`w-full py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all border ${ivaEnabled ? 'bg-blue-50 border-blue-200 text-blue-600 shadow-sm' : 'bg-metal-dark border-metal-border text-chrome-500'}`}
+              className={`w-full py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all border ${ivaEnabled ? 'bg-blue-500/10 border-blue-500/30 text-blue-400 shadow-sm' : 'bg-metal-dark border-metal-border text-chrome-500'}`}
             >
               <Percent size={14}/> {ivaEnabled ? 'IVA Incluido (16%)' : 'Sin IVA'}
             </button>
@@ -333,7 +333,7 @@ const SalesPOS: React.FC<{ store: any }> = ({ store }) => {
               )}
               <div className="flex justify-between items-center pt-2">
                 <span className="text-[10px] font-black text-chrome-500 uppercase tracking-[0.2em]">Total a Pagar</span>
-                <span className="text-4xl font-black text-blue-600 tracking-tighter leading-none">${Number(total).toFixed(2)}</span>
+                <span className="text-4xl font-black text-blue-400 tracking-tighter leading-none">${Number(total).toFixed(2)}</span>
               </div>
               <div className="flex justify-between items-center pt-1">
                 <span className="text-[9px] font-bold text-chrome-500 uppercase italic">Tasa: {store.exchangeRate} Bs/$</span>
@@ -344,7 +344,7 @@ const SalesPOS: React.FC<{ store: any }> = ({ store }) => {
             <button 
               disabled={cart.length === 0}
               onClick={processSale}
-              className="w-full btn-chrome py-5 rounded-[2rem] font-black uppercase text-[10px] tracking-[0.3em] flex items-center justify-center gap-3 hover:bg-black shadow-2xl shadow-metal-border disabled:bg-metal-mid disabled:text-chrome-500 disabled:shadow-none transition-all active:scale-95"
+              className="w-full btn-chrome py-5 rounded-[2rem] font-black uppercase text-[10px] tracking-[0.3em] flex items-center justify-center gap-3 hover:bg-black shadow-2xl shadow-black/30 disabled:bg-metal-mid disabled:text-chrome-500 disabled:shadow-none transition-all active:scale-95"
             >
               <Receipt size={20}/> Procesar Venta
             </button>
@@ -362,7 +362,7 @@ const SalesPOS: React.FC<{ store: any }> = ({ store }) => {
             <p className="text-[8px] font-medium leading-tight">Av. Bolivar norte; Calle Miranda, Local 113-109C<br/>Valencia 2001, Carabobo</p>
           </div>
 
-          <div className="border-y-2 border-dashed border-slate-900 py-3 mb-4 text-[10px]">
+          <div className="border-y-2 border-dashed border-metal-darker py-3 mb-4 text-[10px]">
             <div className="flex justify-between">
               <span className="font-bold">Factura No:</span>
               <span className="font-black">#{lastSale.id}</span>
@@ -378,7 +378,7 @@ const SalesPOS: React.FC<{ store: any }> = ({ store }) => {
           </div>
 
           <table className="w-full text-[10px] mb-6">
-            <thead className="border-b border-slate-900">
+            <thead className="border-b border-metal-darker">
               <tr>
                 <th className="text-left py-1 font-black uppercase">Prod</th>
                 <th className="text-center py-1 font-black uppercase">Cant</th>
@@ -420,7 +420,7 @@ const SalesPOS: React.FC<{ store: any }> = ({ store }) => {
             </div>
           </div>
 
-          <div className="text-center border-t-2 border-dashed border-slate-900 pt-4">
+          <div className="text-center border-t-2 border-dashed border-metal-darker pt-4">
             <p className="text-[10px] font-black uppercase tracking-tighter">¡Gracias por su compra!</p>
             <p className="text-[8px] font-medium italic mt-1">Gonzacars: Calidad y Confianza en cada repuesto.</p>
           </div>
@@ -430,7 +430,7 @@ const SalesPOS: React.FC<{ store: any }> = ({ store }) => {
       {/* VISTA DE IMPRESIÓN DEL REPORTE DIARIO (Visible solo al imprimir) */}
       {dailyStats && (
         <div className="hidden print:block print-only bg-metal-mid text-chrome-100 p-8 w-full max-w-[216mm] mx-auto min-h-screen">
-          <div className="text-center border-b-2 border-slate-900 pb-6 mb-8">
+          <div className="text-center border-b-2 border-metal-darker pb-6 mb-8">
             <h1 className="text-2xl font-black uppercase tracking-tight mb-2">Reporte de Cierre de Caja</h1>
             <p className="text-xs font-bold uppercase tracking-widest text-chrome-400">Gonzacars C.A. | RIF: J-50030426-9</p>
             <p className="text-sm font-bold mt-2">FECHA: {new Date().toLocaleDateString('es-VE', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
@@ -497,7 +497,7 @@ const SalesPOS: React.FC<{ store: any }> = ({ store }) => {
              </table>
           </div>
 
-          <div className="mt-12 pt-8 border-t-2 border-slate-900 flex justify-between px-10">
+          <div className="mt-12 pt-8 border-t-2 border-metal-darker flex justify-between px-10">
              <div className="text-center">
                 <div className="w-40 border-t border-slate-400 mb-2"></div>
                 <p className="text-[10px] font-black uppercase tracking-widest">Firma Cajero</p>
@@ -555,7 +555,7 @@ const SalesPOS: React.FC<{ store: any }> = ({ store }) => {
                   <div className="bg-metal-mid p-8 rounded-2xl border border-metal-border shadow-xl shadow-metal-border/50">
                     <p className="text-[10px] font-black text-chrome-500 uppercase tracking-widest mb-2">Ticket Promedio</p>
                     <div className="flex items-baseline gap-2">
-                      <span className="text-4xl font-black text-blue-600 tracking-tighter">${dailyStats.ticketPromedio.toFixed(2)}</span>
+                      <span className="text-4xl font-black text-blue-400 tracking-tighter">${dailyStats.ticketPromedio.toFixed(2)}</span>
                     </div>
                     <div className="mt-4 pt-4 border-t border-slate-50">
                       <p className="text-[10px] font-black text-chrome-500 uppercase">Volumen Diario</p>
@@ -575,7 +575,7 @@ const SalesPOS: React.FC<{ store: any }> = ({ store }) => {
                     </div>
                   </div>
 
-                  <div className="bg-slate-900 p-8 rounded-2xl text-white shadow-2xl relative overflow-hidden flex flex-col justify-between">
+                  <div className="bg-metal-darkest p-8 rounded-2xl text-white shadow-2xl relative overflow-hidden flex flex-col justify-between">
                     <DollarSign className="absolute -bottom-4 -right-4 text-white/5" size={140} />
                     <div>
                       <p className="text-[10px] font-black text-chrome-400 uppercase tracking-widest mb-1">Tasa Ref.</p>
@@ -619,7 +619,7 @@ const SalesPOS: React.FC<{ store: any }> = ({ store }) => {
                           <div key={idx} className="space-y-2 group">
                             <div className="flex justify-between items-center">
                               <span className="font-black text-chrome-100 text-xs uppercase truncate max-w-[250px]">{item.name}</span>
-                              <span className="font-black text-blue-600 text-xs bg-blue-50 px-3 py-1 rounded-full whitespace-nowrap">{item.qty} unid.</span>
+                              <span className="font-black text-blue-400 text-xs bg-blue-500/15 px-3 py-1 rounded-full whitespace-nowrap">{item.qty} unid.</span>
                             </div>
                             <div className="h-1.5 w-full bg-metal-mid rounded-full overflow-hidden">
                                 <div 

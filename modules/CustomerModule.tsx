@@ -201,7 +201,7 @@ const CustomerModule: React.FC<{ store: any }> = ({ store }) => {
             </div>
             <button 
               onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
-              className={`p-2 rounded-xl transition-all ${showAdvancedFilters || filters.address || filters.dateStart || filters.nameExact ? 'bg-blue-50 text-blue-600' : 'text-chrome-500 hover:bg-metal-dark'}`}
+              className={`p-2 rounded-xl transition-all ${showAdvancedFilters || filters.address || filters.dateStart || filters.nameExact ? 'bg-blue-500/10 text-blue-400' : 'text-chrome-500 hover:bg-metal-dark'}`}
               title="Filtros Avanzados"
             >
               <Filter size={20}/>
@@ -209,7 +209,7 @@ const CustomerModule: React.FC<{ store: any }> = ({ store }) => {
           </div>
           <button 
             onClick={() => setShowAddModal(true)} 
-            className="btn-chrome px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-blue-700 shadow-lg shadow-blue-200 transition-all active:scale-95 w-full sm:w-auto"
+            className="btn-chrome px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-blue-700 shadow-lg shadow-blue-500/20 transition-all active:scale-95 w-full sm:w-auto"
           >
             <Plus size={20}/> Nuevo Cliente
           </button>
@@ -218,7 +218,7 @@ const CustomerModule: React.FC<{ store: any }> = ({ store }) => {
 
       {/* Panel de Filtros Avanzados */}
       {showAdvancedFilters && (
-        <div className="mb-8 bg-metal-mid p-6 rounded-[2rem] border border-blue-100 shadow-xl shadow-blue-50/50 animate-in slide-in-from-top-4 duration-300">
+        <div className="mb-8 bg-metal-mid p-6 rounded-[2rem] border border-blue-500/20 shadow-xl shadow-blue-500/5 animate-in slide-in-from-top-4 duration-300">
           <div className="flex justify-between items-center mb-4">
             <h4 className="text-[10px] font-black text-blue-600 uppercase tracking-[0.2em] flex items-center gap-2">
               <Filter size={14}/> Parámetros de Búsqueda Avanzada
@@ -233,7 +233,7 @@ const CustomerModule: React.FC<{ store: any }> = ({ store }) => {
               <input 
                 type="text" 
                 placeholder="Ej: Juan (no juan)..."
-                className="w-full px-4 py-2.5 bg-metal-dark border border-metal-border rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-blue-500/150 transition-all"
+                className="w-full px-4 py-2.5 bg-metal-dark border border-metal-border rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-blue-500/15 transition-all"
                 value={filters.nameExact}
                 onChange={(e) => setFilters({...filters, nameExact: e.target.value})}
               />
@@ -245,7 +245,7 @@ const CustomerModule: React.FC<{ store: any }> = ({ store }) => {
               <input 
                 type="text" 
                 placeholder="Ej: Urb. Los Olivos..."
-                className="w-full px-4 py-2.5 bg-metal-dark border border-metal-border rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-blue-500/150 transition-all"
+                className="w-full px-4 py-2.5 bg-metal-dark border border-metal-border rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-blue-500/15 transition-all"
                 value={filters.address}
                 onChange={(e) => setFilters({...filters, address: e.target.value})}
               />
@@ -256,7 +256,7 @@ const CustomerModule: React.FC<{ store: any }> = ({ store }) => {
               </label>
               <input 
                 type="date" 
-                className="w-full px-4 py-2.5 bg-metal-dark border border-metal-border rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-blue-500/150 transition-all"
+                className="w-full px-4 py-2.5 bg-metal-dark border border-metal-border rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-blue-500/15 transition-all"
                 value={filters.dateStart}
                 onChange={(e) => setFilters({...filters, dateStart: e.target.value})}
               />
@@ -267,7 +267,7 @@ const CustomerModule: React.FC<{ store: any }> = ({ store }) => {
               </label>
               <input 
                 type="date" 
-                className="w-full px-4 py-2.5 bg-metal-dark border border-metal-border rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-blue-500/150 transition-all"
+                className="w-full px-4 py-2.5 bg-metal-dark border border-metal-border rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-blue-500/15 transition-all"
                 value={filters.dateEnd}
                 onChange={(e) => setFilters({...filters, dateEnd: e.target.value})}
               />
@@ -282,15 +282,15 @@ const CustomerModule: React.FC<{ store: any }> = ({ store }) => {
           <div className="p-5 border-b bg-metal-dark/50 flex justify-between items-center">
             <span className="font-black text-chrome-500 text-[10px] uppercase tracking-widest">Base de Datos ({filteredCustomers.length})</span>
             {(searchTerm || filters.address || filters.dateStart || filters.nameExact) && (
-              <span className="text-[8px] font-black text-blue-500 uppercase bg-blue-50 px-2 py-0.5 rounded-full">Filtrado</span>
+              <span className="text-[8px] font-black text-blue-400 uppercase bg-blue-500/15 px-2 py-0.5 rounded-full">Filtrado</span>
             )}
           </div>
-          <div className="flex-1 overflow-y-auto divide-y divide-slate-50 custom-scrollbar">
+          <div className="flex-1 overflow-y-auto divide-y divide-metal-border custom-scrollbar">
             {filteredCustomers.map((c: Customer) => (
               <button 
                 key={c.id} 
                 onClick={() => { setSelectedCustomer(c); setPlateFilter(null); }}
-                className={`w-full p-5 flex items-center gap-4 text-left transition-all hover:bg-metal-dark ${selectedCustomer?.id === c.id ? 'bg-blue-50/50 border-r-4 border-blue-600' : ''}`}
+                className={`w-full p-5 flex items-center gap-4 text-left transition-all hover:bg-metal-dark ${selectedCustomer?.id === c.id ? 'bg-blue-500/10 border-r-4 border-blue-500' : ''}`}
               >
                 <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-lg font-black uppercase transition-colors ${selectedCustomer?.id === c.id ? 'btn-chrome' : 'bg-metal-mid text-chrome-500'}`}>
                   {c.name.charAt(0)}
@@ -306,7 +306,7 @@ const CustomerModule: React.FC<{ store: any }> = ({ store }) => {
             ))}
             {filteredCustomers.length === 0 && (
               <div className="p-10 text-center flex flex-col items-center">
-                <Search size={32} className="text-slate-200 mb-2"/>
+                <Search size={32} className="text-chrome-500 mb-2"/>
                 <p className="text-[10px] font-black text-chrome-500 uppercase tracking-widest">No hay coincidencias</p>
               </div>
             )}
@@ -359,7 +359,7 @@ const CustomerModule: React.FC<{ store: any }> = ({ store }) => {
                 </div>
                 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-10">
-                   <div className="bg-blue-50/50 p-5 rounded-2xl border border-blue-100/50">
+                   <div className="bg-blue-500/5 p-5 rounded-2xl border border-blue-500/20">
                       <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-1">Valor de Vida (LTV)</p>
                       <p className="text-2xl font-black text-blue-700">${calculateTotalLTV(selectedCustomer.id).toFixed(2)}</p>
                    </div>
@@ -442,7 +442,7 @@ const CustomerModule: React.FC<{ store: any }> = ({ store }) => {
                     ))
                   ) : (
                     <div className="col-span-full py-10 border-2 border-dashed border-metal-border rounded-2xl text-center">
-                      <Car size={32} className="mx-auto text-slate-200 mb-2" />
+                      <Car size={32} className="mx-auto text-chrome-500 mb-2" />
                       <p className="text-[10px] font-black text-chrome-500 uppercase tracking-widest">No hay vehículos registrados en el historial</p>
                     </div>
                   )}
@@ -452,10 +452,10 @@ const CustomerModule: React.FC<{ store: any }> = ({ store }) => {
               {/* Pestañas de Historial */}
               <div className="bg-metal-mid rounded-2xl border border-metal-border shadow-sm flex-1 flex flex-col overflow-hidden">
                 <div className="flex p-2 bg-metal-dark/50 border-b">
-                  <button onClick={() => setActiveTab('repairs')} className={`flex-1 flex items-center justify-center gap-2 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'repairs' ? 'bg-metal-mid text-blue-600 shadow-sm border border-metal-border' : 'text-chrome-500 hover:text-chrome-200'}`}>
+                  <button onClick={() => setActiveTab('repairs')} className={`flex-1 flex items-center justify-center gap-2 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'repairs' ? 'bg-metal-mid text-blue-400 shadow-sm border border-metal-border' : 'text-chrome-500 hover:text-chrome-200'}`}>
                     <History size={16}/> Historial Taller
                   </button>
-                  <button onClick={() => setActiveTab('sales')} className={`flex-1 flex items-center justify-center gap-2 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'sales' ? 'bg-metal-mid text-blue-600 shadow-sm border border-metal-border' : 'text-chrome-500 hover:text-chrome-200'}`}>
+                  <button onClick={() => setActiveTab('sales')} className={`flex-1 flex items-center justify-center gap-2 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'sales' ? 'bg-metal-mid text-blue-400 shadow-sm border border-metal-border' : 'text-chrome-500 hover:text-chrome-200'}`}>
                     <ShoppingBag size={16}/> Compras Directas
                   </button>
                 </div>
@@ -464,7 +464,7 @@ const CustomerModule: React.FC<{ store: any }> = ({ store }) => {
                   {activeTab === 'repairs' && (
                     <div className="space-y-6">
                       {plateFilter && (
-                        <div className="bg-blue-600 p-4 rounded-2xl flex justify-between items-center shadow-lg shadow-blue-100 mb-2">
+                        <div className="bg-blue-600 p-4 rounded-2xl flex justify-between items-center shadow-lg shadow-blue-500/20 mb-2">
                           <div className="flex items-center gap-3 text-white">
                             <Filter size={18} /> 
                             <span className="text-[10px] font-black uppercase tracking-widest">Filtrando historial de: {plateFilter}</span>
@@ -479,7 +479,7 @@ const CustomerModule: React.FC<{ store: any }> = ({ store }) => {
                         getCustomerRepairs(selectedCustomer.id).reverse().map((r: VehicleRepair) => (
                           <div key={r.id} className="p-6 border border-metal-border rounded-[2rem] flex items-center justify-between hover:border-blue-100 hover:bg-metal-dark/50 transition-all group">
                             <div className="flex items-center gap-5">
-                              <div className="w-14 h-14 rounded-2xl bg-blue-50 flex items-center justify-center text-blue-600 group-hover:scale-110 transition-transform">
+                              <div className="w-14 h-14 rounded-2xl bg-blue-500/15 flex items-center justify-center text-blue-400 group-hover:scale-110 transition-transform">
                                 <Wrench size={24}/>
                               </div>
                               <div>
@@ -488,7 +488,7 @@ const CustomerModule: React.FC<{ store: any }> = ({ store }) => {
                                   <span className={`text-[9px] font-black uppercase tracking-tighter px-3 py-1 rounded-full ${r.status === 'Entregado' ? 'bg-green-500/15 text-green-400' : 'bg-blue-500/15 text-blue-400'}`}>{r.status}</span>
                                 </div>
                                 <div className="flex items-center gap-4 mt-2">
-                                  <span className="text-[10px] font-black text-blue-600 bg-blue-50 px-2 py-0.5 rounded-lg border border-blue-100">PLACA: {r.plate}</span>
+                                  <span className="text-[10px] font-black text-blue-400 bg-blue-500/15 px-2 py-0.5 rounded-lg border border-blue-500/20">PLACA: {r.plate}</span>
                                   <span className="text-[10px] font-bold text-chrome-500 uppercase">{new Date(r.createdAt).toLocaleDateString()}</span>
                                 </div>
                               </div>
@@ -606,7 +606,7 @@ const CustomerModule: React.FC<{ store: any }> = ({ store }) => {
               </div>
               <div className="flex gap-4 pt-2">
                 <button type="button" onClick={() => setShowEditModal(false)} className="flex-1 py-4 text-chrome-500 font-black uppercase text-[10px] tracking-widest hover:text-chrome-200 transition-colors">Cancelar</button>
-                <button type="submit" className="flex-[1.5] bg-blue-600 hover:bg-blue-500 text-white py-4 rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-lg shadow-blue-600/25 transition-all active:scale-95">Guardar Cambios</button>
+                <button type="submit" className="flex-[1.5] btn-chrome py-4 rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-lg shadow-blue-600/25 transition-all active:scale-95">Guardar Cambios</button>
               </div>
             </form>
           </div>
@@ -691,7 +691,7 @@ const CustomerModule: React.FC<{ store: any }> = ({ store }) => {
               </div>
               <div className="flex gap-4 pt-2">
                 <button type="button" onClick={() => setShowAddVehicleModal(false)} className="flex-1 py-4 text-chrome-500 font-black uppercase text-[10px] tracking-widest hover:text-chrome-200 transition-colors">Cancelar</button>
-                <button type="submit" className="flex-[1.5] bg-blue-600 hover:bg-blue-500 text-white py-4 rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-lg shadow-blue-600/25 transition-all active:scale-95 flex items-center justify-center gap-2">
+                <button type="submit" className="flex-[1.5] btn-chrome py-4 rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-lg shadow-blue-600/25 transition-all active:scale-95 flex items-center justify-center gap-2">
                   <Car size={14}/> Registrar Vehículo
                 </button>
               </div>

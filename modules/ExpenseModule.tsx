@@ -49,7 +49,7 @@ const ExpenseModule: React.FC<{ store: any }> = ({ store }) => {
               <div className="relative">
                  <textarea 
                   required 
-                  className="w-full px-4 py-3 bg-metal-dark border border-metal-border rounded-2xl text-sm font-bold outline-none focus:ring-4 focus:ring-blue-500/15/50 h-24 resize-none transition-all" 
+                  className="w-full px-4 py-3 bg-metal-dark border border-metal-border rounded-2xl text-sm font-bold outline-none focus:ring-4 focus:ring-blue-500/15 h-24 resize-none transition-all" 
                   value={formData.description || ''} 
                   onChange={(e) => setFormData({...formData, description: e.target.value})}
                   onBlur={handleDescriptionBlur}
@@ -79,7 +79,7 @@ const ExpenseModule: React.FC<{ store: any }> = ({ store }) => {
             </div>
             <div>
               <label className="block text-[10px] font-black text-chrome-500 uppercase tracking-widest mb-1.5 ml-1">Monto ($)</label>
-              <input required type="number" step="0.01" className="w-full px-4 py-3 bg-metal-dark border border-metal-border rounded-2xl text-lg font-black outline-none focus:ring-4 focus:ring-blue-500/15/50" value={formData.amount || ''} onChange={(e) => setFormData({...formData, amount: Number(e.target.value)})} />
+              <input required type="number" step="0.01" className="w-full px-4 py-3 bg-metal-dark border border-metal-border rounded-2xl text-lg font-black outline-none focus:ring-4 focus:ring-blue-500/15" value={formData.amount || ''} onChange={(e) => setFormData({...formData, amount: Number(e.target.value)})} />
             </div>
             <button type="submit" className="w-full btn-chrome py-4 rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-black transition-all shadow-lg">
               Registrar Egreso
@@ -94,16 +94,16 @@ const ExpenseModule: React.FC<{ store: any }> = ({ store }) => {
           </div>
           <div className="space-y-3 overflow-y-auto max-h-[70vh] pr-2 custom-scrollbar">
             {store.expenses.slice().reverse().map((exp: Expense) => (
-              <div key={exp.id} className="bg-metal-mid p-5 rounded-3xl border border-metal-border shadow-sm flex items-center justify-between hover:border-blue-200 transition-all group">
+              <div key={exp.id} className="bg-metal-mid p-5 rounded-3xl border border-metal-border shadow-sm flex items-center justify-between hover:border-blue-500/30 transition-all group">
                 <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-2xl bg-metal-dark flex items-center justify-center text-chrome-500 group-hover:bg-blue-50 group-hover:text-blue-400 transition-colors">
+                  <div className="w-12 h-12 rounded-2xl bg-metal-dark flex items-center justify-center text-chrome-500 group-hover:bg-blue-500/10 group-hover:text-blue-400 transition-colors">
                     <Wallet size={20}/>
                   </div>
                   <div>
                     <h5 className="font-black text-chrome-100 leading-tight uppercase text-sm">{exp.description}</h5>
                     <div className="flex items-center gap-2 mt-1">
                        <span className="text-[10px] font-bold text-chrome-500">{exp.date}</span>
-                       <span className="w-1 h-1 rounded-full bg-slate-200"></span>
+                       <span className="w-1 h-1 rounded-full bg-metal-border"></span>
                        <span className="text-[10px] font-black text-blue-500 uppercase tracking-widest">{exp.category}</span>
                     </div>
                   </div>
@@ -116,7 +116,7 @@ const ExpenseModule: React.FC<{ store: any }> = ({ store }) => {
             ))}
             {store.expenses.length === 0 && (
               <div className="text-center py-20 bg-metal-dark/50 rounded-3xl border-2 border-dashed border-metal-border">
-                <Wallet size={48} className="mx-auto mb-4 text-slate-200" />
+                <Wallet size={48} className="mx-auto mb-4 text-chrome-500" />
                 <p className="font-bold text-chrome-500">No hay egresos registrados</p>
               </div>
             )}

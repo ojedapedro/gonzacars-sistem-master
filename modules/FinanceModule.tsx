@@ -282,7 +282,7 @@ const FinanceModule: React.FC<{ store: any }> = ({ store }) => {
                 {(historyStart || historyEnd) && (
                    <button 
                       onClick={() => { setHistoryStart(''); setHistoryEnd(''); }}
-                      className="p-2 text-chrome-500 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all h-[34px]"
+                       className="p-2 text-chrome-500 hover:text-red-400 hover:bg-red-500/10 rounded-xl transition-all h-[34px]"
                       title="Limpiar Filtros"
                    >
                       <X size={16} />
@@ -296,13 +296,13 @@ const FinanceModule: React.FC<{ store: any }> = ({ store }) => {
                <thead>
                  <tr className="bg-metal-dark text-[10px] font-black text-chrome-500 uppercase tracking-widest">
                    <th className="px-8 py-4">Fecha</th>
-                   <th className="px-8 py-4 text-right text-emerald-600">Ingresos Totales</th>
-                   <th className="px-8 py-4 text-right text-red-500">Egresos Totales</th>
+                    <th className="px-8 py-4 text-right text-emerald-400">Ingresos Totales</th>
+                    <th className="px-8 py-4 text-right text-red-400">Egresos Totales</th>
                    <th className="px-8 py-4 text-right">Balance Neto</th>
                    <th className="px-8 py-4 text-center">Acciones</th>
                  </tr>
                </thead>
-               <tbody className="divide-y divide-slate-50">
+                <tbody className="divide-y divide-metal-border">
                  {filteredHistory.map((day) => (
                    <tr key={day.date} className="hover:bg-metal-dark/50 transition-colors">
                      <td className="px-8 py-5">
@@ -317,21 +317,21 @@ const FinanceModule: React.FC<{ store: any }> = ({ store }) => {
                        </div>
                      </td>
                      <td className="px-8 py-5 text-right">
-                       <p className="font-black text-emerald-600 text-sm">+${day.revenue.toFixed(2)}</p>
+                        <p className="font-black text-emerald-400 text-sm">+${day.revenue.toFixed(2)}</p>
                        <p className="text-[9px] text-chrome-500 font-bold uppercase">POS: ${day.pos.toFixed(2)} | Taller: ${day.workshop.toFixed(2)}</p>
                      </td>
                      <td className="px-8 py-5 text-right">
-                       <p className="font-black text-red-500 text-sm">-${day.expenses.toFixed(2)}</p>
+                        <p className="font-black text-red-400 text-sm">-${day.expenses.toFixed(2)}</p>
                      </td>
                      <td className="px-8 py-5 text-right">
-                       <span className={`px-4 py-1.5 rounded-full text-xs font-black tracking-tight ${day.balance >= 0 ? 'bg-blue-50 text-blue-600' : 'bg-red-50 text-red-600'}`}>
+                        <span className={`px-4 py-1.5 rounded-full text-xs font-black tracking-tight ${day.balance >= 0 ? 'bg-blue-500/15 text-blue-400' : 'bg-red-500/15 text-red-400'}`}>
                          {day.balance >= 0 ? '+' : ''}${day.balance.toFixed(2)}
                        </span>
                      </td>
                      <td className="px-8 py-5 text-center">
                        <button 
                          onClick={() => goToDate(day.date)}
-                         className="p-2 text-chrome-500 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all"
+                          className="p-2 text-chrome-500 hover:text-blue-400 hover:bg-blue-500/10 rounded-xl transition-all"
                          title="Ver Detalles y Auditoría IA"
                        >
                          <Eye size={18} />
@@ -373,8 +373,8 @@ const FinanceModule: React.FC<{ store: any }> = ({ store }) => {
           )}
 
           {aiAnalysis && !aiError && (
-            <div className="bg-metal-mid p-8 rounded-2xl border border-blue-100 mb-8 shadow-xl relative overflow-hidden animate-in fade-in duration-500">
-              <h4 className="text-xs font-black text-blue-800 uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
+            <div className="bg-metal-mid p-8 rounded-2xl border border-blue-500/20 mb-8 shadow-xl relative overflow-hidden animate-in fade-in duration-500">
+              <h4 className="text-xs font-black text-blue-300 uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
                 <Sparkles size={18} className="text-blue-500" /> Diagnóstico Financiero Estratégico
               </h4>
               <div className="text-chrome-200 text-sm whitespace-pre-line leading-relaxed">{aiAnalysis}</div>
@@ -386,12 +386,14 @@ const FinanceModule: React.FC<{ store: any }> = ({ store }) => {
               <h4 className="absolute top-8 left-8 text-[10px] font-black text-chrome-500 uppercase tracking-widest z-10">Flujo de Caja por Fuente</h4>
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={chartData} margin={{ top: 40, right: 10, left: 0, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9"/>
-                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 10, fontWeight: 900, fill: '#94a3b8'}} />
-                  <YAxis axisLine={false} tickLine={false} tick={{fontSize: 10, fill: '#94a3b8'}} />
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#2a2f42"/>
+                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 10, fontWeight: 900, fill: '#8890a6'}} />
+                  <YAxis axisLine={false} tickLine={false} tick={{fontSize: 10, fill: '#8890a6'}} />
                   <Tooltip 
-                    cursor={{fill: '#f8fafc'}} 
-                    contentStyle={{borderRadius: '1.5rem', border: 'none', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)', fontWeight: 'bold'}} 
+                    cursor={{fill: 'rgba(255,255,255,0.04)'}} 
+                    contentStyle={{ borderRadius: '12px', border: '1px solid #2a2f42', background: '#10131a', boxShadow: '0 8px 32px rgba(0,0,0,0.5)' }}
+                    itemStyle={{ color: '#e8eaf0', fontWeight: 700 }}
+                    labelStyle={{ color: '#8890a6', fontSize: '12px', fontWeight: 600 }}
                     formatter={(value: number) => [`$${value.toFixed(2)}`, 'Monto']}
                   />
                   <Bar dataKey="value" radius={[12, 12, 0, 0]} barSize={50} />
@@ -405,7 +407,7 @@ const FinanceModule: React.FC<{ store: any }> = ({ store }) => {
                   <Pie data={categoryData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={100} innerRadius={60} paddingAngle={5} label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}>
                     {categoryData.map((_, index) => <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />)}
                   </Pie>
-                  <Tooltip />
+                  <Tooltip contentStyle={{ borderRadius: '12px', border: '1px solid #2a2f42', background: '#10131a' }} itemStyle={{ color: '#e8eaf0', fontWeight: 700 }} formatter={(v: number) => `$${v.toFixed(2)}`} />
                 </PieChart>
               </ResponsiveContainer>
             </div>
@@ -464,15 +466,15 @@ const FinanceModule: React.FC<{ store: any }> = ({ store }) => {
 };
 
 const StatCard: React.FC<{ title: string, amount: number, icon: React.ReactNode, rate: number, isBalance?: boolean }> = ({ title, amount, icon, rate, isBalance }) => (
-  <div className="bg-metal-mid p-6 rounded-[2rem] border border-metal-border shadow-sm hover:border-blue-200 transition-all group">
+  <div className="bg-metal-mid p-6 rounded-[2rem] border border-metal-border shadow-sm hover:border-blue-500/40 transition-all group">
     <div className="flex justify-between items-start mb-4">
       <span className="text-[10px] font-black text-chrome-500 uppercase tracking-widest">{title}</span>
       <div className="p-2.5 bg-metal-dark rounded-xl">{icon}</div>
     </div>
-    <div className={`text-3xl font-black tracking-tighter leading-none ${isBalance ? (amount >= 0 ? 'text-blue-600' : 'text-red-600') : 'text-chrome-100'}`}>
+    <div className={`text-3xl font-black tracking-tighter leading-none ${isBalance ? (amount >= 0 ? 'text-blue-400' : 'text-red-400') : 'text-chrome-100'}`}>
       {amount < 0 ? `-$${Number(Math.abs(amount)).toFixed(2)}` : `$${Number(amount).toFixed(2)}`}
     </div>
-    <div className="flex items-center justify-between mt-3 pt-3 border-t border-slate-50">
+    <div className="flex items-center justify-between mt-3 pt-3 border-t border-metal-border">
       <p className="text-[10px] text-chrome-500 font-bold">{(Number(amount) * Number(rate || 0)).toLocaleString('es-VE')} Bs</p>
       <span className="text-[8px] font-black text-chrome-500 uppercase italic">Tasa: {rate}</span>
     </div>
