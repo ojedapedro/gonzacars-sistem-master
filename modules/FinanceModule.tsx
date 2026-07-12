@@ -16,6 +16,13 @@ const FinanceModule: React.FC<{ store: any }> = ({ store }) => {
   const [aiAnalysis, setAiAnalysis] = useState<string | null>(null);
   const [isAiLoading, setIsAiLoading] = useState(false);
 
+  // IA Modal State
+  const [showAiModal, setShowAiModal] = useState(false);
+  const [aiPeriodType, setAiPeriodType] = useState<'daily' | 'range' | 'all'>('daily');
+  const [aiDate, setAiDate] = useState(new Date().toISOString().split('T')[0]);
+  const [aiStartDate, setAiStartDate] = useState('');
+  const [aiEndDate, setAiEndDate] = useState('');
+
   // 1. Calcular Ingresos del Taller (Base: Flujo de Caja / Abonos recibidos)
   const workshopIncome = useMemo(() => {
     const repairs: VehicleRepair[] = Array.isArray(store.repairs) ? store.repairs : [];
@@ -123,22 +130,41 @@ const FinanceModule: React.FC<{ store: any }> = ({ store }) => {
 
   const handleAiAudit = async () => {
     setIsAiLoading(true);
+    setShowAiModal(false);
     try {
-      let sales = totalRevenue;
-      let purchases = totalPurchases;
-      let expenses = totalExpenses;
-      let bal = balance;
-      let period = viewMode === 'general' ? 'Historial General' : `Diario (${filterDate})`;
+      let sales = 0;
+      let purchases = 0;
+      let expenses = 0;
+      let bal = 0;
+      let period = '';
 
-      if (viewMode === 'history') {
-        const hRev = filteredHistory.reduce((acc, d) => acc + d.revenue, 0);
-        const hExp = filteredHistory.reduce((acc, d) => acc + d.expenses, 0);
+      if (aiPeriodType === 'daily') {
+        const dRev = historyData.find(d => d.date === aiDate)?.revenue || 0;
+        const dExp = historyData.find(d => d.date === aiDate)?.expenses || 0;
+        sales = dRev;
+        expenses = dExp;
+        bal = dRev - dExp;
+        period = `Diario (${aiDate})`;
+      } else if (aiPeriodType === 'range') {
+        const relevantHistory = historyData.filter(day => {
+          if (aiStartDate && day.date < aiStartDate) return false;
+          if (aiEndDate && day.date > aiEndDate) return false;
+          return true;
+        });
+        const hRev = relevantHistory.reduce((acc, d) => acc + d.revenue, 0);
+        const hExp = relevantHistory.reduce((acc, d) => acc + d.expenses, 0);
         sales = hRev;
-        purchases = 0; // We combine purchases and expenses in history view as 'Egresos'
         expenses = hExp;
         bal = hRev - hExp;
-        if (historyStart && historyEnd) period = `Rango de fechas: ${historyStart} al ${historyEnd} (Semanal/Mensual)`;
-        else period = 'Todo el historial de fechas';
+        if (aiStartDate && aiEndDate) period = `Rango de fechas: ${aiStartDate} al ${aiEndDate} (Semanal/Mensual)`;
+        else period = 'Rango personalizado';
+      } else {
+        const hRev = historyData.reduce((acc, d) => acc + d.revenue, 0);
+        const hExp = historyData.reduce((acc, d) => acc + d.expenses, 0);
+        sales = hRev;
+        expenses = hExp;
+        bal = hRev - hExp;
+        period = 'Historial General (Todo el tiempo)';
       }
 
       const analysis = await generateFinanceAudit({
@@ -199,7 +225,7 @@ const FinanceModule: React.FC<{ store: any }> = ({ store }) => {
           {viewMode === 'daily' && (
             <input type="date" className="px-4 py-2 bg-metal-dark border border-metal-border rounded-xl text-xs font-black outline-none" value={filterDate} onChange={(e) => setFilterDate(e.target.value)} />
           )}
-          <button onClick={handleAiAudit} disabled={isAiLoading} className="btn-chrome px-6 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 hover:bg-blue-700 shadow-lg disabled:opacity-50">
+          <button onClick={() => setShowAiModal(true)} disabled={isAiLoading} className="btn-chrome px-6 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 hover:bg-blue-700 shadow-lg disabled:opacity-50">
               {isAiLoading ? <Loader2 size={14} className="animate-spin"/> : <Sparkles size={14} className="text-blue-200"/>} Análisis Financiero IA
           </button>
         </div>
@@ -354,6 +380,53 @@ const FinanceModule: React.FC<{ store: any }> = ({ store }) => {
                   <Tooltip />
                 </PieChart>
               </ResponsiveContainer>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showAiModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-metal-mid border border-metal-border rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-300">
+            <div className="p-6 border-b border-metal-border flex justify-between items-center">
+              <h3 className="text-lg font-black text-chrome-100 uppercase tracking-widest flex items-center gap-2"><Sparkles className="text-blue-500" size={18}/> Configurar Análisis IA</h3>
+              <button onClick={() => setShowAiModal(false)} className="text-chrome-500 hover:text-white transition-colors"><X size={20}/></button>
+            </div>
+            <div className="p-6 space-y-6">
+              <div>
+                <label className="block text-xs font-black text-chrome-400 uppercase tracking-widest mb-2">Tipo de Periodo</label>
+                <select className="w-full bg-metal-dark border border-metal-border rounded-xl px-4 py-3 text-chrome-100 text-sm focus:border-blue-500 outline-none" value={aiPeriodType} onChange={(e) => setAiPeriodType(e.target.value as any)}>
+                  <option value="daily">Diario (Un día específico)</option>
+                  <option value="range">Semanal / Mensual (Rango de fechas)</option>
+                  <option value="all">Historial Completo (Todo el tiempo)</option>
+                </select>
+              </div>
+
+              {aiPeriodType === 'daily' && (
+                <div>
+                  <label className="block text-xs font-black text-chrome-400 uppercase tracking-widest mb-2">Seleccione Fecha</label>
+                  <input type="date" className="w-full bg-metal-dark border border-metal-border rounded-xl px-4 py-3 text-chrome-100 text-[13px] font-bold focus:border-blue-500 outline-none" value={aiDate} onChange={(e) => setAiDate(e.target.value)} />
+                </div>
+              )}
+
+              {aiPeriodType === 'range' && (
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-[10px] font-black text-chrome-400 uppercase tracking-widest mb-2">Desde</label>
+                    <input type="date" className="w-full bg-metal-dark border border-metal-border rounded-xl px-4 py-3 text-chrome-100 text-[13px] font-bold focus:border-blue-500 outline-none" value={aiStartDate} onChange={(e) => setAiStartDate(e.target.value)} />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-black text-chrome-400 uppercase tracking-widest mb-2">Hasta</label>
+                    <input type="date" className="w-full bg-metal-dark border border-metal-border rounded-xl px-4 py-3 text-chrome-100 text-[13px] font-bold focus:border-blue-500 outline-none" value={aiEndDate} onChange={(e) => setAiEndDate(e.target.value)} />
+                  </div>
+                </div>
+              )}
+            </div>
+            <div className="p-6 bg-metal-dark/50 border-t border-metal-border flex justify-end gap-3">
+              <button onClick={() => setShowAiModal(false)} className="px-5 py-2.5 rounded-xl text-xs font-black text-chrome-500 hover:text-white uppercase tracking-widest">Cancelar</button>
+              <button onClick={handleAiAudit} className="btn-chrome px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest flex items-center gap-2 hover:bg-blue-600 shadow-lg shadow-blue-900/20">
+                <Sparkles size={14} className="text-blue-200" /> Generar Informe
+              </button>
             </div>
           </div>
         </div>
