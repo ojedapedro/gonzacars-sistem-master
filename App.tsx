@@ -194,10 +194,12 @@ const App: React.FC = () => {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoginLoading(true);
-    await new Promise(r => setTimeout(r, 400)); // subtle UX delay
-    const success = store.login(username, password);
+    await new Promise(r => setTimeout(r, 200)); // subtle UX delay
+    const result = store.login(username, password);
     setLoginLoading(false);
-    if (!success) {
+    if (result === 'loading') {
+      toast.warning('Conectando...', 'El sistema aún está cargando los datos. Intenta de nuevo en un momento.');
+    } else if (!result) {
       setLoginError(true);
       setTimeout(() => setLoginError(false), 3000);
     }
@@ -227,6 +229,28 @@ const App: React.FC = () => {
     if (role === 'cajero') return ['dashboard', 'sales', 'expenses', 'finance', 'payroll'].includes(tab);
     return false;
   };
+
+  /* ---- INITIAL FIREBASE LOADING SCREEN ---- */
+  if (!store.currentUser && store.isInitialLoading) {
+    return (
+      <div className="h-screen w-screen flex flex-col items-center justify-center animated-gradient relative overflow-hidden gap-6">
+        <div className="absolute top-[-15%] left-[-10%] w-[45%] h-[45%] bg-blue-600/15 rounded-full blur-[130px] pointer-events-none animate-pulse-slow" />
+        <div className="absolute bottom-[-10%] right-[-10%] w-[35%] h-[35%] bg-cyan-500/10 rounded-full blur-[110px] pointer-events-none animate-pulse-slow" style={{ animationDelay: '1.5s' }} />
+        <div className="w-20 h-20 bg-white/5 rounded-2xl flex items-center justify-center border border-white/8 p-2.5 animate-pulse-slow" style={{ boxShadow: '0 8px 24px rgba(0,0,0,0.4)' }}>
+          <img src={LOGO_URL} alt="Gonzacars Logo" className="w-full h-full object-contain" />
+        </div>
+        <div className="text-center">
+          <h1 className="text-2xl font-black uppercase tracking-tight text-gradient" style={{ fontFamily: 'Outfit, sans-serif' }}>Gonzacars C.A.</h1>
+          <p className="text-chrome-500 text-[10px] font-bold uppercase tracking-[0.2em] mt-2">Conectando con el servidor…</p>
+        </div>
+        <div className="flex gap-1.5">
+          <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+          <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+          <div className="w-2 h-2 bg-blue-300 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+        </div>
+      </div>
+    );
+  }
 
   /* ---- LOGIN SCREEN ---- */
   if (!store.currentUser) {

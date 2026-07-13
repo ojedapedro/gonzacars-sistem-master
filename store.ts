@@ -13,6 +13,7 @@ const STORED_USER = localStorage.getItem('gz_active_user');
 export const useGonzacarsStore = () => {
   const [loading, setLoading] = useState(false);
   const [isProcessingBatch, setIsProcessingBatch] = useState(false);
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState<User | null>(() => {
     try {
       return STORED_USER ? JSON.parse(STORED_USER) : null;
@@ -75,7 +76,7 @@ export const useGonzacarsStore = () => {
     setExchangeRate(45.5);
   };
 
-  const login = (username: string, pass: string): boolean => {
+  const login = (username: string, pass: string): boolean | 'loading' => {
     if (isDemoMode) {
       if (username === 'admin' && pass === 'admin') {
          const demoAdmin: User = { id: 'demo-admin', username: 'admin', name: 'Admin Demo', role: 'administrador' };
@@ -90,6 +91,9 @@ export const useGonzacarsStore = () => {
       }
       return false;
     }
+
+    // If Firebase hasn't finished loading users yet, signal to wait
+    if (isInitialLoading) return 'loading';
 
     const found = users.find(u => 
       u.username && 
@@ -173,7 +177,7 @@ export const useGonzacarsStore = () => {
     return Math.floor(100000000000 + Math.random() * 900000000000).toString();
   };
 
-  const refreshData = async () => {
+  const refreshData = async (isInitial = false) => {
     if (isDemoMode) return;
     if (isProcessingBatch) return;
 
@@ -213,11 +217,12 @@ export const useGonzacarsStore = () => {
       console.error("Error cargando datos de Firebase:", error);
     } finally {
       setLoading(false);
+      if (isInitial) setIsInitialLoading(false);
     }
   };
 
   useEffect(() => {
-    refreshData();
+    refreshData(true);
   }, []);
 
   const saveToFirebase = async (collectionName: string, item: any) => {
@@ -552,7 +557,7 @@ export const useGonzacarsStore = () => {
   const saveUrl = (u: string) => {};
 
   return {
-    loading, isProcessingBatch, sheetsUrl, saveUrl, refreshData,
+    loading, isProcessingBatch, isInitialLoading, sheetsUrl, saveUrl, refreshData,
     currentUser, login, loginWithGoogle, logout,
     users, addUser, updateUser, deleteUser,
     exchangeRate, setExchangeRate: updateExchangeRate,
