@@ -2,6 +2,7 @@
 import React, { useState, useMemo, useRef } from 'react';
 import { Package, Search, Edit3, AlertCircle, Barcode, RotateCw, History, X, Truck, Calendar, DollarSign, ArrowRight, Filter, ChevronDown, ArrowUp, ArrowDown, ClipboardCheck, TrendingUp, TrendingDown, AlertTriangle, Save, FileSpreadsheet, UploadCloud, CheckCircle, ShieldCheck, Download } from 'lucide-react';
 import { Product, Purchase, Sale } from '../types';
+import { ProductModal } from '../components/ProductModal';
 
 // Declare XLSX globally to bypass build resolution issues
 declare const XLSX: any;
@@ -25,6 +26,8 @@ const InventoryModule: React.FC<{ store: any }> = ({ store }) => {
   const [showHistoryModal, setShowHistoryModal] = useState(false);
   const [showAuditModal, setShowAuditModal] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [isProductModalOpen, setIsProductModalOpen] = useState(false);
+  const [modalInitialData, setModalInitialData] = useState<Partial<Product> | undefined>(undefined);
   
   // Audit Form State
   const [physicalCount, setPhysicalCount] = useState<number>(0);
@@ -136,6 +139,14 @@ const InventoryModule: React.FC<{ store: any }> = ({ store }) => {
       store.updateProductName(id, newName);
     }
     setEditingNameId(null);
+  };
+
+  const handleSaveProduct = async (productData: Partial<Product>) => {
+    if (productData.id) {
+      await store.updateProductFull(productData.id, productData);
+    } else {
+      await store.addProduct(productData as Product);
+    }
   };
 
   const regenerateBarcode = (id: string) => {
@@ -409,6 +420,12 @@ const InventoryModule: React.FC<{ store: any }> = ({ store }) => {
              <ShieldCheck size={18}/> Auditoría Compras
           </button>
           <button 
+             onClick={() => { setModalInitialData(undefined); setIsProductModalOpen(true); }}
+             className="bg-blue-600 text-white px-5 py-3 rounded-2xl font-black uppercase text-[10px] tracking-widest flex items-center gap-2 hover:bg-blue-700 shadow-lg shadow-blue-100 transition-all active:scale-95"
+          >
+             <Package size={18}/> Nuevo Producto
+          </button>
+          <button 
              onClick={() => setShowBulkModal(true)}
              className="bg-emerald-600 text-white px-5 py-3 rounded-2xl font-black uppercase text-[10px] tracking-widest flex items-center gap-2 hover:bg-emerald-700 shadow-lg shadow-emerald-100 transition-all active:scale-95"
           >
@@ -620,8 +637,8 @@ const InventoryModule: React.FC<{ store: any }> = ({ store }) => {
                 <td className="px-8 py-5">
                   <div className="flex justify-center gap-1">
                     <button 
-                      onClick={() => { setEditingId(p.id); setNewPrice(p.price); }} 
-                      title="Editar Precio"
+                      onClick={() => { setModalInitialData(p); setIsProductModalOpen(true); }} 
+                      title="Editar Producto"
                       className="p-2 text-chrome-500 hover:text-blue-400 hover:bg-blue-500/10 rounded-xl transition-all"
                     >
                       <Edit3 size={18}/>
@@ -1075,6 +1092,13 @@ const InventoryModule: React.FC<{ store: any }> = ({ store }) => {
           </div>
         </div>
       )}
+      {/* Product Modal */}
+      <ProductModal
+        isOpen={isProductModalOpen}
+        onClose={() => setIsProductModalOpen(false)}
+        onSave={handleSaveProduct}
+        initialData={modalInitialData}
+      />
     </div>
   );
 };

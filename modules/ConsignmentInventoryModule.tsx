@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useRef } from 'react';
 import { Package, Search, Edit3, Barcode, X, Filter, ChevronDown, ArrowUp, ArrowDown, FileSpreadsheet, UploadCloud, CheckCircle, AlertCircle, TrendingUp, Download } from 'lucide-react';
 import { Product } from '../types';
+import { ProductModal } from '../components/ProductModal';
 
 declare const XLSX: any;
 
@@ -13,6 +14,9 @@ const ConsignmentInventoryModule: React.FC<{ store: any }> = ({ store }) => {
   const [newBarcode, setNewBarcode] = useState('');
   const [newName, setNewName] = useState('');
   
+  const [isProductModalOpen, setIsProductModalOpen] = useState(false);
+  const [modalInitialData, setModalInitialData] = useState<Partial<Product> | undefined>(undefined);
+
   // Filtering & Sorting States
   const [categoryFilter, setCategoryFilter] = useState('');
   const [sortConfig, setSortConfig] = useState<{ key: keyof Product; direction: 'asc' | 'desc' }>({ key: 'name', direction: 'asc' });
@@ -96,6 +100,14 @@ const ConsignmentInventoryModule: React.FC<{ store: any }> = ({ store }) => {
       store.updateProductName(id, newName);
     }
     setEditingNameId(null);
+  };
+
+  const handleSaveProduct = async (productData: Partial<Product>) => {
+    if (productData.id) {
+      await store.updateProductFull(productData.id, productData);
+    } else {
+      await store.addProduct(productData as Product);
+    }
   };
 
   const handleDownloadExcel = () => {
@@ -290,6 +302,12 @@ const ConsignmentInventoryModule: React.FC<{ store: any }> = ({ store }) => {
              <Download size={18}/> Descargar Plantilla
           </button>
           <button 
+             onClick={() => { setModalInitialData(undefined); setIsProductModalOpen(true); }}
+             className="bg-blue-600 text-white px-5 py-3 rounded-2xl font-black uppercase text-[10px] tracking-widest flex items-center gap-2 hover:bg-blue-700 shadow-lg shadow-blue-100 transition-all active:scale-95"
+          >
+             <Package size={18}/> Nueva Consignación
+          </button>
+          <button 
              onClick={() => setShowBulkModal(true)}
              className="bg-purple-600 text-white px-5 py-3 rounded-2xl font-black uppercase text-[10px] tracking-widest flex items-center gap-2 hover:bg-purple-700 shadow-lg shadow-purple-100 transition-all active:scale-95"
           >
@@ -433,7 +451,16 @@ const ConsignmentInventoryModule: React.FC<{ store: any }> = ({ store }) => {
                       onKeyDown={(e) => e.key === 'Enter' && handlePriceUpdate(p.id)}
                     />
                   ) : (
-                    <span className="font-black text-purple-400 text-lg tracking-tighter">${Number(p.price || 0).toFixed(2)}</span>
+                    <div className="flex items-center justify-end gap-3">
+                      <span className="font-black text-purple-400 text-lg tracking-tighter">${Number(p.price || 0).toFixed(2)}</span>
+                      <button 
+                        onClick={() => { setModalInitialData(p); setIsProductModalOpen(true); }} 
+                        title="Editar Producto"
+                        className="p-2 text-chrome-500 hover:text-blue-400 hover:bg-blue-500/10 rounded-xl transition-all"
+                      >
+                        <Edit3 size={18}/>
+                      </button>
+                    </div>
                   )}
                 </td>
                 <td className="px-8 py-5 text-center">
@@ -617,6 +644,15 @@ const ConsignmentInventoryModule: React.FC<{ store: any }> = ({ store }) => {
           </div>
         </div>
       )}
+
+      {/* Product Modal */}
+      <ProductModal
+        isOpen={isProductModalOpen}
+        onClose={() => setIsProductModalOpen(false)}
+        onSave={handleSaveProduct}
+        initialData={modalInitialData}
+        isConsignmentMode={true}
+      />
     </div>
   );
 };

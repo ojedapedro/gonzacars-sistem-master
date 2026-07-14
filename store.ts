@@ -272,7 +272,23 @@ export const useGonzacarsStore = () => {
       setRepairs(repSnap.docs.map(d => ({ id: d.id, ...d.data() } as VehicleRepair)));
       setSales(salesSnap.docs.map(d => ({ id: d.id, ...d.data() } as Sale)));
       setPurchases(purchSnap.docs.map(d => ({ id: d.id, ...d.data() } as Purchase)));
-      setExpenses(expSnap.docs.map(d => ({ id: d.id, ...d.data() } as Expense)));
+      const migratedExpenses = expSnap.docs.map(d => {
+        const exp = { id: d.id, ...d.data() } as any;
+        if (!exp.expenseType) {
+          const oldCategory = exp.category;
+          if (['Limpieza', 'Víveres', 'Imprevistos', 'Repuestos Adicionales', 'Herramientas', 'Mantenimiento', 'Viáticos'].includes(oldCategory)) {
+            exp.expenseType = 'Gasto Variable';
+          } else if (['Oficina', 'Impuesto', 'Aseo Urbano', 'Internet', 'Alquiler', 'Luz', 'Agua', 'Impuestos', 'Nómina Administrativa', 'Servicios de Aseo'].includes(oldCategory)) {
+            exp.expenseType = 'Gasto Fijo';
+            if (oldCategory === 'Impuesto') exp.category = 'Impuestos';
+            if (oldCategory === 'Aseo Urbano') exp.category = 'Servicios de Aseo';
+          } else {
+            exp.expenseType = 'Gasto Variable'; // Default fallback
+          }
+        }
+        return exp as Expense;
+      });
+      setExpenses(migratedExpenses);
       setEmployees(empSnap.docs.map(d => ({ id: d.id, ...d.data() } as Employee)));
       setPayroll(paySnap.docs.map(d => ({ id: d.id, ...d.data() } as PayrollRecord)));
 
@@ -603,6 +619,11 @@ export const useGonzacarsStore = () => {
     await saveToFirebase('Expenses', newExpense);
   };
 
+  const updateExpense = async (id: string, updatedData: Partial<Expense>) => {
+    setExpenses(prev => prev.map(e => e.id === id ? { ...e, ...updatedData, amount: updatedData.amount !== undefined ? roundTo(updatedData.amount, 4) : e.amount } as Expense : e));
+    await saveToFirebase('Expenses', { id, ...updatedData });
+  };
+
   const addEmployee = async (emp: Employee) => {
     const newEmp = { 
       ...emp, 
@@ -664,6 +685,19 @@ export const useGonzacarsStore = () => {
         await updateProduct(id, { price: newPrice }, item, getUserContext());
       } else {
         const updated = { ...item, price: newPrice };
+        setInventory(inventory.map(p => p.id === id ? updated : p));
+      }
+      await refreshData();
+    }
+  };
+
+  const updateProductFull = async (id: string, updatedFields: Partial<Product>) => {
+    const item = inventory.find(p => p.id === id);
+    if (item) {
+      if (!isDemoMode) {
+        await updateProduct(id, updatedFields, item, getUserContext());
+      } else {
+        const updated = { ...item, ...updatedFields };
         setInventory(inventory.map(p => p.id === id ? updated : p));
       }
       await refreshData();
@@ -753,12 +787,12 @@ export const useGonzacarsStore = () => {
     users, addUser, updateUser, deleteUser,
     exchangeRate, setExchangeRate: updateExchangeRate,
     customers, addCustomer, updateCustomer, deleteCustomer,
-    inventory, setInventory, addProduct, updateInventoryPrice, updateProductName, updateInventoryQuantity, updateStockBatch, updateBarcode, 
+    inventory, setInventory, addProduct, updateInventoryPrice, updateProductName, updateInventoryQuantity, updateStockBatch, updateBarcode, updateProductFull, 
     generateBarcode,
     repairs, setRepairs, addRepair, updateRepair, deleteRepair, deleteVehicleByPlate,
     sales, setSales, addSale,
     purchases, setPurchases, registerPurchaseBatch, payCreditInvoice,
-    expenses, setExpenses, addExpense,
+    expenses, setExpenses, addExpense, updateExpense,
     employees, setEmployees, addEmployee, updateEmployee, deleteEmployee,
     payroll, setPayroll, addPayrollRecord,
     runGlobalAudit,

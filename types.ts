@@ -28,8 +28,10 @@ export interface Product {
   barcode: string;
   name: string;
   category: string;
+  brand?: string;
   quantity: number;
   cost: number;
+  profitMargin?: number;
   price: number;
   lastEntry: string;
   warehouseStock?: Record<string, number>;
@@ -67,6 +69,7 @@ export interface VehicleRepair {
   serviceType: string;
   mechanicId: string;
   evidencePhotos?: string[];
+  mileage?: number;
   items: RepairItem[];
   installments?: Installment[];
   createdAt: string;
@@ -107,10 +110,16 @@ export interface Purchase {
   warehouseId?: string;
 }
 
+export type ExpenseType = 'Gasto Fijo' | 'Gasto Variable';
+export type FixedExpenseCategory = 'Alquiler' | 'Luz' | 'Agua' | 'Internet' | 'Impuestos' | 'Nómina Administrativa' | 'Servicios de Aseo' | 'Oficina';
+export type VariableExpenseCategory = 'Repuestos Adicionales' | 'Herramientas' | 'Mantenimiento' | 'Viáticos' | 'Imprevistos' | 'Limpieza' | 'Víveres';
+export type ExpenseCategory = FixedExpenseCategory | VariableExpenseCategory | string; // string for backwards compatibility until migrated
+
 export interface Expense {
   id: string;
   date: string;
-  category: 'Limpieza' | 'Oficina' | 'Víveres' | 'Impuesto' | 'Aseo Urbano' | 'Internet';
+  expenseType?: ExpenseType;
+  category: ExpenseCategory;
   description: string;
   amount: number;
 }
@@ -118,10 +127,12 @@ export interface Expense {
 export interface Employee {
   id: string;
   name: string;
-  role: 'Mecánico' | 'Vendedor' | 'Administrador';
+  role: 'Mecánico' | 'Vendedor' | 'Administrador' | 'Gerente' | 'Ayudante de Mecánica' | 'Administradora' | 'Contadora';
   baseSalary: number;
   commissionRate: number;
 }
+
+export type PayrollPeriod = 'Semanal' | 'Quincenal' | 'Mensual';
 
 export interface PayrollRecord {
   id: string;
@@ -130,5 +141,6 @@ export interface PayrollRecord {
   baseSalary: number;
   commission: number;
   total: number;
+  period?: PayrollPeriod;
   status: 'Pendiente' | 'Pagado';
 }

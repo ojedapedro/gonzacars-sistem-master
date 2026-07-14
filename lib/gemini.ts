@@ -35,7 +35,10 @@ export const suggestExpenseCategory = async (description: string) => {
   const ai = getGeminiClient();
   const response = await ai.models.generateContent({
     model: 'gemini-1.5-flash',
-    contents: `Dada la descripción de un gasto: "${description}", clasifícalo en una de estas categorías: Limpieza, Oficina, Víveres, Impuesto, Aseo Urbano, Internet. Responde SOLO con el nombre de la categoría.`,
+    contents: `Dada la descripción de un gasto: "${description}", clasifícalo en una de estas categorías según su tipo:
+Fijos: Alquiler, Luz, Agua, Internet, Impuestos, Nómina Administrativa, Servicios de Aseo, Oficina.
+Variables: Repuestos Adicionales, Herramientas, Mantenimiento, Viáticos, Imprevistos, Limpieza, Víveres.
+Responde SOLO con el formato "Tipo|Categoría" (Ejemplo: "Gasto Fijo|Internet" o "Gasto Variable|Herramientas").`,
   });
   return response.text?.trim();
 };

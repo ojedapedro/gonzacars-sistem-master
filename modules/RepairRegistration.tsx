@@ -130,7 +130,7 @@ const RepairRegistration: React.FC<{ store: any; toast?: any }> = ({ store, toas
     try {
       const compressed = await compressImage(file);
       const photos = formData.evidencePhotos || [];
-      if (photos.length < 4) set('evidencePhotos', [...photos, compressed]);
+      if (photos.length < 5) set('evidencePhotos', [...photos, compressed]);
       toast?.success('Foto agregada', 'Imagen comprimida y lista.');
     } catch {
       toast?.error('Error de imagen', 'No se pudo procesar la foto. Intente con otra.');
@@ -229,6 +229,20 @@ const RepairRegistration: React.FC<{ store: any; toast?: any }> = ({ store, toas
             </Field>
             <Field label="Año" required>
               <input required type="number" className={inputCls} placeholder={String(new Date().getFullYear())} min={1950} max={new Date().getFullYear() + 1} value={formData.year || ''} onChange={e => set('year', Number(e.target.value))} />
+            </Field>
+            <Field label="Kilometraje (km)" hint="Solo números positivos">
+              <input
+                type="number"
+                className={inputCls}
+                placeholder="Ej: 85000"
+                min={0}
+                step={1}
+                value={formData.mileage ?? ''}
+                onChange={e => {
+                  const val = Math.abs(Math.floor(Number(e.target.value)));
+                  set('mileage', isNaN(val) ? undefined : val);
+                }}
+              />
             </Field>
             <Field label="Responsable de recepción" required>
               <input required type="text" className={inputCls} placeholder="Nombre del técnico…" value={formData.responsible || ''} onChange={e => set('responsible', e.target.value)} />
@@ -336,7 +350,7 @@ const RepairRegistration: React.FC<{ store: any; toast?: any }> = ({ store, toas
                 </div>
               ))}
 
-              {photoCount < 4 && !isCompressing && (
+              {photoCount < 5 && !isCompressing && (
                 <label className="cursor-pointer flex flex-col items-center justify-center aspect-square border-2 border-dashed border-metal-border hover:border-cyan-400 rounded-xl hover:bg-cyan-500/10 transition-all text-chrome-500 hover:text-cyan-400 group bg-metal-mid/50">
                   <Plus size={22} className="mb-1 group-hover:scale-110 transition-transform"/>
                   <span className="text-[9px] font-black uppercase">Foto {photoCount + 1}</span>
@@ -351,15 +365,15 @@ const RepairRegistration: React.FC<{ store: any; toast?: any }> = ({ store, toas
                 </div>
               )}
 
-              {Array.from({ length: Math.max(0, 3 - photoCount - (isCompressing ? 1 : 0)) }).map((_, i) => (
+              {Array.from({ length: Math.max(0, 4 - photoCount - (isCompressing ? 1 : 0)) }).map((_, i) => (
                 <div key={`ph-${i}`} className="aspect-square border-2 border-dashed border-metal-border rounded-xl bg-metal-dark/50"/>
               ))}
             </div>
 
             <div className="flex items-center justify-between">
-              <p className="text-[10px] text-chrome-500 font-medium">Las imágenes se comprimen automáticamente (máx. 4 fotos)</p>
-              <span className={`text-[10px] font-black px-2.5 py-1 rounded-full ${photoCount === 4 ? 'bg-emerald-500/15 text-emerald-400' : 'bg-metal-mid text-chrome-200'}`}>
-                {photoCount} / 4
+              <p className="text-[10px] text-chrome-500 font-medium">Las imágenes se comprimen automáticamente (máx. 5 fotos)</p>
+              <span className={`text-[10px] font-black px-2.5 py-1 rounded-full ${photoCount === 5 ? 'bg-emerald-500/15 text-emerald-400' : 'bg-metal-mid text-chrome-200'}`}>
+                {photoCount} / 5
               </span>
             </div>
           </div>
