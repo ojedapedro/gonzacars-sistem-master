@@ -32,6 +32,9 @@ export interface Product {
   cost: number;
   price: number;
   lastEntry: string;
+  warehouseStock?: Record<string, number>;
+  isConsignment?: boolean;
+  consignmentProvider?: string;
 }
 
 export interface RepairItem {
@@ -76,10 +79,15 @@ export interface Sale {
   customerId?: string;
   date: string;
   customerName: string;
-  items: { productId: string; name: string; price: number; quantity: number }[];
+  items: { productId: string; name: string; price: number; quantity: number; cost?: number }[];
   total: number;
   iva: boolean;
   paymentMethod: PaymentMethod;
+  // Profitability fields — injected automatically at time of sale
+  totalCost?: number;       // Sum of (cost * qty) for all items
+  profit?: number;          // total - totalCost
+  profitMargin?: number;    // (profit / totalCost) * 100
+  hasConsignment?: boolean; // True if any item came from consignment inventory
 }
 
 export interface Purchase {
@@ -96,6 +104,7 @@ export interface Purchase {
   total: number;
   type: 'Contado' | 'Crédito';
   status: 'Pendiente' | 'Cerrada' | 'Pagada';
+  warehouseId?: string;
 }
 
 export interface Expense {

@@ -22,7 +22,8 @@ const PurchaseRegistry: React.FC<{ store: any }> = ({ store }) => {
     date: new Date().toISOString().split('T')[0],
     provider: '',
     invoiceNumber: '',
-    type: 'Contado' as 'Contado' | 'Crédito'
+    type: 'Contado' as 'Contado' | 'Crédito',
+    warehouseId: 'gonzacars'
   });
 
   // Ítem actual que se está redactando
@@ -113,7 +114,8 @@ const PurchaseRegistry: React.FC<{ store: any }> = ({ store }) => {
         quantity: item.quantity,
         total: item.price * item.quantity,
         type: invoiceHeader.type,
-        status: status
+        status: status,
+        warehouseId: invoiceHeader.warehouseId
     }));
 
     try {
@@ -127,7 +129,8 @@ const PurchaseRegistry: React.FC<{ store: any }> = ({ store }) => {
           date: new Date().toISOString().split('T')[0],
           provider: '',
           invoiceNumber: '',
-          type: 'Contado'
+          type: 'Contado',
+          warehouseId: 'gonzacars'
         });
         setInvoiceItems([]);
         if (status === 'Cerrada') setActiveTab('history');
@@ -345,6 +348,22 @@ const PurchaseRegistry: React.FC<{ store: any }> = ({ store }) => {
 
             <div className="bg-metal-mid rounded-2xl p-8 border border-metal-border shadow-sm space-y-4">
               <div className="space-y-1.5">
+                <label className="text-[10px] font-black text-chrome-500 uppercase tracking-widest ml-1">Almacén de Destino</label>
+                <select 
+                  className="w-full px-5 py-4 bg-metal-dark border border-metal-border rounded-2xl font-black uppercase text-[10px] tracking-widest outline-none appearance-none cursor-pointer" 
+                  value={invoiceHeader.warehouseId} 
+                  onChange={(e) => setInvoiceHeader({...invoiceHeader, warehouseId: e.target.value})} 
+                  disabled={isSaving}
+                >
+                  <option value="gonzacars">Gonzacars (Principal)</option>
+                  <option value="externo_1">Almacén Externo 1</option>
+                  <option value="externo_2">Almacén Externo 2</option>
+                  <option value="externo_3">Almacén Externo 3</option>
+                  <option value="externo_4">Almacén Externo 4</option>
+                </select>
+              </div>
+
+              <div className="space-y-1.5">
                 <label className="text-[10px] font-black text-chrome-500 uppercase tracking-widest ml-1">Forma de Pago</label>
                 <select className="w-full px-5 py-4 bg-metal-dark border border-metal-border rounded-2xl font-black uppercase text-[10px] tracking-widest outline-none appearance-none cursor-pointer" value={invoiceHeader.type} onChange={(e) => setInvoiceHeader({...invoiceHeader, type: e.target.value as 'Contado' | 'Crédito'})} disabled={isSaving}>
                   <option value="Contado">Pago Inmediato (Contado)</option>
@@ -502,6 +521,7 @@ const PurchaseRegistry: React.FC<{ store: any }> = ({ store }) => {
                           <tr className="text-[10px] font-black text-chrome-500 uppercase tracking-widest border-b border-metal-border">
                             <th className="pb-3 pl-4">Producto</th>
                             <th className="pb-3 text-center">Categoría</th>
+                            <th className="pb-3 text-center">Almacén</th>
                             <th className="pb-3 text-center">Cantidad</th>
                             <th className="pb-3 text-right pr-4">Costo Unit.</th>
                             <th className="pb-3 text-right pr-4">Subtotal</th>
@@ -512,6 +532,13 @@ const PurchaseRegistry: React.FC<{ store: any }> = ({ store }) => {
                             <tr key={item.id} className="border-b border-metal-border last:border-0 hover:bg-metal-mid transition-colors">
                               <td className="py-3 pl-4 font-bold text-chrome-200 uppercase">{item.productName}</td>
                               <td className="py-3 text-center text-chrome-400 font-medium uppercase text-[10px]">{item.category}</td>
+                              <td className="py-3 text-center text-chrome-400 font-bold uppercase text-[10px]">
+                                {item.warehouseId === 'gonzacars' ? 'Gonzacars' : 
+                                 item.warehouseId === 'externo_1' ? 'Ext 1' : 
+                                 item.warehouseId === 'externo_2' ? 'Ext 2' : 
+                                 item.warehouseId === 'externo_3' ? 'Ext 3' : 
+                                 item.warehouseId === 'externo_4' ? 'Ext 4' : 'Gonzacars'}
+                              </td>
                               <td className="py-3 text-center font-black text-chrome-100 bg-metal-mid rounded-lg border border-metal-border w-16 mx-auto block mt-1">{item.quantity}</td>
                               <td className="py-3 text-right pr-4 text-chrome-400">${item.price.toFixed(2)}</td>
                               <td className="py-3 text-right pr-4 font-black text-chrome-100">${item.total.toFixed(2)}</td>

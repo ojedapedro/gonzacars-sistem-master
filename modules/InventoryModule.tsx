@@ -10,10 +10,11 @@ const InventoryModule: React.FC<{ store: any }> = ({ store }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingBarcodeId, setEditingBarcodeId] = useState<string | null>(null);
-  const [editingNameId, setEditingNameId] = useState<string | null>(null); // State for editing name
+  const [editingNameId, setEditingNameId] = useState<string | null>(null);
   const [newPrice, setNewPrice] = useState(0);
   const [newBarcode, setNewBarcode] = useState('');
-  const [newName, setNewName] = useState(''); // State for new name value
+  const [newName, setNewName] = useState('');
+  const [inventoryTab, setInventoryTab] = useState<'own' | 'all'>('own'); // Tab to filter own vs all
   
   // Filtering & Sorting States
   const [categoryFilter, setCategoryFilter] = useState('');
@@ -27,7 +28,22 @@ const InventoryModule: React.FC<{ store: any }> = ({ store }) => {
   
   // Audit Form State
   const [physicalCount, setPhysicalCount] = useState<number>(0);
+  const [auditWarehouseStock, setAuditWarehouseStock] = useState({
+    gonzacars: 0,
+    externo_1: 0,
+    externo_2: 0,
+    externo_3: 0,
+    externo_4: 0
+  });
   const [auditReason, setAuditReason] = useState('');
+
+  const handleWarehouseAuditChange = (wId: string, val: number) => {
+    const updated = { ...auditWarehouseStock, [wId]: Math.max(0, val) };
+    setAuditWarehouseStock(updated);
+    const keys = ['gonzacars', 'externo_1', 'externo_2', 'externo_3', 'externo_4'] as const;
+    const sum = keys.reduce((acc, key) => acc + (updated[key] || 0), 0);
+    setPhysicalCount(sum);
+  };
 
   // Bulk Import States
   const [showBulkModal, setShowBulkModal] = useState(false);
@@ -53,11 +69,12 @@ const InventoryModule: React.FC<{ store: any }> = ({ store }) => {
     const term = searchTerm.trim().toLowerCase();
     
     let result = (store.inventory || []).filter((p: Product) => {
-      // FIX CRÍTICO: Asegurar que las propiedades sean strings antes de usar toLowerCase
-      // Esto previene pantalla blanca si barcode o name vienen como números desde Sheets
       const name = String(p.name || '').toLowerCase();
       const category = String(p.category || '').toLowerCase();
       const barcode = String(p.barcode || '').toLowerCase();
+      
+      // Tab filter: 'own' excludes consignment products
+      if (inventoryTab === 'own' && (p as any).isConsignment) return false;
       
       return name.includes(term) || category.includes(term) || barcode.includes(term);
     });
@@ -133,6 +150,20 @@ const InventoryModule: React.FC<{ store: any }> = ({ store }) => {
   const openAudit = (product: Product) => {
     setSelectedProduct(product);
     setPhysicalCount(product.quantity); // Default to current system stock
+    const ws = product.warehouseStock || {
+      gonzacars: product.quantity,
+      externo_1: 0,
+      externo_2: 0,
+      externo_3: 0,
+      externo_4: 0
+    };
+    setAuditWarehouseStock({
+      gonzacars: ws.gonzacars || 0,
+      externo_1: ws.externo_1 || 0,
+      externo_2: ws.externo_2 || 0,
+      externo_3: ws.externo_3 || 0,
+      externo_4: ws.externo_4 || 0
+    });
     setAuditReason('');
     setShowAuditModal(true);
   };
@@ -142,7 +173,7 @@ const InventoryModule: React.FC<{ store: any }> = ({ store }) => {
     if (physicalCount < 0) return alert("La cantidad no puede ser negativa");
     
     // Update store
-    store.updateInventoryQuantity(selectedProduct.id, physicalCount);
+    store.updateInventoryQuantity(selectedProduct.id, physicalCount, auditWarehouseStock);
     
     alert(`Inventario ajustado correctamente.\nSistema: ${selectedProduct.quantity} -> Físico: ${physicalCount}\nMotivo: ${auditReason || 'Auditoría de rutina'}`);
     setShowAuditModal(false);
@@ -360,8 +391,8 @@ const InventoryModule: React.FC<{ store: any }> = ({ store }) => {
     <div className="p-8">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
         <div>
-          <h3 className="text-3xl font-black text-chrome-100 tracking-tighter uppercase">Control de Inventario</h3>
-          <p className="text-chrome-400 font-medium">Gestión de stock, precios y auditoría de abastecimiento</p>
+          <h3 className="text-3xl font-black text-chrome-100 tracking-tighter uppercase">Inventario General Gonzacars</h3>
+          <p className="text-chrome-400 font-medium">Gestión de stock propio, precios y auditoría de abastecimiento</p>
         </div>
         <div className="flex gap-4 w-full md:w-auto">
           <button 
@@ -394,6 +425,26 @@ const InventoryModule: React.FC<{ store: any }> = ({ store }) => {
             />
           </div>
         </div>
+      </div>
+
+      {/* Inventory Type Tabs */}
+      <div className="flex items-center gap-2 mb-4 bg-metal-mid p-1.5 rounded-2xl border border-metal-border w-fit shadow-sm">
+        <button
+          onClick={() => setInventoryTab('own')}
+          className={`px-5 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
+            inventoryTab === 'own' ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/25' : 'text-chrome-500 hover:text-chrome-200'
+          }`}
+        >
+          Stock Propio
+        </button>
+        <button
+          onClick={() => setInventoryTab('all')}
+          className={`px-5 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
+            inventoryTab === 'all' ? 'bg-metal-dark text-chrome-200 shadow-sm' : 'text-chrome-500 hover:text-chrome-200'
+          }`}
+        >
+          Todo el inventario
+        </button>
       </div>
 
       {/* Filters Bar */}
@@ -503,19 +554,50 @@ const InventoryModule: React.FC<{ store: any }> = ({ store }) => {
                          <div className="font-black text-chrome-100 uppercase text-sm tracking-tight">{p.name}</div>
                          <Edit3 size={12} className="text-chrome-500 opacity-0 group-hover/name:opacity-100 transition-opacity" />
                        </div>
-                       <div className="text-[10px] text-chrome-500 font-black uppercase tracking-widest mt-0.5">{p.category}</div>
+                       <div className="flex items-center gap-2 mt-0.5">
+                         <div className="text-[10px] text-chrome-500 font-black uppercase tracking-widest">{p.category}</div>
+                         {(p as any).isConsignment && (
+                           <span className="text-[8px] bg-purple-500/20 text-purple-400 border border-purple-500/30 px-1.5 py-0.5 rounded-full font-black uppercase tracking-widest">Consig.</span>
+                         )}
+                       </div>
                     </div>
                   )}
                 </td>
                 <td className="px-8 py-5">
-                  <div className="flex items-center justify-center gap-2">
-                    <input 
-                      type="number" 
-                      className={`w-16 px-2 py-1.5 border rounded-xl text-xs font-black text-center outline-none transition-all ${p.quantity <= 5 ? 'bg-red-500/10 border-red-500/30 text-red-400 focus:ring-4 focus:ring-red-500/15' : 'bg-metal-dark border-metal-border text-chrome-200 focus:ring-4 focus:ring-blue-500/15'}`}
-                      value={p.quantity}
-                      onChange={(e) => handleQuantityUpdate(p.id, Number(e.target.value))}
-                    />
-                    {p.quantity <= 5 && <AlertCircle size={14} className="text-red-500 animate-pulse" />}
+                  <div className="flex flex-col items-center">
+                    <div className="flex items-center justify-center gap-2">
+                      <input 
+                        type="number" 
+                        className={`w-16 px-2 py-1.5 border rounded-xl text-xs font-black text-center outline-none transition-all ${p.quantity <= 5 ? 'bg-red-500/10 border-red-500/30 text-red-400 focus:ring-4 focus:ring-red-500/15' : 'bg-metal-dark border-metal-border text-chrome-200 focus:ring-4 focus:ring-blue-500/15'}`}
+                        value={p.quantity}
+                        onChange={(e) => handleQuantityUpdate(p.id, Number(e.target.value))}
+                      />
+                      {p.quantity <= 5 && <AlertCircle size={14} className="text-red-500 animate-pulse" />}
+                    </div>
+                    
+                    {/* Desglose de Stock por Almacén */}
+                    <div className="mt-2 text-[9px] font-black text-chrome-400 bg-metal-dark/40 border border-metal-border rounded-xl p-2 w-32 space-y-1 text-left">
+                      <div className="flex justify-between">
+                        <span>Gonzacars:</span>
+                        <span className="text-chrome-200 font-bold">{p.warehouseStock?.gonzacars ?? p.quantity}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Ext 1:</span>
+                        <span className="text-chrome-200 font-bold">{p.warehouseStock?.externo_1 ?? 0}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Ext 2:</span>
+                        <span className="text-chrome-200 font-bold">{p.warehouseStock?.externo_2 ?? 0}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Ext 3:</span>
+                        <span className="text-chrome-200 font-bold">{p.warehouseStock?.externo_3 ?? 0}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Ext 4:</span>
+                        <span className="text-chrome-200 font-bold">{p.warehouseStock?.externo_4 ?? 0}</span>
+                      </div>
+                    </div>
                   </div>
                 </td>
                 <td className="px-8 py-5 text-right font-bold text-chrome-500 text-sm">${Number(p.cost || 0).toFixed(2)}</td>
@@ -902,16 +984,67 @@ const InventoryModule: React.FC<{ store: any }> = ({ store }) => {
                     </div>
                 </div>
 
-                <div className="space-y-1.5">
-                    <label className="text-[10px] font-black text-chrome-500 uppercase tracking-widest ml-1">Conteo Físico Real</label>
-                    <input 
-                      type="number" 
-                      autoFocus
-                      className="w-full px-6 py-4 bg-metal-mid border-2 border-metal-border rounded-2xl outline-none focus:border-orange-500 text-center font-black text-2xl"
-                      value={physicalCount}
-                      onChange={(e) => setPhysicalCount(Number(e.target.value))}
-                    />
-                </div>
+                 <div className="space-y-3 bg-metal-dark/50 p-4 rounded-2xl border border-metal-border">
+                     <p className="text-[10px] font-black text-chrome-400 uppercase tracking-widest text-center border-b border-metal-border pb-2 mb-2">Conteo por Almacén</p>
+                     
+                     <div className="grid grid-cols-2 gap-4">
+                       <div className="space-y-1">
+                         <label className="text-[9px] font-black text-chrome-500 uppercase tracking-widest">Gonzacars (P)</label>
+                         <input 
+                           type="number" 
+                           className="w-full px-3 py-2 bg-metal-dark border border-metal-border rounded-xl text-center font-black text-sm text-chrome-100 outline-none focus:border-orange-500"
+                           value={auditWarehouseStock.gonzacars}
+                           onChange={(e) => handleWarehouseAuditChange('gonzacars', Number(e.target.value))}
+                         />
+                       </div>
+                       <div className="space-y-1">
+                         <label className="text-[9px] font-black text-chrome-500 uppercase tracking-widest">Ext 1</label>
+                         <input 
+                           type="number" 
+                           className="w-full px-3 py-2 bg-metal-dark border border-metal-border rounded-xl text-center font-black text-sm text-chrome-100 outline-none focus:border-orange-500"
+                           value={auditWarehouseStock.externo_1}
+                           onChange={(e) => handleWarehouseAuditChange('externo_1', Number(e.target.value))}
+                         />
+                       </div>
+                       <div className="space-y-1">
+                         <label className="text-[9px] font-black text-chrome-500 uppercase tracking-widest">Ext 2</label>
+                         <input 
+                           type="number" 
+                           className="w-full px-3 py-2 bg-metal-dark border border-metal-border rounded-xl text-center font-black text-sm text-chrome-100 outline-none focus:border-orange-500"
+                           value={auditWarehouseStock.externo_2}
+                           onChange={(e) => handleWarehouseAuditChange('externo_2', Number(e.target.value))}
+                         />
+                       </div>
+                       <div className="space-y-1">
+                         <label className="text-[9px] font-black text-chrome-500 uppercase tracking-widest">Ext 3</label>
+                         <input 
+                           type="number" 
+                           className="w-full px-3 py-2 bg-metal-dark border border-metal-border rounded-xl text-center font-black text-sm text-chrome-100 outline-none focus:border-orange-500"
+                           value={auditWarehouseStock.externo_3}
+                           onChange={(e) => handleWarehouseAuditChange('externo_3', Number(e.target.value))}
+                         />
+                       </div>
+                       <div className="col-span-2 space-y-1">
+                         <label className="text-[9px] font-black text-chrome-500 uppercase tracking-widest text-center block">Ext 4</label>
+                         <input 
+                           type="number" 
+                           className="w-2/3 mx-auto px-3 py-2 bg-metal-dark border border-metal-border rounded-xl text-center font-black text-sm text-chrome-100 outline-none focus:border-orange-500 block"
+                           value={auditWarehouseStock.externo_4}
+                           onChange={(e) => handleWarehouseAuditChange('externo_4', Number(e.target.value))}
+                         />
+                       </div>
+                     </div>
+                 </div>
+
+                 <div className="space-y-1.5">
+                     <label className="text-[10px] font-black text-chrome-500 uppercase tracking-widest ml-1">Conteo Físico Total</label>
+                     <input 
+                       type="number" 
+                       disabled
+                       className="w-full px-6 py-4 bg-metal-dark border-2 border-metal-border rounded-2xl text-center font-black text-2xl text-chrome-300 cursor-not-allowed"
+                       value={physicalCount}
+                     />
+                 </div>
 
                 <div className="space-y-1.5">
                     <label className="text-[10px] font-black text-chrome-500 uppercase tracking-widest ml-1">Motivo del Ajuste</label>

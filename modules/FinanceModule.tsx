@@ -115,6 +115,29 @@ const FinanceModule: React.FC<{ store: any }> = ({ store }) => {
     return history.sort((a, b) => new Date(b!.date).getTime() - new Date(a!.date).getTime());
   }, [store.sales, store.purchases, store.expenses, store.repairs]);
 
+  // 3b. Compute per-day profitability from sales that have cost/profit data
+  const getProfitabilityForDate = (date: string) => {
+    const daySales = store.sales.filter((s: any) => s.date && s.date.split('T')[0] === date);
+    const totalCost = daySales.reduce((acc: number, s: any) => acc + (Number(s.totalCost) || 0), 0);
+    const profit = daySales.reduce((acc: number, s: any) => acc + (Number(s.profit) || 0), 0);
+    const margin = totalCost > 0 ? (profit / totalCost) * 100 : 0;
+    const hasData = daySales.some((s: any) => s.totalCost !== undefined);
+    return { totalCost, profit, margin, hasData };
+  };
+
+  const currentProfitability = useMemo(() => {
+    const relevantSales = viewMode === 'daily'
+      ? store.sales.filter((s: any) => s.date && s.date.split('T')[0] === filterDate)
+      : viewMode === 'general'
+      ? store.sales
+      : [];
+    const totalCost = relevantSales.reduce((acc: number, s: any) => acc + (Number(s.totalCost) || 0), 0);
+    const profit = relevantSales.reduce((acc: number, s: any) => acc + (Number(s.profit) || 0), 0);
+    const margin = totalCost > 0 ? (profit / totalCost) * 100 : 0;
+    const consignmentSales = relevantSales.filter((s: any) => s.hasConsignment).length;
+    return { totalCost, profit, margin, consignmentSales };
+  }, [store.sales, viewMode, filterDate]);
+
   // 4. Filtrar Historial por Rango Seleccionado
   const filteredHistory = useMemo(() => {
     return historyData.filter(day => {
@@ -298,12 +321,16 @@ const FinanceModule: React.FC<{ store: any }> = ({ store }) => {
                    <th className="px-8 py-4">Fecha</th>
                     <th className="px-8 py-4 text-right text-emerald-400">Ingresos Totales</th>
                     <th className="px-8 py-4 text-right text-red-400">Egresos Totales</th>
+                   <th className="px-8 py-4 text-right text-blue-400">Ganancia Neta</th>
+                   <th className="px-8 py-4 text-right text-purple-400">Margen</th>
                    <th className="px-8 py-4 text-right">Balance Neto</th>
                    <th className="px-8 py-4 text-center">Acciones</th>
                  </tr>
                </thead>
                 <tbody className="divide-y divide-metal-border">
-                 {filteredHistory.map((day) => (
+                 {filteredHistory.map((day) => {
+                   const prof = getProfitabilityForDate(day.date);
+                   return (
                    <tr key={day.date} className="hover:bg-metal-dark/50 transition-colors">
                      <td className="px-8 py-5">
                        <div className="flex items-center gap-3">
@@ -324,6 +351,23 @@ const FinanceModule: React.FC<{ store: any }> = ({ store }) => {
                         <p className="font-black text-red-400 text-sm">-${day.expenses.toFixed(2)}</p>
                      </td>
                      <td className="px-8 py-5 text-right">
+                       {prof.hasData ? (
+                         <div>
+                           <p className={`font-black text-sm ${prof.profit >= 0 ? 'text-blue-400' : 'text-red-400'}`}>
+                             {prof.profit >= 0 ? '+' : ''}${prof.profit.toFixed(2)}
+                           </p>
+                           <p className="text-[9px] text-chrome-500 font-bold">Costo: ${prof.totalCost.toFixed(2)}</p>
+                         </div>
+                       ) : <span className="text-chrome-500 text-xs">—</span>}
+                     </td>
+                     <td className="px-8 py-5 text-right">
+                       {prof.hasData ? (
+                         <span className={`px-3 py-1 rounded-full text-xs font-black ${prof.margin >= 0 ? 'bg-purple-500/15 text-purple-400' : 'bg-red-500/15 text-red-400'}`}>
+                           {prof.margin.toFixed(1)}%
+                         </span>
+                       ) : <span className="text-chrome-500 text-xs">—</span>}
+                     </td>
+                     <td className="px-8 py-5 text-right">
                         <span className={`px-4 py-1.5 rounded-full text-xs font-black tracking-tight ${day.balance >= 0 ? 'bg-blue-500/15 text-blue-400' : 'bg-red-500/15 text-red-400'}`}>
                          {day.balance >= 0 ? '+' : ''}${day.balance.toFixed(2)}
                        </span>
@@ -338,10 +382,11 @@ const FinanceModule: React.FC<{ store: any }> = ({ store }) => {
                        </button>
                      </td>
                    </tr>
-                 ))}
+                   );
+                 })}
                  {filteredHistory.length === 0 && (
                    <tr>
-                     <td colSpan={5} className="py-20 text-center text-chrome-500 font-black uppercase tracking-widest text-xs">
+                     <td colSpan={7} className="py-20 text-center text-chrome-500 font-black uppercase tracking-widest text-xs">
                        {historyData.length === 0 ? "No hay historial registrado aún" : "No se encontraron movimientos en este rango de fechas"}
                      </td>
                    </tr>
@@ -359,6 +404,28 @@ const FinanceModule: React.FC<{ store: any }> = ({ store }) => {
             <StatCard title="Gastos Operativos" amount={totalExpenses} icon={<ArrowDownCircle className="text-orange-500"/>} rate={store.exchangeRate}/>
             <StatCard title="Balance Neto" amount={balance} icon={<DollarSign className="text-blue-500"/>} rate={store.exchangeRate} isBalance/>
           </div>
+
+          {/* Rentabilidad por ventas POS (admin only) */}
+          {store.currentUser?.role === 'administrador' && currentProfitability.totalCost > 0 && (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+              <div className="bg-red-500/10 border border-red-500/20 rounded-2xl p-5">
+                <p className="text-[9px] font-black text-chrome-500 uppercase tracking-widest mb-1">Costo de Ventas</p>
+                <p className="text-2xl font-black text-red-400 tracking-tighter">${currentProfitability.totalCost.toFixed(2)}</p>
+              </div>
+              <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-2xl p-5">
+                <p className="text-[9px] font-black text-chrome-500 uppercase tracking-widest mb-1">Ganancia Bruta</p>
+                <p className={`text-2xl font-black tracking-tighter ${currentProfitability.profit >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>${currentProfitability.profit.toFixed(2)}</p>
+              </div>
+              <div className="bg-blue-500/10 border border-blue-500/20 rounded-2xl p-5">
+                <p className="text-[9px] font-black text-chrome-500 uppercase tracking-widest mb-1">Margen sobre Costo</p>
+                <p className="text-2xl font-black text-blue-400 tracking-tighter">{currentProfitability.margin.toFixed(1)}%</p>
+              </div>
+              <div className="bg-purple-500/10 border border-purple-500/20 rounded-2xl p-5">
+                <p className="text-[9px] font-black text-chrome-500 uppercase tracking-widest mb-1">Ventas Consig.</p>
+                <p className="text-2xl font-black text-purple-400 tracking-tighter">{currentProfitability.consignmentSales}</p>
+              </div>
+            </div>
+          )}
 
           {aiError && (
             <div className="bg-red-500/10 p-6 rounded-2xl border border-red-500/30 mb-8 shadow-sm flex items-start gap-4 animate-in fade-in duration-300">

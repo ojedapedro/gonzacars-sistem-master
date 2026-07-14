@@ -83,7 +83,14 @@ const SalesPOS: React.FC<{ store: any }> = ({ store }) => {
 
   const processSale = () => {
     if (cart.length === 0) return;
-    
+
+    // Calculate profitability metrics
+    const totalCost = cart.reduce((acc, item) => acc + ((Number(item.product.cost) || 0) * item.quantity), 0);
+    const profit = total - totalCost;
+    const totalQty = cart.reduce((acc, item) => acc + item.quantity, 0);
+    const profitMargin = totalCost > 0 ? (profit / totalCost) * 100 : 0;
+    const hasConsignment = cart.some(item => (item.product as any).isConsignment === true);
+
     const newSale: Sale = {
       id: Math.random().toString(36).substr(2, 9).toUpperCase(),
       customerId: selectedCustomer?.id || '',
@@ -93,11 +100,16 @@ const SalesPOS: React.FC<{ store: any }> = ({ store }) => {
         productId: item.product.id,
         name: item.product.name,
         price: Number(item.product.price || 0),
+        cost: Number(item.product.cost || 0),
         quantity: item.quantity
       })),
       total,
       iva: ivaEnabled,
-      paymentMethod
+      paymentMethod,
+      totalCost,
+      profit,
+      profitMargin,
+      hasConsignment
     };
 
     store.addSale(newSale);
@@ -200,19 +212,37 @@ const SalesPOS: React.FC<{ store: any }> = ({ store }) => {
               <button 
                 key={p.id}
                 onClick={() => addToCart(p)}
-                className="bg-metal-mid p-5 rounded-3xl border border-metal-border hover:border-blue-500 hover:shadow-xl hover:shadow-blue-900/5 transition-all text-left flex flex-col justify-between group relative overflow-hidden"
+                className={`p-5 rounded-3xl border hover:shadow-xl transition-all text-left flex flex-col justify-between group relative overflow-hidden ${
+                  (p as any).isConsignment
+                    ? 'bg-purple-900/20 border-purple-500/30 hover:border-purple-400 hover:shadow-purple-900/10'
+                    : 'bg-metal-mid border-metal-border hover:border-blue-500 hover:shadow-blue-900/5'
+                }`}
               >
                 <div className="relative z-10">
-                  <div className="flex justify-between items-start">
-                    <span className="text-[9px] bg-metal-mid px-2.5 py-1 rounded-full font-black uppercase text-chrome-400 tracking-widest">{p.category}</span>
-                    {p.quantity <= 5 && <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>}
+                  <div className="flex justify-between items-start gap-1">
+                    <span className="text-[9px] bg-metal-mid px-2.5 py-1 rounded-full font-black uppercase text-chrome-400 tracking-widest truncate">{p.category}</span>
+                    <div className="flex items-center gap-1 shrink-0">
+                      {(p as any).isConsignment && (
+                        <span className="text-[8px] bg-purple-500/20 text-purple-400 border border-purple-500/30 px-1.5 py-0.5 rounded-full font-black uppercase tracking-widest whitespace-nowrap">Consig.</span>
+                      )}
+                      {p.quantity <= 5 && <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>}
+                    </div>
                   </div>
                   <h4 className="font-bold text-chrome-100 mt-3 truncate group-hover:text-blue-400 uppercase text-xs tracking-tight">{p.name}</h4>
                   <p className="text-[10px] text-chrome-500 font-bold uppercase mt-1">Stock: {p.quantity} unid.</p>
+                  {(p as any).consignmentProvider && (
+                    <p className="text-[9px] text-purple-400/70 font-bold uppercase mt-0.5 truncate">Prov: {(p as any).consignmentProvider}</p>
+                  )}
                 </div>
-                <div className="mt-6 flex items-end justify-between relative z-10">
-                  <p className="font-black text-blue-400 text-2xl tracking-tighter">${Number(p.price || 0).toFixed(2)}</p>
-                  <div className="w-8 h-8 rounded-xl bg-metal-dark flex items-center justify-center text-chrome-500 group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                <div className="mt-4 flex items-end justify-between relative z-10">
+                  <p className={`font-black text-2xl tracking-tighter ${
+                    (p as any).isConsignment ? 'text-purple-400' : 'text-blue-400'
+                  }`}>${Number(p.price || 0).toFixed(2)}</p>
+                  <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-chrome-500 transition-colors ${
+                    (p as any).isConsignment
+                      ? 'bg-metal-dark group-hover:bg-purple-600 group-hover:text-white'
+                      : 'bg-metal-dark group-hover:bg-blue-600 group-hover:text-white'
+                  }`}>
                     <Plus size={16} />
                   </div>
                 </div>
@@ -608,6 +638,41 @@ const SalesPOS: React.FC<{ store: any }> = ({ store }) => {
                     </div>
                   </div>
                 </div>
+
+                {/* Rentabilidad del día — visible para admin */}
+                {store.currentUser?.role === 'administrador' && (() => {
+                  const todaySales: Sale[] = store.sales.filter((s: Sale) => s.date === new Date().toISOString().split('T')[0]);
+                  const dayTotalCost = todaySales.reduce((acc, s) => acc + (Number((s as any).totalCost) || 0), 0);
+                  const dayProfit = todaySales.reduce((acc, s) => acc + (Number((s as any).profit) || 0), 0);
+                  const dayMargin = dayTotalCost > 0 ? (dayProfit / dayTotalCost) * 100 : 0;
+                  const consignmentSales = todaySales.filter(s => (s as any).hasConsignment).length;
+                  return (
+                    <div className="bg-emerald-950/30 border border-emerald-500/20 rounded-2xl p-6">
+                      <h4 className="text-[10px] font-black text-emerald-400 uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
+                        <TrendingUp size={16} className="text-emerald-500" /> Rentabilidad del Día (Admin)
+                      </h4>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div className="bg-metal-dark/60 p-4 rounded-xl border border-metal-border">
+                          <p className="text-[9px] font-black text-chrome-500 uppercase tracking-widest mb-1">Costo Total</p>
+                          <p className="text-2xl font-black text-red-400 tracking-tighter">${dayTotalCost.toFixed(2)}</p>
+                        </div>
+                        <div className="bg-metal-dark/60 p-4 rounded-xl border border-metal-border">
+                          <p className="text-[9px] font-black text-chrome-500 uppercase tracking-widest mb-1">Ganancia Neta</p>
+                          <p className={`text-2xl font-black tracking-tighter ${dayProfit >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>${dayProfit.toFixed(2)}</p>
+                        </div>
+                        <div className="bg-metal-dark/60 p-4 rounded-xl border border-metal-border">
+                          <p className="text-[9px] font-black text-chrome-500 uppercase tracking-widest mb-1">Margen Promedio</p>
+                          <p className="text-2xl font-black text-blue-400 tracking-tighter">{dayMargin.toFixed(1)}%</p>
+                        </div>
+                        <div className="bg-metal-dark/60 p-4 rounded-xl border border-purple-500/20">
+                          <p className="text-[9px] font-black text-chrome-500 uppercase tracking-widest mb-1">Ventas Consig.</p>
+                          <p className="text-2xl font-black text-purple-400 tracking-tighter">{consignmentSales}</p>
+                          <p className="text-[9px] text-chrome-500 font-bold uppercase mt-1">Traspasos realizados</p>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
 
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
                   {/* Desglose por Método */}

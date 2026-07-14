@@ -51,6 +51,63 @@ export const useGonzacarsStore = () => {
     }
   }, []);
 
+  const adjustWarehouseStockToTotal = (
+    currentStock: any,
+    newTotal: number,
+    fallbackQty = 0
+  ): Record<string, number> => {
+    const stock = currentStock || {
+      gonzacars: fallbackQty,
+      externo_1: 0,
+      externo_2: 0,
+      externo_3: 0,
+      externo_4: 0
+    };
+    const updatedStock = {
+      gonzacars: stock.gonzacars || 0,
+      externo_1: stock.externo_1 || 0,
+      externo_2: stock.externo_2 || 0,
+      externo_3: stock.externo_3 || 0,
+      externo_4: stock.externo_4 || 0
+    };
+    const currentTotal = Object.values(updatedStock).reduce((a, b) => a + b, 0);
+    if (currentTotal === newTotal) return updatedStock;
+
+    const diff = newTotal - currentTotal;
+    if (diff > 0) {
+      updatedStock.gonzacars += diff;
+    } else {
+      let toSubtract = Math.abs(diff);
+      const order = ['gonzacars', 'externo_1', 'externo_2', 'externo_3', 'externo_4'];
+      for (const wId of order) {
+        if (toSubtract <= 0) break;
+        const currentVal = updatedStock[wId] || 0;
+        if (currentVal > 0) {
+          const sub = Math.min(toSubtract, currentVal);
+          updatedStock[wId] = currentVal - sub;
+          toSubtract -= sub;
+        }
+      }
+    }
+    return updatedStock;
+  };
+
+  const deductStockFromWarehouseStock = (wStock: Record<string, number>, qty: number): Record<string, number> => {
+    const updatedStock = { ...wStock };
+    const order = ['gonzacars', 'externo_1', 'externo_2', 'externo_3', 'externo_4'];
+    let remaining = qty;
+    for (const wId of order) {
+      if (remaining <= 0) break;
+      const current = updatedStock[wId] || 0;
+      if (current > 0) {
+        const sub = Math.min(remaining, current);
+        updatedStock[wId] = current - sub;
+        remaining -= sub;
+      }
+    }
+    return updatedStock;
+  };
+
   const loadDemoData = () => {
     setUsers([
       { id: 'demo-admin', username: 'admin', password: '123', name: 'Admin Demo', role: 'administrador' },
@@ -60,7 +117,17 @@ export const useGonzacarsStore = () => {
       { id: 'c1', name: 'Juan Pérez', phone: '0412-1234567', email: 'juan@demo.com', address: 'Calle Falsa 123', createdAt: new Date().toISOString() },
     ]);
     setInventory([
-      { id: 'p1', name: 'Aceite 20W50', barcode: '1001', category: 'Lubricantes', quantity: 50, cost: 5, price: 12 },
+      { 
+        id: 'p1', 
+        name: 'Aceite 20W50', 
+        barcode: '1001', 
+        category: 'Lubricantes', 
+        quantity: 50, 
+        cost: 5, 
+        price: 12,
+        warehouseStock: { gonzacars: 30, externo_1: 10, externo_2: 10, externo_3: 0, externo_4: 0 },
+        lastEntry: new Date().toISOString().split('T')[0]
+      },
     ]);
     setRepairs([
       { 
@@ -414,6 +481,114 @@ export const useGonzacarsStore = () => {
       }
     } else {
       const newSale = { ...sale, id: sale.id || Math.random().toString(36).substr(2, 9) };
+      // Deduct stock per warehouse and handle consignment transfer in demo mode
+      setInventory(prevInv => {
+        let currentInv = [...prevInv];
+        sale.items.forEach(soldItem => {
+          const pIndex = currentInv.findIndex(item => item.id === soldItem.productId);
+          if (pIndex > -1) {
+            const p = currentInv[pIndex];
+            const saleQty = soldItem.quantity;
+            
+            if (p.isConsignment) {
+              // 1. Deduct stock from consignment product
+              const wStockConsignment = {
+                gonzacars: p.warehouseStock?.gonzacars !== undefined ? p.warehouseStock.gonzacars : p.quantity,
+                externo_1: p.warehouseStock?.externo_1 || 0,
+                externo_2: p.warehouseStock?.externo_2 || 0,
+                externo_3: p.warehouseStock?.externo_3 || 0,
+                externo_4: p.warehouseStock?.externo_4 || 0
+              };
+              const updatedWStockConsignment = deductStockFromWarehouseStock(wStockConsignment, saleQty);
+              const newTotalQtyConsignment = Object.values(updatedWStockConsignment).reduce((a: any, b: any) => a + b, 0) as number;
+              
+              currentInv[pIndex] = {
+                ...p,
+                quantity: newTotalQtyConsignment,
+                warehouseStock: updatedWStockConsignment
+              };
+              
+              // 2. Transfer stock to general inventory
+              const matchIndex = currentInv.findIndex(gp => 
+                !gp.isConsignment && 
+                ((p.barcode && gp.barcode === p.barcode) || (gp.name.toLowerCase() === p.name.toLowerCase()))
+              );
+              
+              if (matchIndex > -1) {
+                const gp = currentInv[matchIndex];
+                const genWStock = {
+                  gonzacars: gp.warehouseStock?.gonzacars !== undefined ? gp.warehouseStock.gonzacars : gp.quantity,
+                  externo_1: gp.warehouseStock?.externo_1 || 0,
+                  externo_2: gp.warehouseStock?.externo_2 || 0,
+                  externo_3: gp.warehouseStock?.externo_3 || 0,
+                  externo_4: gp.warehouseStock?.externo_4 || 0
+                };
+                
+                genWStock.gonzacars += saleQty;
+                genWStock.gonzacars -= saleQty;
+                const finalTotalQtyGen = Object.values(genWStock).reduce((a: any, b: any) => a + b, 0) as number;
+                
+                currentInv[matchIndex] = {
+                  ...gp,
+                  quantity: finalTotalQtyGen,
+                  warehouseStock: genWStock
+                };
+              } else {
+                // Create a new general product with 0 stock
+                const newGenProduct: Product = {
+                  id: Math.random().toString(36).substr(2, 9),
+                  name: p.name,
+                  category: p.category,
+                  quantity: 0,
+                  cost: p.cost,
+                  price: p.price,
+                  barcode: p.barcode || Math.floor(100000000000 + Math.random() * 900000000000).toString(),
+                  lastEntry: new Date().toISOString().split('T')[0],
+                  warehouseStock: {
+                    gonzacars: 0,
+                    externo_1: 0,
+                    externo_2: 0,
+                    externo_3: 0,
+                    externo_4: 0
+                  }
+                };
+                currentInv.push(newGenProduct);
+              }
+            } else {
+              // Standard own product sale
+              const wStock = {
+                gonzacars: p.warehouseStock?.gonzacars !== undefined ? p.warehouseStock.gonzacars : p.quantity,
+                externo_1: p.warehouseStock?.externo_1 || 0,
+                externo_2: p.warehouseStock?.externo_2 || 0,
+                externo_3: p.warehouseStock?.externo_3 || 0,
+                externo_4: p.warehouseStock?.externo_4 || 0
+              };
+              if (wStock.gonzacars < saleQty) {
+                let need = saleQty - wStock.gonzacars;
+                const external = ['externo_1', 'externo_2', 'externo_3', 'externo_4'];
+                for (const ext of external) {
+                  if (need <= 0) break;
+                  const extStock = wStock[ext] || 0;
+                  if (extStock > 0) {
+                    const trans = Math.min(need, extStock);
+                    wStock[ext] -= trans;
+                    wStock.gonzacars += trans;
+                    need -= trans;
+                  }
+                }
+              }
+              wStock.gonzacars -= saleQty;
+              const newTotalQty = Object.values(wStock).reduce((a: any, b: any) => a + b, 0) as number;
+              currentInv[pIndex] = {
+                ...p,
+                quantity: newTotalQty,
+                warehouseStock: wStock
+              };
+            }
+          }
+        });
+        return currentInv;
+      });
       setSales(prev => [...prev, newSale]);
     }
   };
@@ -465,7 +640,17 @@ export const useGonzacarsStore = () => {
   // --- INVENTORY MODULAR SERVICES INTEGRATION ---
 
   const addProduct = async (product: Product) => {
-    const newProduct = { ...product, id: product.id || Math.random().toString(36).substr(2, 9) };
+    const newProduct = { 
+      ...product, 
+      id: product.id || Math.random().toString(36).substr(2, 9),
+      warehouseStock: product.warehouseStock || {
+        gonzacars: product.quantity || 0,
+        externo_1: 0,
+        externo_2: 0,
+        externo_3: 0,
+        externo_4: 0
+      }
+    };
     setInventory(prev => [...prev, newProduct]);
     if (!isDemoMode) {
       await saveToFirebase('Inventory', newProduct);
@@ -498,13 +683,14 @@ export const useGonzacarsStore = () => {
     }
   };
 
-  const updateInventoryQuantity = async (id: string, newQuantity: number) => {
+  const updateInventoryQuantity = async (id: string, newQuantity: number, exactWarehouseStock?: Record<string, number>) => {
     const item = inventory.find(p => p.id === id);
     if (item) {
+      const updatedWStock = exactWarehouseStock || adjustWarehouseStockToTotal(item.warehouseStock, newQuantity, item.quantity);
       if (!isDemoMode) {
-        await updateProduct(id, { quantity: newQuantity }, item, getUserContext());
+        await updateProduct(id, { quantity: newQuantity, warehouseStock: updatedWStock }, item, getUserContext());
       } else {
-        const updated = { ...item, quantity: newQuantity };
+        const updated = { ...item, quantity: newQuantity, warehouseStock: updatedWStock };
         setInventory(inventory.map(p => p.id === id ? updated : p));
       }
       await refreshData();
@@ -518,10 +704,15 @@ export const useGonzacarsStore = () => {
       updates.forEach(update => {
         const index = currentInventory.findIndex(p => p.id === update.id);
         if (index > -1) {
-            const updatedItem = { ...currentInventory[index], quantity: update.quantity };
+            const item = currentInventory[index];
+            const updatedWStock = adjustWarehouseStockToTotal(item.warehouseStock, update.quantity, item.quantity);
+            const updatedItem = { ...item, quantity: update.quantity, warehouseStock: updatedWStock };
             currentInventory[index] = updatedItem;
             if (updatedItem.id) {
-              batch.update(doc(db, "Inventory", updatedItem.id), { quantity: update.quantity });
+              batch.update(doc(db, "Inventory", updatedItem.id), { 
+                quantity: update.quantity,
+                warehouseStock: updatedWStock
+              });
             }
         }
       });

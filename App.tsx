@@ -44,6 +44,7 @@ import RepairReport from './modules/RepairReport';
 import SalesPOS from './modules/SalesPOS';
 import PurchaseRegistry from './modules/PurchaseRegistry';
 import InventoryModule from './modules/InventoryModule';
+import ConsignmentInventoryModule from './modules/ConsignmentInventoryModule';
 import FinanceModule from './modules/FinanceModule';
 import ExpenseModule from './modules/ExpenseModule';
 import PayrollModule from './modules/PayrollModule';
@@ -148,7 +149,8 @@ const TAB_LABELS: Record<string, string> = {
   'repair-reg': 'Registro de Vehículo',
   'repair-rep': 'Informes de Taller',
   sales:      'Punto de Venta',
-  inventory:  'Inventario',
+  inventory:  'Inventario General',
+  consignment:'Consignación',
   purchases:  'Compras',
   finance:    'Finanzas',
   expenses:   'Gastos',
@@ -225,7 +227,7 @@ const App: React.FC = () => {
   const hasPermission = (tab: string) => {
     const role = store.currentUser?.role;
     if (role === 'administrador') return true;
-    if (role === 'vendedor') return ['dashboard', 'customers', 'repair-reg', 'repair-rep', 'sales', 'inventory'].includes(tab);
+    if (role === 'vendedor') return ['dashboard', 'customers', 'repair-reg', 'repair-rep', 'sales', 'inventory', 'consignment'].includes(tab);
     if (role === 'cajero') return ['dashboard', 'sales', 'expenses', 'finance', 'payroll'].includes(tab);
     return false;
   };
@@ -372,8 +374,9 @@ const App: React.FC = () => {
       case 'repair-reg':  return <RepairRegistration {...moduleProps} />;
       case 'repair-rep':  return <RepairReport       {...moduleProps} />;
       case 'sales':       return <SalesPOS           {...moduleProps} />;
-      case 'purchases':   return <PurchaseRegistry   {...moduleProps} />;
       case 'inventory':   return <InventoryModule    {...moduleProps} />;
+      case 'consignment': return <ConsignmentInventoryModule {...moduleProps} />;
+      case 'purchases':   return <PurchaseRegistry   {...moduleProps} />;
       case 'finance':     return <FinanceModule      {...moduleProps} />;
       case 'expenses':    return <ExpenseModule      {...moduleProps} />;
       case 'payroll':     return <PayrollModule      {...moduleProps} />;
@@ -442,7 +445,8 @@ const App: React.FC = () => {
             <NavItem icon={<ClipboardList size={17}/>}   label="Informes"        tab="repair-rep"  active={activeTab} onClick={handleTabChange} visible={hasPermission('repair-rep')} badge={String(store.repairs?.filter((r: any) => r.status !== 'Entregado').length || '')} />
             <MenuHeader label="Unidad Comercial" />
             <NavItem icon={<ShoppingCart size={17}/>}    label="Punto de Venta"  tab="sales"       active={activeTab} onClick={handleTabChange} visible={hasPermission('sales')} />
-            <NavItem icon={<Package size={17}/>}         label="Inventario"      tab="inventory"   active={activeTab} onClick={handleTabChange} visible={hasPermission('inventory')} badge={String(store.inventory?.filter((p: any) => p.quantity <= 5).length || '')} badgeColor="amber" />
+            <NavItem icon={<Package size={17}/>}         label="Inventario"      tab="inventory"   active={activeTab} onClick={handleTabChange} visible={hasPermission('inventory')} badge={String(store.inventory?.filter((p: any) => p.quantity <= 5 && !p.isConsignment).length || '')} badgeColor="amber" />
+            <NavItem icon={<Package size={17}/>}         label="Consignación"    tab="consignment" active={activeTab} onClick={handleTabChange} visible={hasPermission('consignment')} />
             <NavItem icon={<Truck size={17}/>}           label="Compras"         tab="purchases"   active={activeTab} onClick={handleTabChange} visible={hasPermission('purchases')} />
             <MenuHeader label="Administración" />
             <NavItem icon={<BarChart3 size={17}/>}       label="Finanzas"        tab="finance"     active={activeTab} onClick={handleTabChange} visible={hasPermission('finance')} />
