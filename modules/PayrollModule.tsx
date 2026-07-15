@@ -1,4 +1,4 @@
-﻿
+
 import React, { useState, useMemo } from 'react';
 import { 
   Users, UserPlus, DollarSign, TrendingUp, Wrench, Search,
@@ -6,6 +6,7 @@ import {
   Calendar, CalendarClock, Banknote, LayoutList, ChevronDown
 } from 'lucide-react';
 import { Employee, VehicleRepair, RepairItem, PayrollRecord, Sale, PayrollPeriod, Expense } from '../types';
+import CurrencyInput from '../components/CurrencyInput';
 
 const ALL_ROLES: Employee['role'][] = [
   'MecÃ¡nico', 'Ayudante de MecÃ¡nica', 'Vendedor',
@@ -54,35 +55,38 @@ const PayrollModule: React.FC<{ store: any }> = ({ store }) => {
   }, [store.sales, store.employees]);
 
   const getEmployeeEarnings = (emp: Employee, factor = 1) => {
-    if (emp.role === 'MecÃ¡nico' || emp.role === 'Ayudante de MecÃ¡nica') {
-      const completedRepairs = (store.repairs || []).filter((r: VehicleRepair) =>
-        r.mechanicId === emp.id && r.status === 'Entregado'
-      );
-      const commissionTotal = completedRepairs.reduce((total: number, repair: VehicleRepair) => {
-        const laborTotal = repair.items
-          .filter((item: RepairItem) => item.type === 'Servicio')
-          .reduce((sum: number, item: RepairItem) => sum + item.price * item.quantity, 0);
-        return total + laborTotal * emp.commissionRate;
-      }, 0);
-      return {
-        base: emp.baseSalary * factor,
-        commission: commissionTotal * factor,
-        total: (emp.baseSalary + commissionTotal) * factor,
-        repairCount: completedRepairs.length,
-        commissionType: 'Individual (Taller)',
-      };
-    }
+    // Compute labor commission for ALL roles that have commissionRate > 0
+    const completedRepairs = (store.repairs || []).filter((r: VehicleRepair) =>
+      r.mechanicId === emp.id && r.status === 'Entregado'
+    );
+    const laborCommission = completedRepairs.reduce((total: number, repair: VehicleRepair) => {
+      const laborTotal = repair.items
+        .filter((item: RepairItem) => item.type === 'Servicio')
+        .reduce((sum: number, item: RepairItem) => sum + item.price * item.quantity, 0);
+      return total + laborTotal * (emp.commissionRate || 0);
+    }, 0);
+
     if (emp.role === 'Vendedor') {
+      const totalCommission = sharedSalesCommission.perSeller + laborCommission;
       return {
         base: emp.baseSalary * factor,
-        commission: sharedSalesCommission.perSeller * factor,
-        total: (emp.baseSalary + sharedSalesCommission.perSeller) * factor,
-        repairCount: 0,
-        commissionType: 'Compartida (2.5% Ventas)',
+        commission: totalCommission * factor,
+        total: (emp.baseSalary + totalCommission) * factor,
+        repairCount: completedRepairs.length,
+        commissionType: emp.commissionRate > 0 ? 'Ventas + Mano de Obra' : 'Compartida (2.5% Ventas)',
       };
     }
-    // Fixed salary roles: Gerente, Administrador, Administradora, Contadora
-    return { base: emp.baseSalary * factor, commission: 0, total: emp.baseSalary * factor, repairCount: 0, commissionType: 'Sueldo Fijo' };
+
+    // All other roles (Mecánico, Ayudante, Gerente, Administrador, Administradora, Contadora)
+    const commissionType =
+      emp.commissionRate > 0 ? `Comisión M.O. ${(emp.commissionRate * 100).toFixed(0)}%` : 'Sueldo Fijo';
+    return {
+      base: emp.baseSalary * factor,
+      commission: laborCommission * factor,
+      total: (emp.baseSalary + laborCommission) * factor,
+      repairCount: completedRepairs.length,
+      commissionType,
+    };
   };
 
   const factor = PERIOD_FACTOR[period];
@@ -95,11 +99,11 @@ const PayrollModule: React.FC<{ store: any }> = ({ store }) => {
     }, { total: 0, commissions: 0, base: 0 }),
     [store.employees, store.repairs, store.sales, sharedSalesCommission, factor]);
 
-  // â”€â”€ Liquidar individualmente â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ——————————————————————————————————————————————————————————————————————
   const handleLiquidate = (emp: Employee) => {
     const earnings = getEmployeeEarnings(emp, factor);
     if (earnings.total <= 0) { alert('No hay montos pendientes para liquidar.'); return; }
-    if (!confirm(`Â¿Liquidar $${earnings.total.toFixed(2)} para ${emp.name} (${period})?`)) return;
+    if (!confirm(`¿Liquidar $${earnings.total.toFixed(2)} para ${emp.name} (${period})?`)) return;
 
     const record: PayrollRecord = {
       id: Math.random().toString(36).substr(2, 9),
@@ -109,25 +113,25 @@ const PayrollModule: React.FC<{ store: any }> = ({ store }) => {
     };
     store.addPayrollRecord?.(record);
 
-    // Descuento automÃ¡tico de caja
+    // Descuento automático de caja
     const expense: Expense = {
       id: Math.random().toString(36).substr(2, 9),
       date: new Date().toISOString().split('T')[0],
       expenseType: 'Gasto Fijo',
-      category: 'NÃ³mina Administrativa',
-      description: `Pago de nÃ³mina ${period} â€” ${emp.name} (${emp.role})`,
+      category: 'Nómina Administrativa',
+      description: `Pago de nómina ${period} — ${emp.name} (${emp.role})`,
       amount: earnings.total,
     };
     store.addExpense?.(expense);
-    alert(`âœ… NÃ³mina ${period} de ${emp.name} liquidada y registrada en caja.`);
+    alert(`✅ Nómina ${period} de ${emp.name} liquidada y registrada en caja.`);
   };
 
-  // â”€â”€ Liquidar masivamente â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ——————————————————————————————————————————————————————————————————————————————
   const handleLiquidateAll = () => {
     const employees: Employee[] = store.employees || [];
     if (employees.length === 0) { alert('No hay empleados registrados.'); return; }
     const totalAmount = employees.reduce((acc: number, emp: Employee) => acc + getEmployeeEarnings(emp, factor).total, 0);
-    if (!confirm(`Â¿Liquidar nÃ³mina COMPLETA (${period}) por un total de $${totalAmount.toFixed(2)} para ${employees.length} empleados? Se registrarÃ¡ en caja.`)) return;
+    if (!confirm(`¿Liquidar nómina COMPLETA (${period}) por un total de $${totalAmount.toFixed(2)} para ${employees.length} empleados? Se registrará en caja.`)) return;
 
     employees.forEach((emp: Employee) => {
       const earnings = getEmployeeEarnings(emp, factor);
@@ -142,18 +146,18 @@ const PayrollModule: React.FC<{ store: any }> = ({ store }) => {
         id: Math.random().toString(36).substr(2, 9),
         date: new Date().toISOString().split('T')[0],
         expenseType: 'Gasto Fijo',
-        category: 'NÃ³mina Administrativa',
-        description: `Pago de nÃ³mina ${period} â€” ${emp.name} (${emp.role})`,
+        category: 'Nómina Administrativa',
+        description: `Pago de nómina ${period} — ${emp.name} (${emp.role})`,
         amount: earnings.total,
       } as Expense);
     });
-    alert(`âœ… NÃ³mina ${period} completa liquidada ($${totalAmount.toFixed(2)}) y registrada en caja.`);
+    alert(`✅ Nómina ${period} completa liquidada ($${totalAmount.toFixed(2)}) y registrada en caja.`);
   };
 
-  const handleOpenAdd = () => { setEditingEmployee(null); setFormData({ role: 'MecÃ¡nico', baseSalary: 0, commissionRate: 0.50 }); setShowAddModal(true); };
+  const handleOpenAdd = () => { setEditingEmployee(null); setFormData({ role: 'Mecánico', baseSalary: 0, commissionRate: 0.50 }); setShowAddModal(true); };
   const handleOpenEdit = (emp: Employee) => { setEditingEmployee(emp); setFormData({ ...emp }); setShowAddModal(true); };
   const handleDelete = (id: string, name: string) => {
-    if (!confirm(`Â¿Eliminar a ${name} de la nÃ³mina?`)) return;
+    if (!confirm(`¿Eliminar a ${name} de la nómina?`)) return;
     store.deleteEmployee(id);
   };
   const handleSubmit = (e: React.FormEvent) => {
@@ -177,8 +181,8 @@ const PayrollModule: React.FC<{ store: any }> = ({ store }) => {
       {/* Header */}
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 mb-8">
         <div>
-          <h3 className="text-3xl font-black text-chrome-100 tracking-tighter uppercase leading-none">NÃ³mina y Participaciones</h3>
-          <p className="text-chrome-400 font-medium mt-2">GestiÃ³n de sueldos, comisiones y consolidado periÃ³dico</p>
+          <h3 className="text-3xl font-black text-chrome-100 tracking-tighter uppercase leading-none">Nómina y Participaciones</h3>
+          <p className="text-chrome-400 font-medium mt-2">Gestión de sueldos, comisiones y consolidado periódico</p>
         </div>
         <div className="flex gap-3 flex-wrap">
           <div className="relative">
@@ -201,7 +205,7 @@ const PayrollModule: React.FC<{ store: any }> = ({ store }) => {
       {/* Period Selector */}
       <div className="flex items-center gap-4 mb-8">
         <span className="text-[10px] font-black text-chrome-500 uppercase tracking-widest flex items-center gap-2">
-          <CalendarClock size={14}/> PerÃ­odo de CÃ¡lculo:
+          <CalendarClock size={14}/> Período de Cálculo:
         </span>
         <div className="flex bg-metal-dark rounded-2xl p-1 border border-metal-border">
           {(['Semanal', 'Quincenal', 'Mensual'] as PayrollPeriod[]).map(p => (
@@ -216,7 +220,7 @@ const PayrollModule: React.FC<{ store: any }> = ({ store }) => {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         <div className="bg-metal-mid p-7 rounded-2xl border border-metal-border shadow-sm relative overflow-hidden group">
           <div className="absolute -right-4 -bottom-4 text-slate-50 opacity-10 group-hover:scale-110 transition-transform"><DollarSign size={100}/></div>
-          <p className="text-[10px] font-black text-chrome-500 uppercase tracking-widest mb-2">Total NÃ³mina ({period})</p>
+          <p className="text-[10px] font-black text-chrome-500 uppercase tracking-widest mb-2">Total Nómina ({period})</p>
           <h4 className="text-4xl font-black text-chrome-100 tracking-tighter">${totals.total.toFixed(2)}</h4>
           <div className="mt-4 flex items-center gap-2 text-emerald-600 font-bold text-xs bg-emerald-50 px-3 py-1 rounded-full w-fit">
             <TrendingUp size={14}/> {totals.total > 0 ? ((totals.commissions / totals.total) * 100).toFixed(1) : 0}% es variable
@@ -230,9 +234,9 @@ const PayrollModule: React.FC<{ store: any }> = ({ store }) => {
         </div>
         <div className="bg-metal-mid p-7 rounded-2xl border border-metal-border shadow-sm relative overflow-hidden group">
           <div className="absolute -right-4 -bottom-4 text-slate-50 opacity-10 group-hover:scale-110 transition-transform"><Wrench size={100}/></div>
-          <p className="text-[10px] font-black text-chrome-500 uppercase tracking-widest mb-2">Comisiones TÃ©cnicas</p>
+          <p className="text-[10px] font-black text-chrome-500 uppercase tracking-widest mb-2">Comisiones Técnicas</p>
           <h4 className="text-4xl font-black text-chrome-100 tracking-tighter">${(totals.commissions - sharedSalesCommission.totalPool * factor).toFixed(2)}</h4>
-          <p className="mt-4 text-[10px] font-bold text-chrome-500 uppercase italic">Para personal tÃ©cnico</p>
+          <p className="mt-4 text-[10px] font-bold text-chrome-500 uppercase italic">Para personal técnico</p>
         </div>
       </div>
 
@@ -246,7 +250,7 @@ const PayrollModule: React.FC<{ store: any }> = ({ store }) => {
         </button>
       </div>
 
-      {/* TAB: NÃ³mina de Personal */}
+      {/* TAB: Nómina de Personal */}
       {activeTab === 'nomina' && (
         <div className="bg-metal-mid rounded-2xl border border-metal-border shadow-sm overflow-hidden flex-1 flex flex-col">
           <div className="overflow-x-auto custom-scrollbar">
@@ -256,7 +260,7 @@ const PayrollModule: React.FC<{ store: any }> = ({ store }) => {
                   <th className="px-8 py-5 text-[10px] font-black text-chrome-500 uppercase tracking-widest">Colaborador / Cargo</th>
                   <th className="px-8 py-5 text-[10px] font-black text-chrome-500 uppercase tracking-widest">Esquema</th>
                   <th className="px-8 py-5 text-[10px] font-black text-chrome-500 uppercase tracking-widest text-right">Base ({period})</th>
-                  <th className="px-8 py-5 text-[10px] font-black text-chrome-500 uppercase tracking-widest text-right">ComisiÃ³n</th>
+                  <th className="px-8 py-5 text-[10px] font-black text-chrome-500 uppercase tracking-widest text-right">Comisión</th>
                   <th className="px-8 py-5 text-[10px] font-black text-chrome-500 uppercase tracking-widest text-center">Total a Pagar</th>
                   <th className="px-8 py-5 no-print text-center text-[10px] font-black text-chrome-500 uppercase tracking-widest">Acciones</th>
                 </tr>
@@ -279,15 +283,13 @@ const PayrollModule: React.FC<{ store: any }> = ({ store }) => {
                       </td>
                       <td className="px-8 py-6">
                         <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border w-fit block ${
-                          emp.role === 'MecÃ¡nico' || emp.role === 'Ayudante de MecÃ¡nica'
+                          emp.role === 'Mecánico' || emp.role === 'Ayudante de Mecánica'
                             ? 'bg-blue-50 text-blue-700 border-blue-200'
                             : emp.role === 'Vendedor'
                             ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
                             : 'bg-metal-dark text-chrome-400 border-metal-border'
                         }`}>{earnings.commissionType}</span>
-                        {(emp.role === 'MecÃ¡nico' || emp.role === 'Ayudante de MecÃ¡nica') && (
-                          <p className="text-[8px] font-bold text-chrome-500 mt-1 uppercase italic">Tasa: {(emp.commissionRate * 100).toFixed(0)}% mano obra</p>
-                        )}
+                        <p className="text-[8px] font-bold text-chrome-500 mt-1 uppercase italic">Tasa: {(emp.commissionRate * 100).toFixed(0)}% mano obra</p>
                       </td>
                       <td className="px-8 py-6 text-right">
                         <span className="font-bold text-chrome-200 text-sm">${earnings.base.toFixed(2)}</span>
@@ -332,7 +334,7 @@ const PayrollModule: React.FC<{ store: any }> = ({ store }) => {
           {filteredEmployees.length === 0 && (
             <div className="flex-1 flex flex-col items-center justify-center py-24 text-chrome-500">
               <Users size={64} className="opacity-20 mb-4"/>
-              <p className="text-[10px] font-black uppercase tracking-widest">No se encontrÃ³ personal registrado</p>
+              <p className="text-[10px] font-black uppercase tracking-widest">No se encontró personal registrado</p>
             </div>
           )}
         </div>
@@ -343,7 +345,7 @@ const PayrollModule: React.FC<{ store: any }> = ({ store }) => {
         <div className="bg-metal-mid rounded-2xl border border-metal-border shadow-sm overflow-hidden flex-1 flex flex-col">
           <div className="px-8 py-5 bg-metal-dark border-b border-metal-border flex justify-between items-center">
             <h4 className="text-sm font-black text-chrome-100 uppercase tracking-widest flex items-center gap-2">
-              <LayoutList size={16}/> Historial de Pagos de NÃ³mina
+              <LayoutList size={16}/> Historial de Pagos de Nómina
             </h4>
             <span className="text-[10px] font-bold text-chrome-500">{payrollHistory.length} registros</span>
           </div>
@@ -353,9 +355,9 @@ const PayrollModule: React.FC<{ store: any }> = ({ store }) => {
                 <tr className="border-b border-metal-border">
                   <th className="px-8 py-4 text-[10px] font-black text-chrome-500 uppercase tracking-widest">Empleado</th>
                   <th className="px-8 py-4 text-[10px] font-black text-chrome-500 uppercase tracking-widest">Fecha</th>
-                  <th className="px-8 py-4 text-[10px] font-black text-chrome-500 uppercase tracking-widest">PerÃ­odo</th>
+                  <th className="px-8 py-4 text-[10px] font-black text-chrome-500 uppercase tracking-widest">Período</th>
                   <th className="px-8 py-4 text-[10px] font-black text-chrome-500 uppercase tracking-widest text-right">Base</th>
-                  <th className="px-8 py-4 text-[10px] font-black text-chrome-500 uppercase tracking-widest text-right">ComisiÃ³n</th>
+                  <th className="px-8 py-4 text-[10px] font-black text-chrome-500 uppercase tracking-widest text-right">Comisión</th>
                   <th className="px-8 py-4 text-[10px] font-black text-chrome-500 uppercase tracking-widest text-right">Total</th>
                   <th className="px-8 py-4 text-[10px] font-black text-chrome-500 uppercase tracking-widest text-center">Estado</th>
                 </tr>
@@ -372,7 +374,7 @@ const PayrollModule: React.FC<{ store: any }> = ({ store }) => {
                           </div>
                           <div>
                             <p className="font-black text-chrome-100 text-sm">{emp?.name || 'Empleado eliminado'}</p>
-                            <p className="text-[9px] font-bold text-chrome-500 uppercase">{emp?.role || 'â€”'}</p>
+                            <p className="text-[9px] font-bold text-chrome-500 uppercase">{emp?.role || '—'}</p>
                           </div>
                         </div>
                       </td>
@@ -405,7 +407,7 @@ const PayrollModule: React.FC<{ store: any }> = ({ store }) => {
           {payrollHistory.length === 0 && (
             <div className="flex-1 flex flex-col items-center justify-center py-24 text-chrome-500">
               <LayoutList size={48} className="opacity-20 mb-4"/>
-              <p className="text-[10px] font-black uppercase tracking-widest">No hay pagos de nÃ³mina registrados</p>
+              <p className="text-[10px] font-black uppercase tracking-widest">No hay pagos de nómina registrados</p>
             </div>
           )}
         </div>
@@ -421,45 +423,82 @@ const PayrollModule: React.FC<{ store: any }> = ({ store }) => {
                 {editingEmployee ? 'Modificar Colaborador' : 'Alta de Personal'}
               </h3>
               <p className="text-chrome-400 text-[10px] font-black uppercase tracking-widest mt-1 relative z-10">
-                {editingEmployee ? `Editando: ${editingEmployee.name}` : 'DefiniciÃ³n de esquema de pago'}
+                {editingEmployee ? `Editando: ${editingEmployee.name}` : 'Definición de esquema de pago'}
               </p>
             </div>
             <form onSubmit={handleSubmit} className="p-10 space-y-6">
               <div className="space-y-1.5">
                 <label className="text-[10px] font-black text-chrome-500 uppercase tracking-widest ml-1">Nombre Completo</label>
-                <input required type="text" placeholder="Ej: MarÃ­a GonzÃ¡lez" className="w-full px-6 py-4 bg-metal-dark border border-metal-border rounded-2xl outline-none focus:ring-4 focus:ring-blue-500/15 font-bold transition-all" value={formData.name || ''} onChange={e => setFormData({...formData, name: e.target.value})}/>
+                <input required type="text" placeholder="Ej: María González" className="w-full px-6 py-4 bg-metal-dark border border-metal-border rounded-2xl outline-none focus:ring-4 focus:ring-blue-500/15 font-bold transition-all" value={formData.name || ''} onChange={e => setFormData({...formData, name: e.target.value})}/>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-black text-chrome-500 uppercase tracking-widest ml-1">Cargo</label>
                   <select className="w-full px-4 py-4 bg-metal-dark border border-metal-border rounded-2xl font-black uppercase text-[10px] tracking-widest outline-none focus:ring-4 focus:ring-blue-500/15 transition-all appearance-none cursor-pointer"
                     value={formData.role}
-                    onChange={e => setFormData({...formData, role: e.target.value as Employee['role'], commissionRate: e.target.value === 'MecÃ¡nico' || e.target.value === 'Ayudante de MecÃ¡nica' ? 0.50 : 0})}>
+                    onChange={e => setFormData({...formData, role: e.target.value as Employee['role']})}>
                     {ALL_ROLES.map(r => <option key={r} value={r}>{r}</option>)}
                   </select>
                 </div>
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-black text-chrome-500 uppercase tracking-widest ml-1">Sueldo Base ($)</label>
-                  <input required type="number" className="w-full px-6 py-4 bg-metal-dark border border-metal-border rounded-2xl font-black text-lg outline-none focus:ring-4 focus:ring-blue-500/15 transition-all" value={formData.baseSalary || ''} onChange={e => setFormData({...formData, baseSalary: Number(e.target.value)})}/>
+                <div className="space-y-1.5 flex flex-col justify-end">
+                  <CurrencyInput
+                    valueUsd={formData.baseSalary || 0}
+                    onChangeUsd={(val) => setFormData({...formData, baseSalary: val})}
+                    label="Sueldo Base"
+                    required
+                  />
                 </div>
               </div>
 
-              {(formData.role === 'MecÃ¡nico' || formData.role === 'Ayudante de MecÃ¡nica') && (
-                <div className="p-6 bg-blue-50 rounded-3xl border border-blue-100 space-y-3">
-                  <div className="flex justify-between items-center">
-                    <label className="text-[10px] font-black text-blue-600 uppercase tracking-widest">Tasa de ParticipaciÃ³n TÃ©cnica</label>
-                    <span className="text-xl font-black text-blue-700">{((formData.commissionRate || 0) * 100).toFixed(0)}%</span>
+              {/* Commission panel — visible for ALL roles */}
+              <div className="p-5 bg-blue-950/40 rounded-2xl border border-blue-500/20 space-y-4">
+                <div className="flex justify-between items-center">
+                  <div>
+                    <label className="text-[10px] font-black text-blue-400 uppercase tracking-widest block">
+                      Comisión sobre Mano de Obra / Servicios
+                    </label>
+                    <p className="text-[9px] text-chrome-500 font-medium mt-0.5">
+                      Se aplica sobre el total de mano de obra en reparaciones entregadas
+                    </p>
                   </div>
-                  <input type="range" min="0" max="1" step="0.01" className="w-full accent-blue-600 cursor-pointer" value={formData.commissionRate} onChange={e => setFormData({...formData, commissionRate: Number(e.target.value)})}/>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      min={0}
+                      max={100}
+                      step={1}
+                      className="w-16 px-2 py-1.5 bg-metal-dark border border-blue-500/30 rounded-xl text-center font-black text-lg text-blue-300 outline-none focus:ring-2 focus:ring-blue-500/40 transition-all"
+                      value={Math.round((formData.commissionRate || 0) * 100)}
+                      onChange={e => {
+                        const pct = Math.min(100, Math.max(0, Number(e.target.value)));
+                        setFormData({...formData, commissionRate: pct / 100});
+                      }}
+                    />
+                    <span className="text-xl font-black text-blue-400">%</span>
+                  </div>
                 </div>
-              )}
+                <input
+                  type="range" min="0" max="100" step="1"
+                  className="w-full accent-blue-500 cursor-pointer"
+                  value={Math.round((formData.commissionRate || 0) * 100)}
+                  onChange={e => setFormData({...formData, commissionRate: Number(e.target.value) / 100})}
+                />
+                <div className="flex justify-between text-[9px] font-bold text-chrome-500">
+                  <span>0% (Sin comisión)</span>
+                  <span>50%</span>
+                  <span>100%</span>
+                </div>
+              </div>
+
               {formData.role === 'Vendedor' && (
-                <div className="p-6 bg-emerald-50 rounded-3xl border border-emerald-100 flex items-start gap-4">
-                  <ShoppingBag className="text-emerald-600 shrink-0" size={20}/>
-                  <p className="text-[10px] text-emerald-800 font-bold leading-relaxed uppercase">Participa del 2.50% compartido de ventas totales.</p>
+                <div className="p-4 bg-emerald-500/10 rounded-2xl border border-emerald-500/20 flex items-start gap-3">
+                  <ShoppingBag className="text-emerald-400 shrink-0 mt-0.5" size={16}/>
+                  <p className="text-[10px] text-emerald-300 font-bold leading-relaxed uppercase">
+                    Además participa del 2.50% compartido de ventas totales.
+                  </p>
                 </div>
               )}
-              {['Gerente','Administrador','Administradora','Contadora'].includes(formData.role || '') && (
+              {['Gerente','Administrador','Administradora','Contadora'].includes(formData.role || '') && formData.commissionRate === 0 && (
                 <div className="p-6 bg-metal-dark rounded-3xl border border-metal-border flex items-start gap-4">
                   <DollarSign className="text-chrome-400 shrink-0" size={20}/>
                   <p className="text-[10px] text-chrome-400 font-bold leading-relaxed uppercase">Percibe sueldo fijo mensual sin comisiones variables.</p>

@@ -1,30 +1,9 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { 
-  ShoppingCart, 
-  Plus, 
-  Minus, 
-  Trash2, 
-  Printer, 
-  Search, 
-  Barcode, 
-  UserRound, 
-  X, 
-  DollarSign, 
-  Wallet, 
-  ChevronDown, 
-  TrendingUp,
-  Clock,
-  ArrowUpRight,
-  Receipt,
-  Percent,
-  Tag,
-  BarChart3,
-  Package,
-  ClipboardList,
-  FileText
-} from 'lucide-react';
-import { Product, PaymentMethod, Sale, Customer } from '../types';
+import { ShoppingCart, User, Plus, Minus, Trash2, Search, Receipt, Wallet, Percent, Printer, FileText, ChevronDown, Package, Activity, DollarSign, Calculator, ScanBarcode as Barcode, X, TrendingUp, Clock, ArrowUpRight, BarChart3, Tag, ClipboardList } from 'lucide-react';
+import { useGonzacarsStore } from '../store';
+import { Product, Sale, Customer, PaymentMethod } from '../types';
+import CurrencyBadge from '../components/CurrencyBadge';
 
 const LOGO_URL = "https://i.ibb.co/MDhy5tzK/image-2.png";
 
@@ -174,10 +153,6 @@ const SalesPOS: React.FC<{ store: any }> = ({ store }) => {
 
   const dailyStats = showDailyReport ? getDailyTotals() : null;
 
-  const handlePrint = () => {
-    window.print();
-  };
-
   return (
     <div className="flex flex-col lg:flex-row h-full relative overflow-hidden">
       <div className="flex flex-1 h-full print:hidden overflow-y-auto custom-scrollbar">
@@ -235,9 +210,7 @@ const SalesPOS: React.FC<{ store: any }> = ({ store }) => {
                   )}
                 </div>
                 <div className="mt-4 flex items-end justify-between relative z-10">
-                  <p className={`font-black text-2xl tracking-tighter ${
-                    (p as any).isConsignment ? 'text-purple-400' : 'text-blue-400'
-                  }`}>${Number(p.price || 0).toFixed(2)}</p>
+                  <CurrencyBadge amountUsd={p.price || 0} size="lg" className={(p as any).isConsignment ? 'text-purple-400' : 'text-blue-400'} />
                   <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-chrome-500 transition-colors ${
                     (p as any).isConsignment
                       ? 'bg-metal-dark group-hover:bg-purple-600 group-hover:text-white'
@@ -337,7 +310,7 @@ const SalesPOS: React.FC<{ store: any }> = ({ store }) => {
           <div className="space-y-4 border-t border-metal-border pt-6">
             <div className="grid grid-cols-2 gap-3">
               <div className="relative">
-                <UserRound size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-chrome-500 pointer-events-none"/>
+                <User size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-chrome-500 pointer-events-none"/>
                 <select 
                   className="w-full pl-10 pr-4 py-3 bg-metal-dark border border-metal-border rounded-xl text-[10px] outline-none font-black uppercase tracking-widest cursor-pointer appearance-none focus:border-blue-500 transition-all"
                   value={selectedCustomer?.id || ''}
@@ -386,13 +359,12 @@ const SalesPOS: React.FC<{ store: any }> = ({ store }) => {
                   <span className="text-sm font-bold text-chrome-200">${Number(iva).toFixed(2)}</span>
                 </div>
               )}
-              <div className="flex justify-between items-center pt-2">
-                <span className="text-[10px] font-black text-chrome-500 uppercase tracking-[0.2em]">Total a Pagar</span>
-                <span className="text-4xl font-black text-blue-400 tracking-tighter leading-none">${Number(total).toFixed(2)}</span>
+              <div className="flex justify-between items-end pt-2">
+                <span className="text-[10px] font-black text-chrome-500 uppercase tracking-[0.2em] mb-1">Total a Pagar</span>
+                <CurrencyBadge amountUsd={total} size="lg" className="text-blue-400" />
               </div>
-              <div className="flex justify-between items-center pt-1">
+              <div className="flex justify-start items-center pt-1">
                 <span className="text-[9px] font-bold text-chrome-500 uppercase italic">Tasa: {store.exchangeRate} Bs/$</span>
-                <span className="text-xs font-black text-chrome-400">{(Number(total) * Number(store.exchangeRate)).toLocaleString('es-VE')} Bs</span>
               </div>
             </div>
 
@@ -688,7 +660,7 @@ const SalesPOS: React.FC<{ store: any }> = ({ store }) => {
                         return (
                           <div key={method} className="bg-metal-mid p-6 rounded-[2rem] border border-metal-border hover:shadow-xl transition-all group">
                             <span className="font-black text-chrome-500 text-[9px] uppercase block mb-3">{method}</span>
-                            <p className="font-black text-slate-950 text-xl tracking-tighter">${amount.toFixed(2)}</p>
+                            <CurrencyBadge amountUsd={amount} size="md" className="text-chrome-100" />
                           </div>
                         );
                       })}

@@ -1,7 +1,9 @@
-
 import React, { useState, useMemo } from 'react';
-import { Truck, Save, Search, Calendar, Filter, FileText, ChevronRight, DollarSign, Tag, User, Hash, Plus, Trash2, Package, CheckCircle, Clock, AlertCircle, Loader2, ChevronDown, ChevronUp, CreditCard } from 'lucide-react';
+import { ShoppingCart, Package, Plus, Trash2, Calendar, FileText, User, Hash, CheckCircle, Clock, ChevronDown, ChevronUp } from 'lucide-react';
+import { useGonzacarsStore } from '../store';
 import { Purchase, Product } from '../types';
+import CurrencyInput from '../components/CurrencyInput';
+import CurrencyBadge from '../components/CurrencyBadge';
 
 interface TemporaryItem {
   id: string;
@@ -275,9 +277,13 @@ const PurchaseRegistry: React.FC<{ store: any }> = ({ store }) => {
                     {categories.map(c => <option key={c} value={c} />)}
                   </datalist>
                 </div>
-                <div className="md:col-span-2 space-y-1.5">
-                  <label className="text-[9px] font-black text-chrome-500 uppercase tracking-widest ml-1">Costo Unit. ($)</label>
-                  <input type="number" step="0.01" className="w-full px-4 py-2.5 bg-metal-mid border border-metal-border rounded-xl font-black outline-none" value={currentItem.price || ''} onChange={(e) => setCurrentItem({...currentItem, price: Number(e.target.value)})} disabled={isSaving} />
+                <div className="md:col-span-2 space-y-1.5 flex flex-col justify-end">
+                  <CurrencyInput
+                    valueUsd={currentItem.price || 0}
+                    onChangeUsd={(val) => setCurrentItem({...currentItem, price: val})}
+                    label="Costo Unit."
+                    disabled={isSaving}
+                  />
                 </div>
                 <div className="md:col-span-2 space-y-1.5">
                   <label className="text-[9px] font-black text-chrome-500 uppercase tracking-widest ml-1">Cant.</label>
@@ -307,7 +313,7 @@ const PurchaseRegistry: React.FC<{ store: any }> = ({ store }) => {
                     </div>
                     <div className="flex items-center gap-6">
                       <div className="text-right">
-                        <p className="font-black text-chrome-100">${(item.price * item.quantity).toFixed(2)}</p>
+                        <CurrencyBadge amountUsd={item.price * item.quantity} size="md" />
                         <p className="text-[9px] font-bold text-chrome-500 uppercase italic">@ ${item.price.toFixed(2)}</p>
                       </div>
                       <button onClick={() => removeItemFromInvoice(item.id)} disabled={isSaving} className="text-chrome-500 hover:text-red-500 transition-colors p-2 disabled:opacity-30">

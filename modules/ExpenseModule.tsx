@@ -1,7 +1,10 @@
 import React, { useState, useMemo } from 'react';
-import { Wallet, Plus, Calendar, Sparkles, Loader2, Activity, Tag, CalendarClock, Edit3 } from 'lucide-react';
-import { Expense, ExpenseType, ExpenseCategory } from '../types';
-import { suggestExpenseCategory } from '../lib/gemini';
+import { Sparkles, Loader2, CalendarClock, Activity, Edit3, Trash2, Tag, Calendar, Wallet, Plus } from 'lucide-react';
+import { useGonzacarsStore } from '../store';
+import { Expense, ExpenseCategory, ExpenseType, FixedExpenseCategory, VariableExpenseCategory } from '../types';
+import { generateExpenseClassification } from '../lib/gemini';
+import CurrencyInput from '../components/CurrencyInput';
+import CurrencyBadge from '../components/CurrencyBadge';
 
 const fixedCategories = ['Alquiler', 'Luz', 'Agua', 'Internet', 'Impuestos', 'Nómina Administrativa', 'Servicios de Aseo', 'Oficina'];
 const variableCategories = ['Repuestos Adicionales', 'Herramientas', 'Mantenimiento', 'Viáticos', 'Imprevistos', 'Limpieza', 'Víveres'];
@@ -176,10 +179,12 @@ const ExpenseModule: React.FC<{ store: any }> = ({ store }) => {
               </select>
             </div>
             
-            <div>
-              <label className="block text-[10px] font-black text-chrome-500 uppercase tracking-widest mb-1.5 ml-1">Monto ($)</label>
-              <input required type="number" step="0.01" className="w-full px-4 py-3 bg-metal-dark border border-metal-border rounded-2xl text-lg font-black outline-none focus:ring-4 focus:ring-blue-500/15" value={formData.amount || ''} onChange={(e) => setFormData({...formData, amount: Number(e.target.value)})} />
-            </div>
+            <CurrencyInput
+              valueUsd={formData.amount || 0}
+              onChangeUsd={(val) => setFormData({...formData, amount: val})}
+              label="Monto"
+              required
+            />
             
             <div className="flex gap-3">
               <button type="submit" className="flex-1 btn-chrome py-4 rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-black transition-all shadow-lg">
@@ -228,8 +233,7 @@ const ExpenseModule: React.FC<{ store: any }> = ({ store }) => {
                 </div>
                 <div className="flex items-center gap-4 text-right">
                   <div>
-                    <p className="text-xl font-black text-red-500">-${exp.amount.toFixed(2)}</p>
-                    <p className="text-[10px] font-bold text-chrome-500 italic">{(exp.amount * store.exchangeRate).toLocaleString('es-VE')} Bs</p>
+                    <CurrencyBadge amountUsd={exp.amount} size="md" className="text-red-500" />
                   </div>
                   <button 
                     onClick={() => handleEdit(exp)}
