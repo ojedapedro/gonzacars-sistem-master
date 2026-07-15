@@ -1,7 +1,7 @@
 
 export type ServiceStatus = 'Ingresado' | 'En Diagnóstico' | 'En Reparación' | 'Esperando Repuestos' | 'Finalizado' | 'Entregado';
 
-export type PaymentMethod = 'Efectivo Bs' | 'Efectivo $' | 'Pago Móvil' | 'TDD' | 'TDC' | 'Zelle';
+export type PaymentMethod = 'Efectivo Bs' | 'Efectivo $' | 'Pago Móvil' | 'TDD' | 'TDC' | 'Zelle' | 'Binance';
 
 export type UserRole = 'administrador' | 'vendedor' | 'cajero';
 

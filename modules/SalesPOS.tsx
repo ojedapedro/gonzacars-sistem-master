@@ -30,7 +30,7 @@ const SalesPOS: React.FC<{ store: any }> = ({ store }) => {
     }
   }, [barcodeInput]);
 
-  const filteredProducts = store.inventory.filter((p: Product) => 
+  const filteredProducts = store.inventory.filter((p: Product) =>
     p.name.toLowerCase().includes(searchTerm.toLowerCase()) && p.quantity > 0
   );
 
@@ -99,7 +99,7 @@ const SalesPOS: React.FC<{ store: any }> = ({ store }) => {
     setTimeout(() => {
       window.print();
     }, 500);
-    
+
     setCart([]);
     setSelectedCustomer(null);
   };
@@ -107,7 +107,7 @@ const SalesPOS: React.FC<{ store: any }> = ({ store }) => {
   const getDailyTotals = () => {
     const today = new Date().toISOString().split('T')[0];
     const todaySales = store.sales.filter((s: Sale) => s.date === today);
-    
+
     const totalsByMethod = todaySales.reduce((acc: any, sale: Sale) => {
       acc[sale.paymentMethod] = (acc[sale.paymentMethod] || 0) + Number(sale.total || 0);
       return acc;
@@ -138,16 +138,16 @@ const SalesPOS: React.FC<{ store: any }> = ({ store }) => {
 
     const ticketPromedio = todaySales.length > 0 ? totalUSD / todaySales.length : 0;
 
-    return { 
-      totalsByMethod, 
-      totalUSD, 
-      totalBS, 
-      count: todaySales.length, 
+    return {
+      totalsByMethod,
+      totalUSD,
+      totalBS,
+      count: todaySales.length,
       topItemsByQty,
-      topItemsByValue, 
+      topItemsByValue,
       todaySales,
       itemsSold,
-      ticketPromedio 
+      ticketPromedio
     };
   };
 
@@ -159,21 +159,21 @@ const SalesPOS: React.FC<{ store: any }> = ({ store }) => {
         <div className="flex-1 p-4 lg:p-8 lg:border-r border-metal-border bg-metal-dark/30 pb-24 lg:pb-8">
           <div className="mb-6 flex gap-4">
             <div className="relative flex-1">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-chrome-500" size={18}/>
-              <input 
-                type="text" 
-                placeholder="Buscar repuesto por nombre..." 
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-chrome-500" size={18} />
+              <input
+                type="text"
+                placeholder="Buscar repuesto por nombre..."
                 className="w-full pl-12 pr-4 py-3 bg-metal-mid border border-metal-border rounded-2xl outline-none focus:ring-4 focus:ring-blue-500/15 transition-all shadow-sm font-medium"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
             <div className="relative w-72">
-              <Barcode className="absolute left-4 top-1/2 -translate-y-1/2 text-blue-500" size={18}/>
-              <input 
+              <Barcode className="absolute left-4 top-1/2 -translate-y-1/2 text-blue-500" size={18} />
+              <input
                 ref={barcodeRef}
-                type="text" 
-                placeholder="Escanear Código..." 
+                type="text"
+                placeholder="Escanear Código..."
                 className="w-full pl-12 pr-4 py-3 border-2 border-blue-500/30 rounded-2xl outline-none focus:ring-4 focus:ring-blue-500/15 bg-blue-500/5 font-mono text-sm font-bold"
                 value={barcodeInput}
                 onChange={(e) => setBarcodeInput(e.target.value)}
@@ -184,14 +184,13 @@ const SalesPOS: React.FC<{ store: any }> = ({ store }) => {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {filteredProducts.map((p: Product) => (
-              <button 
+              <button
                 key={p.id}
                 onClick={() => addToCart(p)}
-                className={`p-5 rounded-3xl border hover:shadow-xl transition-all text-left flex flex-col justify-between group relative overflow-hidden ${
-                  (p as any).isConsignment
+                className={`p-5 rounded-3xl border hover:shadow-xl transition-all text-left flex flex-col justify-between group relative overflow-hidden ${(p as any).isConsignment
                     ? 'bg-purple-900/20 border-purple-500/30 hover:border-purple-400 hover:shadow-purple-900/10'
                     : 'bg-metal-mid border-metal-border hover:border-blue-500 hover:shadow-blue-900/5'
-                }`}
+                  }`}
               >
                 <div className="relative z-10">
                   <div className="flex justify-between items-start gap-1">
@@ -211,11 +210,10 @@ const SalesPOS: React.FC<{ store: any }> = ({ store }) => {
                 </div>
                 <div className="mt-4 flex items-end justify-between relative z-10">
                   <CurrencyBadge amountUsd={p.price || 0} size="lg" className={(p as any).isConsignment ? 'text-purple-400' : 'text-blue-400'} />
-                  <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-chrome-500 transition-colors ${
-                    (p as any).isConsignment
+                  <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-chrome-500 transition-colors ${(p as any).isConsignment
                       ? 'bg-metal-dark group-hover:bg-purple-600 group-hover:text-white'
                       : 'bg-metal-dark group-hover:bg-blue-600 group-hover:text-white'
-                  }`}>
+                    }`}>
                     <Plus size={16} />
                   </div>
                 </div>
@@ -225,26 +223,26 @@ const SalesPOS: React.FC<{ store: any }> = ({ store }) => {
           </div>
         </div>
 
-      {/* Floating Action Button (Mobile Only) */}
-      {!showMobileCart && (
-        <button
-          onClick={() => setShowMobileCart(true)}
-          className="lg:hidden fixed bottom-6 right-6 w-16 h-16 bg-blue-600 rounded-full shadow-[0_8px_30px_rgba(37,99,235,0.5)] flex items-center justify-center text-white z-30 animate-bounce hover:bg-blue-500 transition-colors"
-        >
-          <div className="relative">
-            <ShoppingCart size={28} />
-            {cart.length > 0 && (
-              <span className="absolute -top-2 -right-3 bg-red-500 text-white text-[10px] font-black w-6 h-6 rounded-full flex items-center justify-center border-2 border-metal-darkest">
-                {cart.reduce((a, b) => a + b.quantity, 0)}
-              </span>
-            )}
-          </div>
-        </button>
-      )}
+        {/* Floating Action Button (Mobile Only) */}
+        {!showMobileCart && (
+          <button
+            onClick={() => setShowMobileCart(true)}
+            className="lg:hidden fixed bottom-6 right-6 w-16 h-16 bg-blue-600 rounded-full shadow-[0_8px_30px_rgba(37,99,235,0.5)] flex items-center justify-center text-white z-30 animate-bounce hover:bg-blue-500 transition-colors"
+          >
+            <div className="relative">
+              <ShoppingCart size={28} />
+              {cart.length > 0 && (
+                <span className="absolute -top-2 -right-3 bg-red-500 text-white text-[10px] font-black w-6 h-6 rounded-full flex items-center justify-center border-2 border-metal-darkest">
+                  {cart.reduce((a, b) => a + b.quantity, 0)}
+                </span>
+              )}
+            </div>
+          </button>
+        )}
 
-      {/* Cart Sidebar */}
-      <div className={`w-full lg:w-[400px] bg-metal-mid p-6 lg:p-8 flex flex-col shadow-2xl lg:border-l border-metal-border relative z-40 fixed inset-0 lg:static transition-transform duration-300 ${showMobileCart ? 'translate-y-0' : 'translate-y-full lg:translate-y-0'}`}>
-        <div className="flex items-center justify-between mb-8">
+        {/* Cart Sidebar */}
+        <div className={`w-full lg:w-[400px] bg-metal-mid p-6 lg:p-8 flex flex-col shadow-2xl lg:border-l border-metal-border relative z-40 fixed inset-0 lg:static transition-transform duration-300 ${showMobileCart ? 'translate-y-0' : 'translate-y-full lg:translate-y-0'}`}>
+          <div className="flex items-center justify-between mb-8">
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 bg-metal-darkest rounded-2xl flex items-center justify-center text-white shadow-xl shadow-black/30 p-2">
                 <img src={LOGO_URL} alt="Logo" className="w-full h-full object-contain" />
@@ -256,7 +254,7 @@ const SalesPOS: React.FC<{ store: any }> = ({ store }) => {
             </div>
             <div className="flex gap-2">
               {lastSale && (
-                <button 
+                <button
                   onClick={() => setShowReceiptModal(true)}
                   className="w-10 h-10 flex items-center justify-center rounded-xl text-blue-400 bg-blue-500/10 hover:bg-blue-500/15 transition-all border border-blue-500/20"
                   title="Re-imprimir última venta"
@@ -264,7 +262,7 @@ const SalesPOS: React.FC<{ store: any }> = ({ store }) => {
                   <FileText size={20} />
                 </button>
               )}
-              <button 
+              <button
                 onClick={() => setShowDailyReport(true)}
                 className="w-10 h-10 flex items-center justify-center rounded-xl text-chrome-500 hover:bg-metal-dark hover:text-chrome-200 transition-all border border-metal-border"
                 title="Reporte de Caja Diario"
@@ -283,8 +281,8 @@ const SalesPOS: React.FC<{ store: any }> = ({ store }) => {
           <div className="flex-1 overflow-y-auto space-y-4 mb-6 custom-scrollbar pr-2">
             {cart.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-full text-chrome-500 opacity-40">
-                 <ShoppingCart size={64} className="mb-4 stroke-[1.5]"/>
-                 <p className="text-xs font-black uppercase tracking-[0.2em] italic">Carrito Vacío</p>
+                <ShoppingCart size={64} className="mb-4 stroke-[1.5]" />
+                <p className="text-xs font-black uppercase tracking-[0.2em] italic">Carrito Vacío</p>
               </div>
             ) : cart.map(item => (
               <div key={item.product.id} className="bg-metal-dark/50 p-4 rounded-[2rem] border border-metal-border flex gap-4 group animate-in slide-in-from-right-2 duration-300 hover:bg-metal-mid hover:shadow-md transition-all">
@@ -292,15 +290,15 @@ const SalesPOS: React.FC<{ store: any }> = ({ store }) => {
                   <h5 className="font-black text-xs text-chrome-100 truncate uppercase tracking-tight">{item.product.name}</h5>
                   <div className="flex items-center gap-4 mt-3">
                     <div className="flex items-center gap-2 bg-metal-mid px-2 py-1 rounded-xl border border-metal-border shadow-sm">
-                      <button onClick={() => updateQuantity(item.product.id, -1)} className="w-6 h-6 flex items-center justify-center text-chrome-500 hover:text-blue-600"><Minus size={12}/></button>
+                      <button onClick={() => updateQuantity(item.product.id, -1)} className="w-6 h-6 flex items-center justify-center text-chrome-500 hover:text-blue-600"><Minus size={12} /></button>
                       <span className="font-black text-xs text-chrome-200 w-4 text-center">{item.quantity}</span>
-                      <button onClick={() => updateQuantity(item.product.id, 1)} className="w-6 h-6 flex items-center justify-center text-chrome-500 hover:text-blue-600"><Plus size={12}/></button>
+                      <button onClick={() => updateQuantity(item.product.id, 1)} className="w-6 h-6 flex items-center justify-center text-chrome-500 hover:text-blue-600"><Plus size={12} /></button>
                     </div>
                     <span className="text-[10px] font-bold text-chrome-500 uppercase">x ${Number(item.product.price || 0).toFixed(2)}</span>
                   </div>
                 </div>
                 <div className="text-right flex flex-col justify-between items-end">
-                  <button onClick={() => removeFromCart(item.product.id)} className="text-chrome-500 hover:text-red-500 transition-colors"><Trash2 size={16}/></button>
+                  <button onClick={() => removeFromCart(item.product.id)} className="text-chrome-500 hover:text-red-500 transition-colors"><Trash2 size={16} /></button>
                   <span className="font-black text-chrome-100 text-sm tracking-tighter">${(Number(item.product.price || 0) * item.quantity).toFixed(2)}</span>
                 </div>
               </div>
@@ -310,8 +308,8 @@ const SalesPOS: React.FC<{ store: any }> = ({ store }) => {
           <div className="space-y-4 border-t border-metal-border pt-6">
             <div className="grid grid-cols-2 gap-3">
               <div className="relative">
-                <User size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-chrome-500 pointer-events-none"/>
-                <select 
+                <User size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-chrome-500 pointer-events-none" />
+                <select
                   className="w-full pl-10 pr-4 py-3 bg-metal-dark border border-metal-border rounded-xl text-[10px] outline-none font-black uppercase tracking-widest cursor-pointer appearance-none focus:border-blue-500 transition-all"
                   value={selectedCustomer?.id || ''}
                   onChange={(e) => {
@@ -328,12 +326,12 @@ const SalesPOS: React.FC<{ store: any }> = ({ store }) => {
 
               <div className="relative">
                 <Wallet size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-chrome-500 pointer-events-none" />
-                <select 
+                <select
                   className="w-full pl-10 pr-8 py-3 bg-metal-dark border border-metal-border rounded-xl text-[10px] font-black uppercase tracking-widest appearance-none outline-none focus:border-blue-500 transition-all cursor-pointer"
                   value={paymentMethod}
                   onChange={(e) => setPaymentMethod(e.target.value as PaymentMethod)}
                 >
-                  {['Efectivo $', 'Efectivo Bs', 'Pago Móvil', 'TDD', 'TDC', 'Zelle'].map(m => (
+                  {['Efectivo $', 'Efectivo Bs', 'Pago Móvil', 'TDD', 'TDC', 'Zelle', 'Binance'].map(m => (
                     <option key={m} value={m}>{m}</option>
                   ))}
                 </select>
@@ -341,11 +339,11 @@ const SalesPOS: React.FC<{ store: any }> = ({ store }) => {
               </div>
             </div>
 
-            <button 
+            <button
               onClick={() => setIvaEnabled(!ivaEnabled)}
               className={`w-full py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all border ${ivaEnabled ? 'bg-blue-500/10 border-blue-500/30 text-blue-400 shadow-sm' : 'bg-metal-dark border-metal-border text-chrome-500'}`}
             >
-              <Percent size={14}/> {ivaEnabled ? 'IVA Incluido (16%)' : 'Sin IVA'}
+              <Percent size={14} /> {ivaEnabled ? 'IVA Incluido (16%)' : 'Sin IVA'}
             </button>
 
             <div className="py-6 border-y border-metal-border space-y-2">
@@ -368,12 +366,12 @@ const SalesPOS: React.FC<{ store: any }> = ({ store }) => {
               </div>
             </div>
 
-            <button 
+            <button
               disabled={cart.length === 0}
               onClick={processSale}
               className="w-full btn-chrome py-5 rounded-[2rem] font-black uppercase text-[10px] tracking-[0.3em] flex items-center justify-center gap-3 hover:bg-black shadow-2xl shadow-black/30 disabled:bg-metal-mid disabled:text-chrome-500 disabled:shadow-none transition-all active:scale-95"
             >
-              <Receipt size={20}/> Procesar Venta
+              <Receipt size={20} /> Procesar Venta
             </button>
           </div>
         </div>
@@ -386,7 +384,7 @@ const SalesPOS: React.FC<{ store: any }> = ({ store }) => {
             <img src={LOGO_URL} alt="Logo" className="w-16 h-16 mx-auto mb-2 object-contain" />
             <h1 className="text-xl font-black uppercase tracking-tighter">Gonzacars C.A.</h1>
             <p className="text-[10px] font-bold uppercase tracking-widest">R.I.F. J-50030426-9</p>
-            <p className="text-[8px] font-medium leading-tight">Av. Bolivar norte; Calle Miranda, Local 113-109C<br/>Valencia 2001, Carabobo</p>
+            <p className="text-[8px] font-medium leading-tight">Av. Bolivar norte; Calle Miranda, Local 113-109C<br />Valencia 2001, Carabobo</p>
           </div>
 
           <div className="border-y-2 border-dashed border-metal-darker py-3 mb-4 text-[10px]">
@@ -428,7 +426,7 @@ const SalesPOS: React.FC<{ store: any }> = ({ store }) => {
 
           <div className="space-y-1 mb-6">
             {lastSale.iva && (
-               <div className="flex justify-between text-[10px]">
+              <div className="flex justify-between text-[10px]">
                 <span className="uppercase">IVA (16%):</span>
                 <span>${(Number(lastSale.total) * 0.16).toFixed(2)}</span>
               </div>
@@ -465,74 +463,74 @@ const SalesPOS: React.FC<{ store: any }> = ({ store }) => {
 
           <div className="grid grid-cols-2 gap-8 mb-8">
             <div className="border border-metal-border p-4 rounded-xl">
-               <p className="text-[10px] font-black uppercase text-chrome-500 tracking-widest">Ventas Totales (USD)</p>
-               <p className="text-4xl font-black text-chrome-100">${dailyStats.totalUSD.toFixed(2)}</p>
+              <p className="text-[10px] font-black uppercase text-chrome-500 tracking-widest">Ventas Totales (USD)</p>
+              <p className="text-4xl font-black text-chrome-100">${dailyStats.totalUSD.toFixed(2)}</p>
             </div>
             <div className="border border-metal-border p-4 rounded-xl">
-               <p className="text-[10px] font-black uppercase text-chrome-500 tracking-widest">Ventas Totales (Bs)</p>
-               <p className="text-4xl font-black text-chrome-100">{dailyStats.totalBS.toLocaleString('es-VE')} Bs</p>
+              <p className="text-[10px] font-black uppercase text-chrome-500 tracking-widest">Ventas Totales (Bs)</p>
+              <p className="text-4xl font-black text-chrome-100">{dailyStats.totalBS.toLocaleString('es-VE')} Bs</p>
             </div>
             <div className="border border-metal-border p-4 rounded-xl">
-               <p className="text-[10px] font-black uppercase text-chrome-500 tracking-widest">Transacciones</p>
-               <p className="text-2xl font-black text-chrome-100">{dailyStats.count} Operaciones</p>
+              <p className="text-[10px] font-black uppercase text-chrome-500 tracking-widest">Transacciones</p>
+              <p className="text-2xl font-black text-chrome-100">{dailyStats.count} Operaciones</p>
             </div>
             <div className="border border-metal-border p-4 rounded-xl">
-               <p className="text-[10px] font-black uppercase text-chrome-500 tracking-widest">Ticket Promedio</p>
-               <p className="text-2xl font-black text-chrome-100">${dailyStats.ticketPromedio.toFixed(2)}</p>
+              <p className="text-[10px] font-black uppercase text-chrome-500 tracking-widest">Ticket Promedio</p>
+              <p className="text-2xl font-black text-chrome-100">${dailyStats.ticketPromedio.toFixed(2)}</p>
             </div>
           </div>
 
           <div className="mb-8">
             <h4 className="text-xs font-black uppercase tracking-widest border-b border-metal-border pb-2 mb-4">Desglose por Método de Pago</h4>
             <table className="w-full text-xs">
-               <thead>
-                 <tr className="bg-metal-mid">
-                    <th className="text-left py-2 px-2">Método</th>
-                    <th className="text-right py-2 px-2">Total ($)</th>
-                 </tr>
-               </thead>
-               <tbody className="divide-y divide-slate-100">
-                  {Object.entries(dailyStats.totalsByMethod).map(([method, amount]: [string, any]) => (
-                    <tr key={method}>
-                       <td className="py-2 px-2 font-bold uppercase">{method}</td>
-                       <td className="py-2 px-2 text-right font-black">${Number(amount).toFixed(2)}</td>
-                    </tr>
-                  ))}
-               </tbody>
+              <thead>
+                <tr className="bg-metal-mid">
+                  <th className="text-left py-2 px-2">Método</th>
+                  <th className="text-right py-2 px-2">Total ($)</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {Object.entries(dailyStats.totalsByMethod).map(([method, amount]: [string, any]) => (
+                  <tr key={method}>
+                    <td className="py-2 px-2 font-bold uppercase">{method}</td>
+                    <td className="py-2 px-2 text-right font-black">${Number(amount).toFixed(2)}</td>
+                  </tr>
+                ))}
+              </tbody>
             </table>
           </div>
 
           <div className="mb-8">
-             <h4 className="text-xs font-black uppercase tracking-widest border-b border-metal-border pb-2 mb-4">Productos Más Vendidos</h4>
-             <table className="w-full text-xs">
-               <thead>
-                 <tr className="bg-metal-mid">
-                    <th className="text-left py-2 px-2">Producto</th>
-                    <th className="text-center py-2 px-2">Cant.</th>
-                    <th className="text-right py-2 px-2">Total ($)</th>
-                 </tr>
-               </thead>
-               <tbody className="divide-y divide-slate-100">
-                  {dailyStats.topItemsByValue.map((item: any, idx: number) => (
-                    <tr key={idx}>
-                       <td className="py-2 px-2 font-bold uppercase">{item.name}</td>
-                       <td className="py-2 px-2 text-center">{item.qty}</td>
-                       <td className="py-2 px-2 text-right font-black">${item.val.toFixed(2)}</td>
-                    </tr>
-                  ))}
-               </tbody>
-             </table>
+            <h4 className="text-xs font-black uppercase tracking-widest border-b border-metal-border pb-2 mb-4">Productos Más Vendidos</h4>
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="bg-metal-mid">
+                  <th className="text-left py-2 px-2">Producto</th>
+                  <th className="text-center py-2 px-2">Cant.</th>
+                  <th className="text-right py-2 px-2">Total ($)</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {dailyStats.topItemsByValue.map((item: any, idx: number) => (
+                  <tr key={idx}>
+                    <td className="py-2 px-2 font-bold uppercase">{item.name}</td>
+                    <td className="py-2 px-2 text-center">{item.qty}</td>
+                    <td className="py-2 px-2 text-right font-black">${item.val.toFixed(2)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
 
           <div className="mt-12 pt-8 border-t-2 border-metal-darker flex justify-between px-10">
-             <div className="text-center">
-                <div className="w-40 border-t border-slate-400 mb-2"></div>
-                <p className="text-[10px] font-black uppercase tracking-widest">Firma Cajero</p>
-             </div>
-             <div className="text-center">
-                <div className="w-40 border-t border-slate-400 mb-2"></div>
-                <p className="text-[10px] font-black uppercase tracking-widest">Firma Supervisor</p>
-             </div>
+            <div className="text-center">
+              <div className="w-40 border-t border-slate-400 mb-2"></div>
+              <p className="text-[10px] font-black uppercase tracking-widest">Firma Cajero</p>
+            </div>
+            <div className="text-center">
+              <div className="w-40 border-t border-slate-400 mb-2"></div>
+              <p className="text-[10px] font-black uppercase tracking-widest">Firma Supervisor</p>
+            </div>
           </div>
         </div>
       )}
@@ -543,7 +541,7 @@ const SalesPOS: React.FC<{ store: any }> = ({ store }) => {
           <div className="bg-metal-mid rounded-2xl shadow-2xl max-w-6xl w-full overflow-hidden flex flex-col max-h-[92vh] animate-in slide-in-from-bottom-8 duration-500 border border-metal-border">
             <div className="p-10 bg-slate-950 text-white flex justify-between items-center relative overflow-hidden">
               <div className="absolute top-0 right-0 p-10 opacity-5">
-                 <BarChart3 size={160} />
+                <BarChart3 size={160} />
               </div>
               <div className="relative z-10">
                 <div className="flex items-center gap-4">
@@ -553,7 +551,7 @@ const SalesPOS: React.FC<{ store: any }> = ({ store }) => {
                   <div>
                     <h3 className="text-3xl font-black uppercase tracking-tighter leading-none">Arqueo de Caja Diario</h3>
                     <p className="text-chrome-400 text-[10px] font-black uppercase tracking-[0.3em] mt-3 flex items-center gap-2">
-                      <Clock size={12}/> {new Date().toLocaleDateString('es-VE', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                      <Clock size={12} /> {new Date().toLocaleDateString('es-VE', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
                     </p>
                   </div>
                 </div>
@@ -655,7 +653,7 @@ const SalesPOS: React.FC<{ store: any }> = ({ store }) => {
                       </h4>
                     </div>
                     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-                      {['Efectivo $', 'Efectivo Bs', 'Pago Móvil', 'TDD', 'TDC', 'Zelle'].map((method) => {
+                      {['Efectivo $', 'Efectivo Bs', 'Pago Móvil', 'TDD', 'TDC', 'Zelle', 'Binance'].map((method) => {
                         const amount = Number(dailyStats.totalsByMethod[method] || 0);
                         return (
                           <div key={method} className="bg-metal-mid p-6 rounded-[2rem] border border-metal-border hover:shadow-xl transition-all group">
@@ -684,10 +682,10 @@ const SalesPOS: React.FC<{ store: any }> = ({ store }) => {
                               <span className="font-black text-blue-400 text-xs bg-blue-500/15 px-3 py-1 rounded-full whitespace-nowrap">{item.qty} unid.</span>
                             </div>
                             <div className="h-1.5 w-full bg-metal-mid rounded-full overflow-hidden">
-                                <div 
-                                className="h-full bg-blue-600 rounded-full transition-all duration-1000" 
+                              <div
+                                className="h-full bg-blue-600 rounded-full transition-all duration-1000"
                                 style={{ width: `${percentage}%` }}
-                                />
+                              />
                             </div>
                           </div>
                         );
@@ -712,10 +710,10 @@ const SalesPOS: React.FC<{ store: any }> = ({ store }) => {
                               <span className="font-black text-emerald-600 text-xs bg-emerald-50 px-3 py-1 rounded-full whitespace-nowrap">${item.val.toFixed(2)}</span>
                             </div>
                             <div className="h-1.5 w-full bg-metal-mid rounded-full overflow-hidden">
-                                <div 
-                                className="h-full bg-emerald-500 rounded-full transition-all duration-1000" 
+                              <div
+                                className="h-full bg-emerald-500 rounded-full transition-all duration-1000"
                                 style={{ width: `${percentage}%` }}
-                                />
+                              />
                             </div>
                           </div>
                         );
@@ -727,7 +725,7 @@ const SalesPOS: React.FC<{ store: any }> = ({ store }) => {
             </div>
 
             <div className="p-8 bg-metal-mid border-t border-metal-border flex gap-4 no-print">
-              <button 
+              <button
                 onClick={() => window.print()}
                 className="flex-1 bg-slate-950 text-white py-6 rounded-2xl font-black uppercase text-[11px] tracking-[0.3em] hover:bg-black transition-all shadow-2xl flex items-center justify-center gap-3"
               >
