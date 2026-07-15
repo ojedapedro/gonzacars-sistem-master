@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { ShoppingCart, Package, Plus, Trash2, Calendar, FileText, User, Hash, CheckCircle, Clock, ChevronDown, ChevronUp } from 'lucide-react';
+import { ShoppingCart, Package, Plus, Trash2, Calendar, FileText, User, Hash, CheckCircle, Clock, ChevronDown, ChevronUp, DollarSign, Loader2, Search, Filter, CreditCard, AlertCircle } from 'lucide-react';
 import { useGonzacarsStore } from '../store';
 import { Purchase, Product } from '../types';
 import CurrencyInput from '../components/CurrencyInput';

@@ -9,13 +9,13 @@ import { Employee, VehicleRepair, RepairItem, PayrollRecord, Sale, PayrollPeriod
 import CurrencyInput from '../components/CurrencyInput';
 
 const ALL_ROLES: Employee['role'][] = [
-  'MecÃ¡nico', 'Ayudante de MecÃ¡nica', 'Vendedor',
-  'Gerente', 'Administrador', 'Administradora', 'Contadora'
+  'Mecánico', 'Ayudante de Mecánica', 'Vendedor',
+  'Administrador', 'Gerente', 'Administradora', 'Contadora'
 ];
 
 const ROLE_COLORS: Record<string, string> = {
-  'MecÃ¡nico':            'bg-blue-600',
-  'Ayudante de MecÃ¡nica':'bg-sky-500',
+  'Mecánico':            'bg-blue-600',
+  'Ayudante de Mecánica':'bg-sky-500',
   'Vendedor':            'bg-emerald-600',
   'Gerente':             'bg-purple-700',
   'Administrador':       'bg-slate-700',

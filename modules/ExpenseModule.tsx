@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { Sparkles, Loader2, CalendarClock, Activity, Edit3, Trash2, Tag, Calendar, Wallet, Plus } from 'lucide-react';
 import { useGonzacarsStore } from '../store';
 import { Expense, ExpenseCategory, ExpenseType, FixedExpenseCategory, VariableExpenseCategory } from '../types';
-import { generateExpenseClassification } from '../lib/gemini';
+import { suggestExpenseCategory } from '../lib/gemini';
 import CurrencyInput from '../components/CurrencyInput';
 import CurrencyBadge from '../components/CurrencyBadge';
 
