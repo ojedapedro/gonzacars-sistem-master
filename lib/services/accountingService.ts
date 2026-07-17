@@ -205,6 +205,23 @@ export const processSaleTransaction = async (
     // Save the sale
     const saleRef = doc(db, 'Sales', saleId);
     transaction.set(saleRef, roundedSale);
+
+    // Generación de Cuenta por Cobrar si es a crédito
+    if (roundedSale.type === 'Crédito') {
+      const arRef = doc(collection(db, 'AccountsReceivable'));
+      transaction.set(arRef, {
+        id: arRef.id,
+        referenceId: saleId,
+        customerId: roundedSale.customerId || '',
+        customerName: roundedSale.customerName || 'Cliente General',
+        date: roundedSale.date,
+        dueDate: new Date(new Date(roundedSale.date).getTime() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 días default
+        totalAmount: roundedSale.total,
+        paidAmount: 0,
+        status: 'Pendiente',
+        payments: []
+      });
+    }
   });
 
   // Log audit
@@ -319,6 +336,31 @@ export const registerPurchaseBatchService = async (
 
       transaction.set(purchaseRef, roundedPurchase);
       processedPurchases.push(roundedPurchase);
+    });
+
+    // Generación de Cuentas por Pagar (agrupado por factura) si es a crédito
+    const creditInvoices = new Map<string, { total: number, date: string, provider: string }>();
+    processedPurchases.forEach(p => {
+      if (p.type === 'Crédito') {
+        const invoiceData = creditInvoices.get(p.invoiceId) || { total: 0, date: p.date, provider: p.provider };
+        invoiceData.total += p.total;
+        creditInvoices.set(p.invoiceId, invoiceData);
+      }
+    });
+
+    creditInvoices.forEach((data, invoiceId) => {
+      const apRef = doc(collection(db, 'AccountsPayable'));
+      transaction.set(apRef, {
+        id: apRef.id,
+        purchaseInvoiceId: invoiceId,
+        provider: data.provider,
+        date: data.date,
+        dueDate: new Date(new Date(data.date).getTime() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+        totalAmount: roundTo(data.total, 4),
+        paidAmount: 0,
+        status: 'Pendiente',
+        payments: []
+      });
     });
   });
 

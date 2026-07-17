@@ -23,6 +23,8 @@ import {
   Share2,
   Copy,
   Smartphone,
+  Car,
+  FileText,
   ExternalLink,
   CheckCircle2,
   Menu,
@@ -51,7 +53,12 @@ import PayrollModule from './modules/PayrollModule';
 import CustomerModule from './modules/CustomerModule';
 import UserManagement from './modules/UserManagement';
 import DashboardModule from './modules/DashboardModule';
-
+import VehiclesModule from './modules/VehiclesModule';
+import QuotesModule from './modules/QuotesModule';
+import AccountsReceivableModule from './modules/AccountsReceivableModule';
+import AccountsPayableModule from './modules/AccountsPayableModule';
+import TechnicalReportsModule from './modules/TechnicalReportsModule';
+import FinancialReportsModule from './modules/FinancialReportsModule';
 const LOGO_URL = "https://i.ibb.co/MDhy5tzK/image-2.png";
 
 /* ============================================================
@@ -144,8 +151,10 @@ const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ children }) =>
    MAIN APP
    ============================================================ */
 const TAB_LABELS: Record<string, string> = {
-  dashboard:  'Escritorio',
+  dashboard:  'Dashboard',
   customers:  'Clientes',
+  vehicles:   'Vehículos',
+  quotes:     'Cotizaciones',
   'repair-reg': 'Registro de Vehículo',
   'repair-rep': 'Informes de Taller',
   sales:      'Punto de Venta',
@@ -154,6 +163,10 @@ const TAB_LABELS: Record<string, string> = {
   purchases:  'Compras',
   finance:    'Finanzas',
   expenses:   'Gastos',
+  cxc:        'Cuentas por Cobrar',
+  cxp:        'Cuentas por Pagar',
+  'tech-reports': 'Reportes Técnicos',
+  'fin-reports':  'Reportes Financieros',
   payroll:    'Nómina',
   'user-mgmt':'Gestión de Usuarios',
 };
@@ -227,8 +240,8 @@ const App: React.FC = () => {
   const hasPermission = (tab: string) => {
     const role = store.currentUser?.role;
     if (role === 'administrador') return true;
-    if (role === 'vendedor') return ['dashboard', 'customers', 'repair-reg', 'repair-rep', 'sales', 'inventory', 'consignment'].includes(tab);
-    if (role === 'cajero') return ['dashboard', 'sales', 'expenses', 'finance', 'payroll'].includes(tab);
+    if (role === 'vendedor') return ['dashboard', 'customers', 'vehicles', 'quotes', 'repair-reg', 'repair-rep', 'sales', 'inventory', 'consignment'].includes(tab);
+    if (role === 'cajero') return ['dashboard', 'sales', 'expenses', 'finance', 'payroll', 'quotes', 'cxc', 'cxp', 'fin-reports', 'tech-reports'].includes(tab);
     return false;
   };
 
@@ -371,6 +384,8 @@ const App: React.FC = () => {
     const moduleProps = { store, toast };
     switch (activeTab) {
       case 'customers':   return <CustomerModule   {...moduleProps} />;
+      case 'vehicles':    return <VehiclesModule />;
+      case 'quotes':      return <QuotesModule localRate={localRate} />;
       case 'repair-reg':  return <RepairRegistration {...moduleProps} />;
       case 'repair-rep':  return <RepairReport       {...moduleProps} />;
       case 'sales':       return <SalesPOS           {...moduleProps} />;
@@ -378,6 +393,10 @@ const App: React.FC = () => {
       case 'consignment': return <ConsignmentInventoryModule {...moduleProps} />;
       case 'purchases':   return <PurchaseRegistry   {...moduleProps} />;
       case 'finance':     return <FinanceModule      {...moduleProps} />;
+      case 'cxc':         return <AccountsReceivableModule />;
+      case 'cxp':         return <AccountsPayableModule />;
+      case 'tech-reports':return <TechnicalReportsModule />;
+      case 'fin-reports': return <FinancialReportsModule />;
       case 'expenses':    return <ExpenseModule      {...moduleProps} />;
       case 'payroll':     return <PayrollModule      {...moduleProps} />;
       case 'user-mgmt':   return <UserManagement     {...moduleProps} />;
@@ -440,6 +459,8 @@ const App: React.FC = () => {
             <NavItem icon={<LayoutDashboard size={17}/>} label="Escritorio"      tab="dashboard"   active={activeTab} onClick={handleTabChange} visible={hasPermission('dashboard')} badge={store.loading ? '…' : ''} />
             <MenuHeader label="Base de Datos" />
             <NavItem icon={<UserRound size={17}/>}       label="Clientes"        tab="customers"   active={activeTab} onClick={handleTabChange} visible={hasPermission('customers')} badge={store.customers?.length > 0 ? String(store.customers.length) : ''} />
+            <NavItem icon={<Car size={17}/>}             label="Vehículos"       tab="vehicles"    active={activeTab} onClick={handleTabChange} visible={hasPermission('vehicles')} badge={store.vehicles?.length > 0 ? String(store.vehicles.length) : ''} />
+            <NavItem icon={<FileText size={17}/>}        label="Cotizaciones"    tab="quotes"      active={activeTab} onClick={handleTabChange} visible={hasPermission('quotes')} badge={store.quotes?.filter((q: any) => q.status === 'Borrador').length ? String(store.quotes.filter((q: any) => q.status === 'Borrador').length) : ''} badgeColor="amber" />
             <MenuHeader label="Servicio Técnico" />
             <NavItem icon={<Wrench size={17}/>}          label="Reg. Vehículo"   tab="repair-reg"  active={activeTab} onClick={handleTabChange} visible={hasPermission('repair-reg')} />
             <NavItem icon={<ClipboardList size={17}/>}   label="Informes"        tab="repair-rep"  active={activeTab} onClick={handleTabChange} visible={hasPermission('repair-rep')} badge={String(store.repairs?.filter((r: any) => r.status !== 'Entregado').length || '')} />
@@ -450,8 +471,14 @@ const App: React.FC = () => {
             <NavItem icon={<Truck size={17}/>}           label="Compras"         tab="purchases"   active={activeTab} onClick={handleTabChange} visible={hasPermission('purchases')} />
             <MenuHeader label="Administración" />
             <NavItem icon={<BarChart3 size={17}/>}       label="Finanzas"        tab="finance"     active={activeTab} onClick={handleTabChange} visible={hasPermission('finance')} />
+            <NavItem icon={<Wallet size={17}/>}          label="Por Cobrar"      tab="cxc"         active={activeTab} onClick={handleTabChange} visible={hasPermission('cxc')} badge={String(store.accountsReceivable?.filter(a => a.status !== 'Pagado').length || '')} badgeColor="amber" />
+            <NavItem icon={<Truck size={17}/>}           label="Por Pagar"       tab="cxp"         active={activeTab} onClick={handleTabChange} visible={hasPermission('cxp')} badge={String(store.accountsPayable?.filter(a => a.status !== 'Pagado').length || '')} badgeColor="amber" />
             <NavItem icon={<Wallet size={17}/>}          label="Gastos"          tab="expenses"    active={activeTab} onClick={handleTabChange} visible={hasPermission('expenses')} />
             <NavItem icon={<Users size={17}/>}           label="Nómina"          tab="payroll"     active={activeTab} onClick={handleTabChange} visible={hasPermission('payroll')} />
+            <MenuHeader label="Reportes y Estadísticas" />
+            <NavItem icon={<Wrench size={17}/>}          label="Técnicos"        tab="tech-reports" active={activeTab} onClick={handleTabChange} visible={hasPermission('tech-reports')} />
+            <NavItem icon={<BarChart3 size={17}/>}       label="Financieros"     tab="fin-reports"  active={activeTab} onClick={handleTabChange} visible={hasPermission('fin-reports')} />
+            <MenuHeader label="Sistema" />
             <NavItem icon={<ShieldCheck size={17}/>}     label="Usuarios"        tab="user-mgmt"   active={activeTab} onClick={handleTabChange} visible={hasPermission('user-mgmt')} />
           </nav>
 

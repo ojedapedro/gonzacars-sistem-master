@@ -20,3 +20,23 @@ export const roundTo = (value: number | string, decimals: number = 4): number =>
 export const formatFinance = (value: number, decimals: number = 2): string => {
   return roundTo(value, decimals).toFixed(decimals);
 };
+
+/**
+ * Formats a number to a currency string.
+ */
+export const formatCurrency = (val: number): string => {
+  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(val);
+};
+
+/**
+ * Formats an ISO date string to a localized date string.
+ */
+export const formatDate = (isoString: string): string => {
+  try {
+    const d = new Date(isoString);
+    if (isNaN(d.getTime())) return isoString;
+    return d.toLocaleDateString('es-VE', { year: 'numeric', month: 'short', day: 'numeric' });
+  } catch (e) {
+    return isoString;
+  }
+};

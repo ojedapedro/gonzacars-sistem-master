@@ -107,11 +107,11 @@ export const ProductModal: React.FC<ProductModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-slate-900 rounded-xl shadow-2xl w-full max-w-2xl overflow-hidden border border-slate-700 flex flex-col max-h-[90vh]">
-        <div className="flex justify-between items-center p-6 border-b border-slate-800">
-          <h2 className="text-xl font-bold text-white flex items-center gap-2">
-            <Package className="text-blue-500" />
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 lg:p-8">
+      <div className="bg-slate-900 rounded-2xl shadow-2xl w-full max-w-4xl overflow-hidden border border-slate-700 flex flex-col max-h-[90vh]">
+        <div className="flex justify-between items-center p-6 lg:p-8 border-b border-slate-800">
+          <h2 className="text-2xl font-black text-white flex items-center gap-3">
+            <Package className="text-blue-500" size={28} />
             {initialData?.id ? 'Editar Producto' : 'Nuevo Producto'}
             {isConsignmentMode && <span className="ml-2 text-sm bg-purple-500/20 text-purple-400 px-2 py-1 rounded-full">Consignación</span>}
           </h2>
@@ -120,12 +120,12 @@ export const ProductModal: React.FC<ProductModalProps> = ({
           </button>
         </div>
 
-        <div className="p-6 overflow-y-auto custom-scrollbar">
-          <form id="productForm" onSubmit={handleSubmit} className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="p-6 lg:p-8 overflow-y-auto custom-scrollbar">
+          <form id="productForm" onSubmit={handleSubmit} className="space-y-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               
               {/* Información Básica */}
-              <div className="space-y-4 md:col-span-2 bg-slate-800/50 p-4 rounded-lg border border-slate-700">
+              <div className="space-y-4 md:col-span-2 bg-slate-800/50 p-6 rounded-xl border border-slate-700">
                 <h3 className="text-sm font-semibold text-slate-300 uppercase tracking-wider mb-2 flex items-center gap-2">
                   <Tag size={16} /> Información Principal
                 </h3>
@@ -180,7 +180,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({
 
               {/* Proveedor de Consignación */}
               {isConsignmentMode && (
-                <div className="space-y-4 md:col-span-2 bg-purple-900/10 p-4 rounded-lg border border-purple-500/30">
+                <div className="space-y-4 md:col-span-2 bg-purple-900/10 p-6 rounded-xl border border-purple-500/30">
                   <h3 className="text-sm font-semibold text-purple-300 uppercase tracking-wider mb-2 flex items-center gap-2">
                     <Briefcase size={16} /> Detalles de Consignación
                   </h3>
@@ -199,7 +199,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({
               )}
 
               {/* Rentabilidad */}
-              <div className="space-y-4 md:col-span-2 bg-emerald-900/10 p-4 rounded-lg border border-emerald-500/30">
+              <div className="space-y-4 md:col-span-2 bg-emerald-900/10 p-6 rounded-xl border border-emerald-500/30">
                 <h3 className="text-sm font-semibold text-emerald-400 uppercase tracking-wider mb-2 flex items-center gap-2">
                   <DollarSign size={16} /> Estructura de Precios
                 </h3>
@@ -276,7 +276,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({
           </form>
         </div>
 
-        <div className="p-6 border-t border-slate-800 bg-slate-900/50 flex justify-end gap-3">
+        <div className="p-6 lg:p-8 border-t border-slate-800 bg-slate-900/50 flex justify-end gap-3">
           <button
             type="button"
             onClick={onClose}

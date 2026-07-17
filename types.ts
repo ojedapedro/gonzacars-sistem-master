@@ -1,7 +1,7 @@
 
 export type ServiceStatus = 'Ingresado' | 'En Diagnóstico' | 'En Reparación' | 'Esperando Repuestos' | 'Finalizado' | 'Entregado';
 
-export type PaymentMethod = 'Efectivo Bs' | 'Efectivo $' | 'Pago Móvil' | 'TDD' | 'TDC' | 'Zelle' | 'Binance';
+export type PaymentMethod = 'Efectivo Bs' | 'Efectivo $' | 'Pago Móvil' | 'TDD' | 'TDC' | 'Zelle' | 'Binance' | 'Crédito';
 
 export type UserRole = 'administrador' | 'vendedor' | 'cajero';
 
@@ -91,6 +91,7 @@ export interface Sale {
   profit?: number;          // total - totalCost
   profitMargin?: number;    // (profit / totalCost) * 100
   hasConsignment?: boolean; // True if any item came from consignment inventory
+  type?: 'Contado' | 'Crédito';
 }
 
 export interface Purchase {
@@ -124,12 +125,37 @@ export interface Expense {
   amount: number;
 }
 
+export interface PayrollBonus {
+  id: string;
+  name: string;      // ej: "Bono de Alimentación", "Bono de Transporte"
+  amount: number;    // Monto en USD o % sobre sueldo base
+  type: 'Fijo' | 'Porcentaje';
+}
+
+export interface PayrollDeduction {
+  id: string;
+  name: string;      // ej: "SSO", "FAOV", "Anticipo", "ISLR"
+  amount: number;    // Monto en USD o % sobre sueldo bruto
+  type: 'Fijo' | 'Porcentaje';
+}
+
 export interface Employee {
   id: string;
   name: string;
   role: 'Mecánico' | 'Vendedor' | 'Administrador' | 'Gerente' | 'Ayudante de Mecánica' | 'Administradora' | 'Contadora';
   baseSalary: number;
   commissionRate: number;
+  // — Datos Personales —
+  cedula?: string;
+  phone?: string;
+  email?: string;
+  hireDate?: string;       // ISO date
+  // — Datos Bancarios —
+  bankName?: string;
+  bankAccount?: string;
+  // — Configuración de Nómina —
+  bonuses?: PayrollBonus[];
+  deductions?: PayrollDeduction[];
 }
 
 export type PayrollPeriod = 'Semanal' | 'Quincenal' | 'Mensual';
@@ -138,9 +164,94 @@ export interface PayrollRecord {
   id: string;
   employeeId: string;
   date: string;
-  baseSalary: number;
-  commission: number;
-  total: number;
   period?: PayrollPeriod;
   status: 'Pendiente' | 'Pagado';
+  // — Asignaciones —
+  baseSalary: number;
+  commission: number;
+  bonusesTotal: number;
+  bonusesDetail?: PayrollBonus[];
+  // — Deducciones —
+  deductionsTotal: number;
+  deductionsDetail?: PayrollDeduction[];
+  // — Totales —
+  grossTotal: number;    // baseSalary + commission + bonusesTotal
+  total: number;         // grossTotal - deductionsTotal (neto a pagar)
+}
+
+export interface Vehicle {
+  id: string;
+  customerId: string;
+  plate: string;
+  brand: string;
+  model: string;
+  year: number;
+  vin?: string;
+  color?: string;
+  mileage?: number;
+  photos?: string[]; // Up to 5 photos
+  notes?: string;
+}
+
+export interface QuoteItem {
+  productId?: string;
+  description: string;
+  quantity: number;
+  price: number; // Unit price in USD
+}
+
+export interface Quote {
+  id: string;
+  customerId?: string;
+  customerName: string;
+  vehiclePlate?: string;
+  date: string;
+  validUntil: string;
+  items: QuoteItem[];
+  subtotal: number;
+  iva: boolean;
+  total: number;
+  status: 'Borrador' | 'Enviada' | 'Aprobada' | 'Rechazada';
+  notes?: string;
+}
+
+export interface ReceivablePayment {
+  id: string;
+  date: string;
+  amount: number;
+  method: PaymentMethod;
+  reference?: string;
+}
+
+export interface AccountReceivable {
+  id: string;
+  referenceId?: string; // id de Venta o Reparación
+  customerId: string;
+  customerName: string;
+  date: string;
+  dueDate: string;
+  totalAmount: number;
+  paidAmount: number;
+  status: 'Pendiente' | 'Parcial' | 'Pagado' | 'Vencido';
+  payments: ReceivablePayment[];
+}
+
+export interface PayablePayment {
+  id: string;
+  date: string;
+  amount: number;
+  method: PaymentMethod;
+  reference?: string;
+}
+
+export interface AccountPayable {
+  id: string;
+  purchaseInvoiceId?: string; // Reference to Purchase invoiceId
+  provider: string;
+  date: string;
+  dueDate: string;
+  totalAmount: number;
+  paidAmount: number;
+  status: 'Pendiente' | 'Parcial' | 'Pagado' | 'Vencido';
+  payments: PayablePayment[];
 }
