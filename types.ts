@@ -75,6 +75,7 @@ export interface VehicleRepair {
   createdAt: string;
   finishedAt?: string;
   paymentMethod?: PaymentMethod;
+  quoteId?: string;  // ID de la cotización de origen (si fue creada desde una cotización)
 }
 
 export interface Sale {
@@ -213,6 +214,7 @@ export interface Quote {
   total: number;
   status: 'Borrador' | 'Enviada' | 'Aprobada' | 'Rechazada';
   notes?: string;
+  repairId?: string;  // ID de la VehicleRepair generada (si fue convertida a orden)
 }
 
 export interface ReceivablePayment {

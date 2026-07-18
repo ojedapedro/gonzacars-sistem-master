@@ -153,6 +153,23 @@ const RepairRegistration: React.FC<{ store: any; toast?: any }> = ({ store, toas
       toast?.error('Cliente requerido', 'Seleccione un cliente antes de continuar.');
       return;
     }
+
+    // FIX #5: Validar que la placa no tenga ya una orden abierta
+    if (formData.plate) {
+      const CLOSED_STATUSES: ServiceStatus[] = ['Finalizado', 'Entregado'];
+      const openOrder = store.repairs.find((r: VehicleRepair) =>
+        r.plate.toUpperCase() === formData.plate!.toUpperCase() &&
+        !CLOSED_STATUSES.includes(r.status)
+      );
+      if (openOrder) {
+        toast?.error(
+          'Orden ya existente',
+          `El vehículo ${formData.plate.toUpperCase()} ya tiene una orden abierta con estado "${openOrder.status}". Debe finalizar o entregar esa orden antes de abrir una nueva.`
+        );
+        return;
+      }
+    }
+
     setIsSubmitting(true);
     await new Promise(r => setTimeout(r, 500));
     const customer = store.customers.find((c: Customer) => c.id === formData.customerId);

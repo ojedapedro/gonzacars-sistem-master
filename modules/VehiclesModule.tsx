@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { Car, Search, Plus, User, Info, Hash, Calendar, Wrench, X, Activity, ShieldCheck, MapPin, Gauge, ChevronRight, Clock, AlertCircle } from 'lucide-react';
 import { useGonzacarsStore } from '../store';
 import { VehicleRepair, Customer } from '../types';
+import { fuzzySearch } from '../lib/utils/search';
 import CurrencyBadge from '../components/CurrencyBadge';
 
 // A vehicle "record" derived from Repairs data
@@ -73,14 +74,7 @@ const VehiclesModule: React.FC = () => {
 
   // Filtered list
   const filteredVehicles = useMemo(() => {
-    const s = searchTerm.toLowerCase().trim();
-    if (!s) return vehicleRecords;
-    return vehicleRecords.filter(v =>
-      v.plate.toLowerCase().includes(s) ||
-      v.brand.toLowerCase().includes(s) ||
-      v.model.toLowerCase().includes(s) ||
-      v.ownerName.toLowerCase().includes(s)
-    );
+    return fuzzySearch(vehicleRecords, searchTerm, ['plate', 'brand', 'model', 'ownerName']);
   }, [vehicleRecords, searchTerm]);
 
   const selectedVehicle = useMemo(() =>

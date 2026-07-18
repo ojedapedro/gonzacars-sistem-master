@@ -3,24 +3,25 @@ import { GoogleGenAI } from "@google/genai";
 
 // Fix: Correct initialization of GoogleGenAI with an object
 export const getGeminiClient = () => {
-  return new GoogleGenAI({ apiKey: process.env.API_KEY });
+  // Vite requiere import.meta.env para leer las variables expuestas (que empiezan con VITE_)
+  return new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY });
 };
 
-// Fix: Use 'gemini-1.5-flash' for basic text improvement and ensure response.text property access
+// Fix: Use 'gemini-2.5-flash' for basic text improvement and ensure response.text property access
 export const improveDiagnosis = async (prompt: string) => {
   const ai = getGeminiClient();
   const response = await ai.models.generateContent({
-    model: 'gemini-1.5-flash',
+    model: 'gemini-2.5-flash',
     contents: `Actúa como un jefe de taller mecánico experto. Convierte la siguiente descripción informal en un diagnóstico técnico formal, profesional y breve para un informe de reparación: "${prompt}"`,
   });
   return response.text;
 };
 
-// Fix: Use 'gemini-1.5-flash' for complex auditing tasks and ensure response.text property access
+// Fix: Use 'gemini-2.5-flash' for complex auditing tasks and ensure response.text property access
 export const generateFinanceAudit = async (data: any) => {
   const ai = getGeminiClient();
   const response = await ai.models.generateContent({
-    model: 'gemini-1.5-flash',
+    model: 'gemini-2.5-flash',
     contents: `Analiza los siguientes datos financieros de un taller mecánico y tienda de repuestos llamado Gonzacars C.A. Proporciona un análisis financiero detallado del ejercicio económico según el periodo indicado (${data.period}). Tu respuesta debe incluir recomendaciones para optimizar el ahorro y la salud financiera del negocio: 
     Ventas totales: $${data.sales}, 
     Compras totales: $${data.purchases}, 
@@ -30,11 +31,11 @@ export const generateFinanceAudit = async (data: any) => {
   return response.text;
 };
 
-// Fix: Use 'gemini-1.5-flash' for text-based classification and ensure response.text property access
+// Fix: Use 'gemini-2.5-flash' for text-based classification and ensure response.text property access
 export const suggestExpenseCategory = async (description: string) => {
   const ai = getGeminiClient();
   const response = await ai.models.generateContent({
-    model: 'gemini-1.5-flash',
+    model: 'gemini-2.5-flash',
     contents: `Dada la descripción de un gasto: "${description}", clasifícalo en una de estas categorías según su tipo:
 Fijos: Alquiler, Luz, Agua, Internet, Impuestos, Nómina Administrativa, Servicios de Aseo, Oficina.
 Variables: Repuestos Adicionales, Herramientas, Mantenimiento, Viáticos, Imprevistos, Limpieza, Víveres.

@@ -1,8 +1,9 @@
 
-import React, { useState, useMemo, useRef } from 'react';
-import { Package, Search, Edit3, AlertCircle, Barcode, RotateCw, History, X, Truck, Calendar, DollarSign, ArrowRight, Filter, ChevronDown, ArrowUp, ArrowDown, ClipboardCheck, TrendingUp, TrendingDown, AlertTriangle, Save, FileSpreadsheet, UploadCloud, CheckCircle, ShieldCheck, Download } from 'lucide-react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
+import { Package, Search, Edit3, AlertCircle, Barcode, RotateCw, History, X, Truck, Calendar, DollarSign, ArrowRight, Filter, ChevronDown, ArrowUp, ArrowDown, ClipboardCheck, TrendingUp, TrendingDown, AlertTriangle, Save, FileSpreadsheet, UploadCloud, CheckCircle, ShieldCheck, Download, Calculator, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Product, Purchase, Sale } from '../types';
 import { ProductModal } from '../components/ProductModal';
+import { fuzzySearch } from '../lib/utils/search';
 
 // Declare XLSX globally to bypass build resolution issues
 declare const XLSX: any;
@@ -21,6 +22,14 @@ const InventoryModule: React.FC<{ store: any }> = ({ store }) => {
   const [categoryFilter, setCategoryFilter] = useState('');
   const [supplierFilter, setSupplierFilter] = useState('');
   const [sortConfig, setSortConfig] = useState<{ key: keyof Product; direction: 'asc' | 'desc' }>({ key: 'name', direction: 'asc' });
+
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 15;
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, categoryFilter, supplierFilter, inventoryTab, sortConfig]);
 
   // History & Audit Modal States
   const [showHistoryModal, setShowHistoryModal] = useState(false);
@@ -69,18 +78,16 @@ const InventoryModule: React.FC<{ store: any }> = ({ store }) => {
 
   // Filtered and Sorted Inventory
   const filtered = useMemo(() => {
-    const term = searchTerm.trim().toLowerCase();
+    let result = store.inventory || [];
     
-    let result = (store.inventory || []).filter((p: Product) => {
-      const name = String(p.name || '').toLowerCase();
-      const category = String(p.category || '').toLowerCase();
-      const barcode = String(p.barcode || '').toLowerCase();
-      
-      // Tab filter: 'own' excludes consignment products
-      if (inventoryTab === 'own' && (p as any).isConsignment) return false;
-      
-      return name.includes(term) || category.includes(term) || barcode.includes(term);
-    });
+    // Tab filter: 'own' excludes consignment products
+    if (inventoryTab === 'own') {
+      result = result.filter((p: any) => !p.isConsignment);
+    }
+    
+    if (searchTerm) {
+      result = fuzzySearch(result, searchTerm, ['name', 'category', 'barcode']);
+    }
 
     if (categoryFilter) {
       result = result.filter((p: Product) => p.category === categoryFilter);
@@ -112,6 +119,28 @@ const InventoryModule: React.FC<{ store: any }> = ({ store }) => {
       return 0;
     });
   }, [store.inventory, store.purchases, searchTerm, categoryFilter, supplierFilter, sortConfig]);
+
+  const { totalCostValue, totalPriceValue } = useMemo(() => {
+    return filtered.reduce(
+      (acc, p) => {
+        const qty = p.quantity || 0;
+        const cost = p.cost || 0;
+        const price = p.price || 0;
+        return {
+          totalCostValue: acc.totalCostValue + qty * cost,
+          totalPriceValue: acc.totalPriceValue + qty * price,
+        };
+      },
+      { totalCostValue: 0, totalPriceValue: 0 }
+    );
+  }, [filtered]);
+
+  const paginatedItems = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    return filtered.slice(startIndex, startIndex + itemsPerPage);
+  }, [filtered, currentPage, itemsPerPage]);
+
+  const totalPages = Math.ceil(filtered.length / itemsPerPage);
 
   const handleSort = (key: keyof Product) => {
     setSortConfig(current => ({
@@ -445,7 +474,7 @@ const InventoryModule: React.FC<{ store: any }> = ({ store }) => {
       </div>
 
       {/* Inventory Type Tabs */}
-      <div className="flex items-center gap-2 mb-4 bg-metal-mid p-1.5 rounded-2xl border border-metal-border w-fit shadow-sm">
+      <div className="flex items-center gap-2 mb-6 bg-metal-mid p-1.5 rounded-2xl border border-metal-border w-fit shadow-sm">
         <button
           onClick={() => setInventoryTab('own')}
           className={`px-5 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
@@ -462,6 +491,44 @@ const InventoryModule: React.FC<{ store: any }> = ({ store }) => {
         >
           Todo el inventario
         </button>
+      </div>
+
+      {/* Inventory Valuation KPIs */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <div className="bg-gradient-to-r from-metal-mid to-metal-dark p-6 rounded-2xl border border-metal-border shadow-sm flex items-center justify-between hover:border-emerald-500/50 transition-colors">
+          <div>
+            <p className="text-[10px] font-black text-chrome-500 uppercase tracking-widest mb-1 flex items-center gap-1"><DollarSign size={12}/> Valorización (Costo)</p>
+            <p className="text-3xl font-black text-emerald-500 tracking-tighter">${totalCostValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+          </div>
+          <div className="w-12 h-12 bg-emerald-500/10 rounded-xl flex items-center justify-center border border-emerald-500/20">
+             <Calculator size={24} className="text-emerald-500" />
+          </div>
+        </div>
+        <div className="bg-gradient-to-r from-metal-mid to-metal-dark p-6 rounded-2xl border border-metal-border shadow-sm flex items-center justify-between hover:border-blue-500/50 transition-colors">
+          <div>
+            <p className="text-[10px] font-black text-chrome-500 uppercase tracking-widest mb-1 flex items-center gap-1"><TrendingUp size={12}/> Valorización (Precio Venta)</p>
+            <p className="text-3xl font-black text-blue-500 tracking-tighter">${totalPriceValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+          </div>
+          <div className="w-12 h-12 bg-blue-500/10 rounded-xl flex items-center justify-center border border-blue-500/20">
+             <DollarSign size={24} className="text-blue-500" />
+          </div>
+        </div>
+        <div className="bg-gradient-to-r from-metal-mid to-metal-dark p-6 rounded-2xl border border-metal-border shadow-sm flex items-center justify-between hover:border-purple-500/50 transition-colors">
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+               <p className="text-[10px] font-black text-chrome-500 uppercase tracking-widest flex items-center gap-1"><TrendingUp size={12}/> Margen Bruto</p>
+               {totalCostValue > 0 && (
+                 <span className="text-[9px] font-black bg-purple-500/20 text-purple-400 px-2 py-0.5 rounded-full border border-purple-500/30">
+                   {(((totalPriceValue - totalCostValue) / totalCostValue) * 100).toFixed(1)}%
+                 </span>
+               )}
+            </div>
+            <p className="text-3xl font-black text-purple-500 tracking-tighter">${(totalPriceValue - totalCostValue).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+          </div>
+          <div className="w-12 h-12 bg-purple-500/10 rounded-xl flex items-center justify-center border border-purple-500/20">
+             <TrendingUp size={24} className="text-purple-500" />
+          </div>
+        </div>
       </div>
 
       {/* Filters Bar */}
@@ -532,7 +599,7 @@ const InventoryModule: React.FC<{ store: any }> = ({ store }) => {
             </tr>
           </thead>
           <tbody className="divide-y divide-metal-border font-medium">
-            {filtered.map((p: Product) => (
+            {paginatedItems.map((p: Product) => (
               <tr key={p.id} className="hover:bg-metal-dark/50 transition-colors group">
                 <td className="px-8 py-5">
                   {editingBarcodeId === p.id ? (
@@ -678,6 +745,53 @@ const InventoryModule: React.FC<{ store: any }> = ({ store }) => {
                <Package size={40} />
             </div>
             <p className="font-black text-chrome-500 uppercase tracking-widest text-xs">No se encontraron productos en el inventario</p>
+          </div>
+        )}
+
+        {/* Pagination Controls */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between p-4 border-t border-metal-border bg-metal-dark/30">
+            <span className="text-xs font-bold text-chrome-500">
+              Mostrando {(currentPage - 1) * itemsPerPage + 1} a {Math.min(currentPage * itemsPerPage, filtered.length)} de {filtered.length} productos
+            </span>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="p-2 rounded-xl text-chrome-400 hover:bg-metal-mid hover:text-white disabled:opacity-30 disabled:hover:bg-transparent transition-all"
+              >
+                <ChevronLeft size={18} />
+              </button>
+              <div className="flex items-center gap-1">
+                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                  let pageNum = i + 1;
+                  if (totalPages > 5 && currentPage > 3) {
+                    pageNum = currentPage - 2 + i;
+                    if (pageNum > totalPages) pageNum = totalPages - (4 - i);
+                  }
+                  return (
+                    <button
+                      key={pageNum}
+                      onClick={() => setCurrentPage(pageNum)}
+                      className={`w-8 h-8 flex items-center justify-center rounded-lg text-xs font-black transition-all ${
+                        currentPage === pageNum 
+                          ? 'bg-blue-600 text-white shadow-md' 
+                          : 'text-chrome-500 hover:bg-metal-mid hover:text-white'
+                      }`}
+                    >
+                      {pageNum}
+                    </button>
+                  );
+                })}
+              </div>
+              <button
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+                className="p-2 rounded-xl text-chrome-400 hover:bg-metal-mid hover:text-white disabled:opacity-30 disabled:hover:bg-transparent transition-all"
+              >
+                <ChevronRight size={18} />
+              </button>
+            </div>
           </div>
         )}
       </div>

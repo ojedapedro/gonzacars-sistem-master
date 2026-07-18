@@ -23,9 +23,12 @@ import {
   User,
   Pencil,
   Trash2,
-  AlertTriangle
+  AlertTriangle,
+  FileText
 } from 'lucide-react';
+import { useGonzacarsStore } from '../store';
 import { Customer, VehicleRepair, Sale } from '../types';
+import { fuzzySearch } from '../lib/utils/search';
 
 const CustomerModule: React.FC<{ store: any }> = ({ store }) => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -52,10 +55,13 @@ const CustomerModule: React.FC<{ store: any }> = ({ store }) => {
   });
 
   const filteredCustomers = useMemo(() => {
-    return store.customers.filter((c: Customer) => {
-      const matchSearch = c.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                          c.phone.includes(searchTerm);
-      
+    let results = store.customers;
+    
+    if (searchTerm) {
+      results = fuzzySearch(results, searchTerm, ['name', 'phone', 'email', 'address']);
+    }
+
+    return results.filter((c: Customer) => {
       // Filtro sensible a mayúsculas y minúsculas (Case-Sensitive)
       const matchNameExact = !filters.nameExact || c.name.includes(filters.nameExact);
       
@@ -66,7 +72,7 @@ const CustomerModule: React.FC<{ store: any }> = ({ store }) => {
       const matchDateStart = !filters.dateStart || customerDate >= filters.dateStart;
       const matchDateEnd = !filters.dateEnd || customerDate <= filters.dateEnd;
 
-      return matchSearch && matchNameExact && matchAddress && matchDateStart && matchDateEnd;
+      return matchNameExact && matchAddress && matchDateStart && matchDateEnd;
     });
   }, [store.customers, searchTerm, filters]);
 

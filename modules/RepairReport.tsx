@@ -26,6 +26,7 @@ import {
   CheckCircle2
 } from 'lucide-react';
 import { VehicleRepair, RepairItem, PaymentMethod, Product, ServiceStatus, Installment } from '../types';
+import { fuzzySearch } from '../lib/utils/search';
 
 /* ─── Status visual config ─── */
 const STATUS_STYLE: Record<ServiceStatus, { label: string; headerBg: string; badge: string; dot: string }> = {
@@ -41,6 +42,7 @@ const LOGO_URL = "https://i.ibb.co/MDhy5tzK/image-2.png";
 
 const RepairReport: React.FC<{ store: any }> = ({ store }) => {
   const [searchPlate, setSearchPlate] = useState('');
+  const [showDropdown, setShowDropdown] = useState(false);
   const [currentRepair, setCurrentRepair] = useState<VehicleRepair | null>(null);
   const [showPayModal, setShowPayModal] = useState(false);
   const [showAbonoModal, setShowAbonoModal] = useState(false);
@@ -69,31 +71,30 @@ const RepairReport: React.FC<{ store: any }> = ({ store }) => {
     );
   }, [store.inventory, invSearchTerm]);
 
+  const searchResults = useMemo(() => {
+    if (!searchPlate.trim()) return [];
+    
+    // Ordenar los más nuevos primero
+    const sortedRepairs = [...store.repairs].sort((a, b) => 
+      new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
+    );
+
+    return fuzzySearch(sortedRepairs, searchPlate, [
+      'plate', 'ownerName', 'brand', 'model', 'id'
+    ]).slice(0, 8);
+  }, [store.repairs, searchPlate]);
+
+  const handleSelectRepair = (repair: VehicleRepair) => {
+    setCurrentRepair({ ...repair });
+    if (repair.paymentMethod) setTempPaymentMethod(repair.paymentMethod);
+    setSearchPlate('');
+    setShowDropdown(false);
+  };
+
   const handleSearch = () => {
-    if (!searchPlate.trim()) {
-      alert('Por favor ingrese un término de búsqueda');
-      return;
-    }
-    const term = searchPlate.toLowerCase().trim();
-    const termClean = term.replace(/\s/g, ''); // Para buscar placas o nombres sin espacios
-
-    const found = store.repairs.find((r: VehicleRepair) => {
-      const plate = (r.plate || '').toLowerCase().replace(/\s/g, '');
-      const owner = (r.ownerName || '').toLowerCase();
-      const ownerClean = owner.replace(/\s/g, '');
-      const brand = (r.brand || '').toLowerCase();
-      const model = (r.model || '').toLowerCase();
-
-      return plate.includes(termClean) ||
-        owner.includes(term) || ownerClean.includes(termClean) ||
-        brand.includes(term) ||
-        model.includes(term);
-    });
-
-    if (found) {
-      setCurrentRepair({ ...found });
-      if (found.paymentMethod) setTempPaymentMethod(found.paymentMethod);
-    } else {
+    if (searchResults.length > 0) {
+      handleSelectRepair(searchResults[0]);
+    } else if (searchPlate.trim()) {
       alert('No se encontraron reportes que coincidan con la búsqueda');
       setCurrentRepair(null);
     }
@@ -506,17 +507,53 @@ const RepairReport: React.FC<{ store: any }> = ({ store }) => {
       {/* UI APLICACIÓN (NO-PRINT) */}
       <div className="print:hidden flex-1 flex flex-col animate-fade-in-up">
         {/* Premium Search Bar */}
-        <div className="bg-metal-mid p-5 rounded-2xl shadow-sm border border-metal-border mb-6 flex gap-3 items-center">
+        <div className="bg-metal-mid p-5 rounded-2xl shadow-sm border border-metal-border mb-6 flex gap-3 items-center relative z-20">
           <div className="relative flex-1">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-chrome-500" size={18} />
             <input
               type="text"
-              placeholder="Buscar por placa, cliente, marca o modelo..."
+              placeholder="Buscar informe por placa, cliente, marca o modelo..."
               className="w-full pl-11 pr-4 py-3.5 bg-metal-dark border-2 border-metal-border focus:border-blue-500 focus:bg-metal-mid rounded-2xl uppercase outline-none focus:ring-4 focus:ring-blue-500/15 font-bold text-sm transition-all"
               value={searchPlate}
-              onChange={(e) => setSearchPlate(e.target.value)}
+              onChange={(e) => {
+                setSearchPlate(e.target.value);
+                setShowDropdown(true);
+              }}
+              onFocus={() => setShowDropdown(true)}
               onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
             />
+            {/* Dropdown Menu */}
+            {showDropdown && searchPlate.trim() && searchResults.length > 0 && (
+              <>
+                <div className="fixed inset-0 z-10" onClick={() => setShowDropdown(false)}></div>
+                <div className="absolute top-full left-0 right-0 mt-2 bg-metal-dark border border-metal-border rounded-xl shadow-2xl z-20 overflow-hidden animate-in fade-in slide-in-from-top-2">
+                  {searchResults.map(repair => (
+                    <button
+                      key={repair.id}
+                      onClick={() => handleSelectRepair(repair)}
+                      className="w-full text-left px-4 py-3 border-b border-metal-border hover:bg-metal-mid transition-colors flex items-center justify-between group"
+                    >
+                      <div>
+                        <div className="font-black text-chrome-200 uppercase tracking-wide group-hover:text-blue-400">
+                          {repair.plate} - {repair.brand} {repair.model}
+                        </div>
+                        <div className="text-[10px] font-bold text-chrome-500 uppercase tracking-widest mt-0.5">
+                          {repair.ownerName}
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-[10px] text-chrome-400">
+                          {new Date(repair.createdAt).toLocaleDateString()}
+                        </div>
+                        <div className={`text-[10px] font-black uppercase tracking-widest mt-0.5 ${STATUS_STYLE[repair.status]?.badge.replace('border', '').replace('bg-', 'text-').split(' ')[1]}`}>
+                          {repair.status}
+                        </div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
           </div>
           <button
             onClick={handleSearch}

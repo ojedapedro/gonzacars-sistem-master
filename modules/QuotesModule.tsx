@@ -34,6 +34,9 @@ const QuotesModule: React.FC<QuotesModuleProps> = ({ localRate }) => {
   const [selectedQuote, setSelectedQuote] = useState<Quote | null>(null);
   const [showPrintModal, setShowPrintModal] = useState(false);
 
+  // Inventory source filter for product search
+  const [inventorySource, setInventorySource] = useState<'all' | 'own' | 'consignment'>('all');
+
   // Derive available vehicles for the selected customer
   const customerVehicles = useMemo(() => {
     if (!selectedCustomer) return [];
@@ -49,12 +52,21 @@ const QuotesModule: React.FC<QuotesModuleProps> = ({ localRate }) => {
     setSelectedVehiclePlate('');
   }, [selectedCustomer]);
 
-  // Filter Inventory for Search
+  // Filter Inventory for Search — incluye Gonzacars + Consignación
   const filteredProducts = useMemo(() => {
-    return store.inventory.filter((p: Product) =>
-      p.name.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-  }, [store.inventory, searchTerm]);
+    return store.inventory.filter((p: Product) => {
+      // Filtro por origen
+      if (inventorySource === 'own' && p.isConsignment) return false;
+      if (inventorySource === 'consignment' && !p.isConsignment) return false;
+      // Solo productos con stock disponible
+      if (p.quantity <= 0) return false;
+      // Filtro por término de búsqueda
+      if (!searchTerm) return true;
+      return p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+             (p.category || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+             (p.consignmentProvider || '').toLowerCase().includes(searchTerm.toLowerCase());
+    });
+  }, [store.inventory, searchTerm, inventorySource]);
 
   // Filter Quotes for List
   const filteredQuotes = useMemo(() => {
@@ -169,19 +181,38 @@ const QuotesModule: React.FC<QuotesModuleProps> = ({ localRate }) => {
       return;
     }
 
+    // FIX #3: Evitar re-conversión si ya fue procesada
+    if (selectedQuote.repairId) {
+      alert(`Esta cotización ya fue convertida a la Orden de Taller #${selectedQuote.repairId}. No puede convertirse nuevamente.`);
+      return;
+    }
+
+    // FIX #2: Validar que la placa no tenga una orden ya abierta
+    const CLOSED_STATUSES: VehicleRepair['status'][] = ['Finalizado', 'Entregado'];
+    const openOrder = store.repairs.find((r: VehicleRepair) =>
+      r.plate.toUpperCase() === selectedQuote.vehiclePlate!.toUpperCase() &&
+      !CLOSED_STATUSES.includes(r.status)
+    );
+    if (openOrder) {
+      alert(`El vehículo ${selectedQuote.vehiclePlate} ya tiene una orden de taller abierta (Estado: "${openOrder.status}"). Debe finalizar o entregar esa orden antes de abrir una nueva.`);
+      return;
+    }
+
     // Attempt to find brand/model from existing repairs of this plate
     let brand = 'Por Definir'; 
     let model = 'Por Definir'; 
     let year = new Date().getFullYear();
-    const existingRepairs = store.repairs.filter((r: VehicleRepair) => r.plate === selectedQuote.vehiclePlate);
+    const existingRepairs = store.repairs.filter((r: VehicleRepair) => r.plate.toUpperCase() === selectedQuote.vehiclePlate!.toUpperCase());
     if (existingRepairs.length > 0) {
       brand = existingRepairs[0].brand;
       model = existingRepairs[0].model;
       year = existingRepairs[0].year;
     }
 
+    const newRepairId = Math.random().toString(36).substr(2, 9);
+
     const newRepair: VehicleRepair = {
-      id: Math.random().toString(36).substr(2, 9),
+      id: newRepairId,
       customerId: selectedQuote.customerId || '',
       ownerName: selectedQuote.customerName,
       plate: selectedQuote.vehiclePlate,
@@ -189,10 +220,11 @@ const QuotesModule: React.FC<QuotesModuleProps> = ({ localRate }) => {
       model,
       year,
       responsible: '',
-      status: 'Ingresado', // Initial Status
+      status: 'Ingresado',
       diagnosis: `Ingreso generado desde Cotización Aprobada #${selectedQuote.id}`,
       serviceType: 'Reparación General',
       mechanicId: '',
+      quoteId: selectedQuote.id, // FIX #3: Vínculo hacia la cotización de origen
       items: selectedQuote.items.map(item => ({
         id: Math.random().toString(36).substr(2, 9),
         productId: item.productId,
@@ -204,8 +236,13 @@ const QuotesModule: React.FC<QuotesModuleProps> = ({ localRate }) => {
       createdAt: new Date().toISOString()
     };
 
+    // FIX #3: Primero crear la orden, luego actualizar la cotización
     await store.addRepair(newRepair);
-    alert(`¡Éxito! La orden de trabajo para el vehículo ${selectedQuote.vehiclePlate} ha sido creada y ya está en el Taller.`);
+    const updatedQuote = { ...selectedQuote, status: 'Aprobada' as const, repairId: newRepairId };
+    await store.updateQuote(updatedQuote);
+    setSelectedQuote(updatedQuote);
+
+    alert(`¡Éxito! La orden de trabajo para el vehículo ${selectedQuote.vehiclePlate} ha sido creada (Orden #${newRepairId}) y la cotización marcada como Aprobada.`);
   };
 
   return (
@@ -265,27 +302,62 @@ const QuotesModule: React.FC<QuotesModuleProps> = ({ localRate }) => {
                 />
               </div>
 
+              {/* Filtros de origen del inventario */}
+              <div className="flex gap-1 mb-4 p-1 bg-black/20 rounded-xl border border-white/10">
+                {(['all', 'own', 'consignment'] as const).map(source => {
+                  const labels = { all: '🏪 Todos', own: '🔧 Gonzacars', consignment: '🤝 Consignación' };
+                  return (
+                    <button
+                      key={source}
+                      onClick={() => setInventorySource(source)}
+                      className={`flex-1 py-2 px-3 rounded-lg text-xs font-black uppercase tracking-widest transition-all ${
+                        inventorySource === source
+                          ? 'bg-amber-500 text-white shadow-lg shadow-amber-500/25'
+                          : 'text-chrome-400 hover:text-white hover:bg-white/5'
+                      }`}
+                    >
+                      {labels[source]}
+                    </button>
+                  );
+                })}
+              </div>
+
               {searchTerm && (
                 <div className="flex-1 overflow-y-auto custom-scrollbar border border-white/10 rounded-xl bg-black/20 p-2 space-y-2 mb-4">
                   {filteredProducts.map((p: Product) => (
                     <div key={p.id} className="flex items-center justify-between p-3 bg-white/5 rounded-lg border border-white/5 hover:bg-white/10 transition-colors">
-                      <div>
-                        <p className="font-bold text-white">{p.name}</p>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="font-bold text-white text-sm">{p.name}</p>
+                          {p.isConsignment ? (
+                            <span className="text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30 whitespace-nowrap">
+                              🤝 {p.consignmentProvider || 'Consignación'}
+                            </span>
+                          ) : (
+                            <span className="text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30 whitespace-nowrap">
+                              🔧 Gonzacars
+                            </span>
+                          )}
+                        </div>
                         <div className="flex gap-3 text-xs mt-1">
-                          <span className="text-amber-400 font-medium">${Number(p.price).toFixed(2)}</span>
+                          <span className="text-amber-400 font-bold">${Number(p.price).toFixed(2)}</span>
                           <span className="text-chrome-500 uppercase">Disp: {p.quantity}</span>
+                          {p.category && <span className="text-chrome-600">{p.category}</span>}
                         </div>
                       </div>
                       <button 
                         onClick={() => addToCart(p)}
-                        className="p-2 bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 rounded-lg transition-colors border border-amber-500/20"
+                        className="p-2 bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 rounded-lg transition-colors border border-amber-500/20 ml-3 flex-shrink-0"
                       >
                         <Plus size={16} />
                       </button>
                     </div>
                   ))}
                   {filteredProducts.length === 0 && (
-                    <div className="p-4 text-center text-chrome-500 text-sm">No se encontraron productos.</div>
+                    <div className="p-6 text-center text-chrome-500 text-sm">
+                      <Search size={32} className="mx-auto mb-2 opacity-20" />
+                      No se encontraron productos en {inventorySource === 'all' ? 'el inventario' : inventorySource === 'own' ? 'el almacén Gonzacars' : 'consignación'}.
+                    </div>
                   )}
                 </div>
               )}
@@ -609,14 +681,26 @@ const QuotesModule: React.FC<QuotesModuleProps> = ({ localRate }) => {
                       <CheckCircle className="text-emerald-400" size={32} />
                       <div>
                         <p className="text-white font-bold text-base">Cotización Aprobada</p>
-                        <p className="text-emerald-400/80 text-xs mt-0.5">Puedes facturar o generar orden con estos datos.</p>
+                        {selectedQuote.repairId ? (
+                          <p className="text-emerald-400/80 text-xs mt-0.5">
+                            ✅ Orden de Taller generada: <span className="font-black text-emerald-300 uppercase tracking-widest">#{selectedQuote.repairId}</span>
+                          </p>
+                        ) : (
+                          <p className="text-emerald-400/80 text-xs mt-0.5">Puedes generar la orden de taller con estos datos.</p>
+                        )}
                       </div>
                     </div>
                     <button 
                       onClick={handleConvertToRepair}
-                      className="bg-emerald-600 hover:bg-emerald-500 text-white px-5 py-3 rounded-xl font-bold transition-all shadow-[0_0_20px_rgba(5,150,105,0.3)] active:scale-95 flex items-center gap-2 w-full md:w-auto justify-center whitespace-nowrap"
+                      disabled={!!selectedQuote.repairId}
+                      className={`px-5 py-3 rounded-xl font-bold transition-all active:scale-95 flex items-center gap-2 w-full md:w-auto justify-center whitespace-nowrap ${
+                        selectedQuote.repairId
+                          ? 'bg-metal-dark border border-metal-border text-chrome-500 cursor-not-allowed opacity-60'
+                          : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-[0_0_20px_rgba(5,150,105,0.3)]'
+                      }`}
                     >
-                      <Activity size={18} /> Convertir a Orden de Taller
+                      <Activity size={18} />
+                      {selectedQuote.repairId ? 'Ya tiene Orden de Taller' : 'Convertir a Orden de Taller'}
                     </button>
                   </div>
                 )}
