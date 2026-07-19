@@ -257,3 +257,31 @@ export interface AccountPayable {
   status: 'Pendiente' | 'Parcial' | 'Pagado' | 'Vencido';
   payments: PayablePayment[];
 }
+
+export type AppointmentStatus = 'Pendiente' | 'Confirmada' | 'En Proceso' | 'Completada' | 'Cancelada';
+
+export interface Appointment {
+  id: string;
+  customerId: string;
+  customerName: string;
+  customerPhone: string;
+  customerEmail?: string;
+  vehiclePlate: string;
+  vehicleBrand: string;
+  vehicleModel: string;
+  vehicleYear: number;
+  vehicleColor?: string;
+  vehicleMileage?: number;
+  serviceType: string;
+  description: string;
+  scheduledDate: string;    // YYYY-MM-DD
+  scheduledTime: string;    // HH:mm
+  mechanicId?: string;
+  mechanicName?: string;
+  status: AppointmentStatus;
+  repairId?: string;        // ID del VehicleRepair generado automáticamente
+  notes?: string;
+  createdAt: string;
+  isNewCustomer?: boolean;
+  isNewVehicle?: boolean;
+}

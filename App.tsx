@@ -37,7 +37,8 @@ import {
   Activity,
   ArrowUpRight,
   ArrowDownRight,
-  Minus
+  Minus,
+  CalendarDays
 } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { useGonzacarsStore } from './store';
@@ -59,6 +60,7 @@ import AccountsReceivableModule from './modules/AccountsReceivableModule';
 import AccountsPayableModule from './modules/AccountsPayableModule';
 import TechnicalReportsModule from './modules/TechnicalReportsModule';
 import FinancialReportsModule from './modules/FinancialReportsModule';
+import AppointmentsModule from './modules/AppointmentsModule';
 const LOGO_URL = "https://i.ibb.co/MDhy5tzK/image-2.png";
 
 /* ============================================================
@@ -155,6 +157,7 @@ const TAB_LABELS: Record<string, string> = {
   customers:  'Clientes',
   vehicles:   'Vehículos',
   quotes:     'Cotizaciones',
+  appointments: 'Citas del Taller',
   'repair-reg': 'Registro de Vehículo',
   'repair-rep': 'Informes de Taller',
   sales:      'Punto de Venta',
@@ -240,7 +243,7 @@ const App: React.FC = () => {
   const hasPermission = (tab: string) => {
     const role = store.currentUser?.role;
     if (role === 'administrador') return true;
-    if (role === 'vendedor') return ['dashboard', 'customers', 'vehicles', 'quotes', 'repair-reg', 'repair-rep', 'sales', 'inventory', 'consignment'].includes(tab);
+    if (role === 'vendedor') return ['dashboard', 'customers', 'vehicles', 'quotes', 'appointments', 'repair-reg', 'repair-rep', 'sales', 'inventory', 'consignment'].includes(tab);
     if (role === 'cajero') return ['dashboard', 'sales', 'expenses', 'finance', 'payroll', 'quotes', 'cxc', 'cxp', 'fin-reports', 'tech-reports'].includes(tab);
     return false;
   };
@@ -386,6 +389,7 @@ const App: React.FC = () => {
       case 'customers':   return <CustomerModule   {...moduleProps} />;
       case 'vehicles':    return <VehiclesModule />;
       case 'quotes':      return <QuotesModule localRate={localRate} />;
+      case 'appointments': return <AppointmentsModule {...moduleProps} onGoToRepairs={() => handleTabChange('repair-rep')} />;
       case 'repair-reg':  return <RepairRegistration {...moduleProps} />;
       case 'repair-rep':  return <RepairReport       {...moduleProps} />;
       case 'sales':       return <SalesPOS           {...moduleProps} />;
@@ -462,6 +466,7 @@ const App: React.FC = () => {
             <NavItem icon={<Car size={17}/>}             label="Vehículos"       tab="vehicles"    active={activeTab} onClick={handleTabChange} visible={hasPermission('vehicles')} badge={store.vehicles?.length > 0 ? String(store.vehicles.length) : ''} />
             <NavItem icon={<FileText size={17}/>}        label="Cotizaciones"    tab="quotes"      active={activeTab} onClick={handleTabChange} visible={hasPermission('quotes')} badge={store.quotes?.filter((q: any) => q.status === 'Borrador').length ? String(store.quotes.filter((q: any) => q.status === 'Borrador').length) : ''} badgeColor="amber" />
             <MenuHeader label="Servicio Técnico" />
+            <NavItem icon={<CalendarDays size={17}/>} label="Citas"          tab="appointments" active={activeTab} onClick={handleTabChange} visible={hasPermission('appointments')} badge={String(store.appointments?.filter((a: any) => a.scheduledDate === new Date().toISOString().split('T')[0] && (a.status === 'Pendiente' || a.status === 'Confirmada')).length || '')} badgeColor="amber" />
             <NavItem icon={<Wrench size={17}/>}          label="Reg. Vehículo"   tab="repair-reg"  active={activeTab} onClick={handleTabChange} visible={hasPermission('repair-reg')} />
             <NavItem icon={<ClipboardList size={17}/>}   label="Informes"        tab="repair-rep"  active={activeTab} onClick={handleTabChange} visible={hasPermission('repair-rep')} badge={String(store.repairs?.filter((r: any) => r.status !== 'Entregado').length || '')} />
             <MenuHeader label="Unidad Comercial" />

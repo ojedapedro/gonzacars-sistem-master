@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Product, VehicleRepair, Sale, Purchase, Expense, Employee, PayrollRecord, Customer, User, Vehicle, Quote, AccountReceivable, ReceivablePayment, AccountPayable, PayablePayment } from './types';
+import { Product, VehicleRepair, Sale, Purchase, Expense, Employee, PayrollRecord, Customer, User, Vehicle, Quote, AccountReceivable, ReceivablePayment, AccountPayable, PayablePayment, Appointment } from './types';
 import { db, auth, googleProvider } from './lib/firebase';
 import { collection, getDocs, doc, setDoc, deleteDoc, writeBatch } from 'firebase/firestore';
 import { signInWithPopup } from 'firebase/auth';
@@ -36,6 +36,7 @@ export const useGonzacarsStore = () => {
   const [quotes, setQuotes] = useState<Quote[]>([]);
   const [accountsReceivable, setAccountsReceivable] = useState<AccountReceivable[]>([]);
   const [accountsPayable, setAccountsPayable] = useState<AccountPayable[]>([]);
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
 
   const [isDemoMode, setIsDemoMode] = useState(false);
 
@@ -257,7 +258,7 @@ export const useGonzacarsStore = () => {
       const [
         usersSnap, custSnap, invSnap, repSnap, 
         salesSnap, purchSnap, expSnap, empSnap, paySnap, setSnap,
-        vehiclesSnap, quotesSnap, arSnap, apSnap
+        vehiclesSnap, quotesSnap, arSnap, apSnap, apptSnap
       ] = await Promise.all([
         getDocs(collection(db, "Users")),
         getDocs(collection(db, "Customers")),
@@ -272,7 +273,8 @@ export const useGonzacarsStore = () => {
         getDocs(collection(db, "Vehicles")),
         getDocs(collection(db, "Quotes")),
         getDocs(collection(db, "AccountsReceivable")),
-        getDocs(collection(db, "AccountsPayable"))
+        getDocs(collection(db, "AccountsPayable")),
+        getDocs(collection(db, "Appointments"))
       ]);
 
       setUsers(usersSnap.docs.map(d => ({ id: d.id, ...d.data() } as User)));
@@ -285,6 +287,7 @@ export const useGonzacarsStore = () => {
       setQuotes(quotesSnap.docs.map(d => ({ id: d.id, ...d.data() } as Quote)));
       setAccountsReceivable(arSnap.docs.map(d => ({ id: d.id, ...d.data() } as AccountReceivable)));
       setAccountsPayable(apSnap.docs.map(d => ({ id: d.id, ...d.data() } as AccountPayable)));
+      setAppointments(apptSnap.docs.map(d => ({ id: d.id, ...d.data() } as Appointment)));
       const migratedExpenses = expSnap.docs.map(d => {
         const exp = { id: d.id, ...d.data() } as any;
         if (!exp.expenseType) {
@@ -820,6 +823,31 @@ export const useGonzacarsStore = () => {
     setQuotes(prev => prev.filter(q => q.id !== id));
   };
 
+  // --- APPOINTMENTS CRUD ---
+
+  const addAppointment = async (appt: Appointment) => {
+    const newAppt = { ...appt, id: appt.id || Math.random().toString(36).substr(2, 9) };
+    setAppointments(prev => [...prev, newAppt]);
+    if (!isDemoMode) {
+      await saveToFirebase('Appointments', newAppt);
+    }
+    return newAppt;
+  };
+
+  const updateAppointment = async (appt: Appointment) => {
+    setAppointments(prev => prev.map(a => a.id === appt.id ? appt : a));
+    if (!isDemoMode) {
+      await saveToFirebase('Appointments', appt);
+    }
+  };
+
+  const deleteAppointment = async (id: string) => {
+    setAppointments(prev => prev.filter(a => a.id !== id));
+    if (!isDemoMode) {
+      await deleteFromFirebase('Appointments', id);
+    }
+  };
+
   const updateBarcode = async (id: string, barcode: string) => {
     const item = inventory.find(p => p.id === id);
     if (item) {
@@ -854,6 +882,7 @@ export const useGonzacarsStore = () => {
     quotes, setQuotes, addQuote, updateQuote, deleteQuote,
     accountsReceivable, setAccountsReceivable,
     accountsPayable, setAccountsPayable,
+    appointments, setAppointments, addAppointment, updateAppointment, deleteAppointment,
     saveToFirebase,
     runGlobalAudit,
     isDemoMode, setIsDemoMode
