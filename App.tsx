@@ -1,14 +1,14 @@
 
 import React, { useState, useMemo, useEffect, useCallback, createContext, useContext } from 'react';
-import { 
-  LayoutDashboard, 
-  Wrench, 
-  ClipboardList, 
-  ShoppingCart, 
-  Package, 
-  Truck, 
-  BarChart3, 
-  Wallet, 
+import {
+  LayoutDashboard,
+  Wrench,
+  ClipboardList,
+  ShoppingCart,
+  Package,
+  Truck,
+  BarChart3,
+  Wallet,
   Users,
   DollarSign,
   UserRound,
@@ -72,21 +72,21 @@ interface Toast { id: string; type: ToastType; title: string; message?: string; 
 interface ToastContextValue {
   toast: (type: ToastType, title: string, message?: string, duration?: number) => void;
   success: (title: string, message?: string) => void;
-  error:   (title: string, message?: string) => void;
-  info:    (title: string, message?: string) => void;
+  error: (title: string, message?: string) => void;
+  info: (title: string, message?: string) => void;
   warning: (title: string, message?: string) => void;
 }
 
 const ToastContext = createContext<ToastContextValue>({
-  toast: () => {}, success: () => {}, error: () => {}, info: () => {}, warning: () => {},
+  toast: () => { }, success: () => { }, error: () => { }, info: () => { }, warning: () => { },
 });
 
 export const useToast = () => useContext(ToastContext);
 
 const TOAST_ICONS: Record<ToastType, React.ReactNode> = {
   success: <CheckCircle size={16} />,
-  error:   <AlertCircle size={16} />,
-  info:    <Info size={16} />,
+  error: <AlertCircle size={16} />,
+  info: <Info size={16} />,
   warning: <AlertTriangle size={16} />,
 };
 
@@ -104,18 +104,18 @@ const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ children }) =>
   }, [removeToast]);
 
   const ctx: ToastContextValue = {
-    toast:   addToast,
+    toast: addToast,
     success: (t, m) => addToast('success', t, m),
-    error:   (t, m) => addToast('error',   t, m),
-    info:    (t, m) => addToast('info',    t, m),
+    error: (t, m) => addToast('error', t, m),
+    info: (t, m) => addToast('info', t, m),
     warning: (t, m) => addToast('warning', t, m),
   };
 
   const toastColors: Record<ToastType, { border: string; iconBg: string; iconText: string }> = {
     success: { border: 'border-emerald-500/20', iconBg: 'bg-emerald-500/15', iconText: 'text-emerald-400' },
-    error:   { border: 'border-red-500/20',     iconBg: 'bg-red-500/15',     iconText: 'text-red-400' },
-    info:    { border: 'border-blue-500/20',     iconBg: 'bg-blue-500/15',    iconText: 'text-blue-400' },
-    warning: { border: 'border-amber-500/20',    iconBg: 'bg-amber-500/15',   iconText: 'text-amber-400' },
+    error: { border: 'border-red-500/20', iconBg: 'bg-red-500/15', iconText: 'text-red-400' },
+    info: { border: 'border-blue-500/20', iconBg: 'bg-blue-500/15', iconText: 'text-blue-400' },
+    warning: { border: 'border-amber-500/20', iconBg: 'bg-amber-500/15', iconText: 'text-amber-400' },
   };
 
   return (
@@ -153,25 +153,25 @@ const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ children }) =>
    MAIN APP
    ============================================================ */
 const TAB_LABELS: Record<string, string> = {
-  dashboard:  'Dashboard',
-  customers:  'Clientes',
-  vehicles:   'Vehículos',
-  quotes:     'Cotizaciones',
+  dashboard: 'Dashboard',
+  customers: 'Clientes',
+  vehicles: 'Vehículos',
+  quotes: 'Cotizaciones',
   appointments: 'Citas del Taller',
   'repair-reg': 'Registro de Vehículo',
   'repair-rep': 'Informes de Taller',
-  sales:      'Punto de Venta',
-  inventory:  'Inventario General',
-  consignment:'Consignación',
-  purchases:  'Compras',
-  finance:    'Finanzas',
-  expenses:   'Gastos',
-  cxc:        'Cuentas por Cobrar',
-  cxp:        'Cuentas por Pagar',
+  sales: 'Punto de Venta',
+  inventory: 'Inventario General',
+  consignment: 'Consignación',
+  purchases: 'Compras',
+  finance: 'Finanzas',
+  expenses: 'Gastos',
+  cxc: 'Cuentas por Cobrar',
+  cxp: 'Cuentas por Pagar',
   'tech-reports': 'Reportes Técnicos',
-  'fin-reports':  'Reportes Financieros',
-  payroll:    'Nómina',
-  'user-mgmt':'Gestión de Usuarios',
+  'fin-reports': 'Reportes Financieros',
+  payroll: 'Nómina',
+  'user-mgmt': 'Gestión de Usuarios',
 };
 
 const App: React.FC = () => {
@@ -289,26 +289,26 @@ const App: React.FC = () => {
               <p className="text-chrome-400 font-semibold uppercase text-[9px] tracking-[0.25em]">Sistema de Gestión Integral</p>
             </div>
           </div>
-          
+
           <div className="flex-1 flex items-center justify-between w-full mt-4 mb-4">
             <div className="space-y-6 animate-fade-in-up stagger-2 max-w-md xl:max-w-lg relative z-10">
               <h2 className="text-5xl xl:text-6xl font-black text-white leading-[1.1]" style={{ fontFamily: 'Outfit, sans-serif' }}>
-                Control total <br/> de tu <span className="text-gradient drop-shadow-lg">negocio.</span>
+                Control total <br /> de tu <span className="text-gradient drop-shadow-lg">negocio.</span>
               </h2>
               <p className="text-chrome-300 max-w-md text-base leading-relaxed">
                 Plataforma integral para la gestión de talleres mecánicos, venta de repuestos y administración financiera con análisis de rendimiento en tiempo real.
               </p>
-              
+
               <div className="flex flex-wrap gap-4 pt-6">
-                 <div className="flex items-center gap-2 text-xs font-bold text-chrome-300 bg-white/5 px-5 py-2.5 rounded-full border border-white/10 shadow-lg backdrop-blur-md">
-                   <Zap size={16} className="text-blue-400" /> Rendimiento
-                 </div>
-                 <div className="flex items-center gap-2 text-xs font-bold text-chrome-300 bg-white/5 px-5 py-2.5 rounded-full border border-white/10 shadow-lg backdrop-blur-md">
-                   <ShieldCheck size={16} className="text-emerald-400" /> Seguridad
-                 </div>
-                 <div className="flex items-center gap-2 text-xs font-bold text-chrome-300 bg-white/5 px-5 py-2.5 rounded-full border border-white/10 shadow-lg backdrop-blur-md">
-                   <Activity size={16} className="text-amber-400" /> Tiempo Real
-                 </div>
+                <div className="flex items-center gap-2 text-xs font-bold text-chrome-300 bg-white/5 px-5 py-2.5 rounded-full border border-white/10 shadow-lg backdrop-blur-md">
+                  <Zap size={16} className="text-blue-400" /> Rendimiento
+                </div>
+                <div className="flex items-center gap-2 text-xs font-bold text-chrome-300 bg-white/5 px-5 py-2.5 rounded-full border border-white/10 shadow-lg backdrop-blur-md">
+                  <ShieldCheck size={16} className="text-emerald-400" /> Seguridad
+                </div>
+                <div className="flex items-center gap-2 text-xs font-bold text-chrome-300 bg-white/5 px-5 py-2.5 rounded-full border border-white/10 shadow-lg backdrop-blur-md">
+                  <Activity size={16} className="text-amber-400" /> Tiempo Real
+                </div>
               </div>
             </div>
 
@@ -316,9 +316,9 @@ const App: React.FC = () => {
               <img src={LOGO_URL} alt="Gonzacars Vista" className="w-[350px] 2xl:w-[450px] object-contain drop-shadow-[0_20px_50px_rgba(0,0,0,0.5)]" />
             </div>
           </div>
-          
+
           <div className="text-chrome-500 text-xs font-medium animate-fade-in-up stagger-3 flex items-center gap-2">
-            &copy; {new Date().getFullYear()} Gonzacars C.A. Todos los derechos reservados.
+            &copy; {new Date().getFullYear()} DevMecanico.online Todos los derechos reservados.
           </div>
         </div>
 
@@ -326,7 +326,7 @@ const App: React.FC = () => {
         <div className="w-full lg:w-[45%] flex items-center justify-center p-6 lg:p-12 relative z-10">
           <div className="w-full max-w-md animate-scale-in">
             <div className="glass-panel rounded-3xl overflow-hidden glow-box hover-lift bg-metal-base/80 shadow-2xl border border-white/10">
-              
+
               {/* Form Header */}
               <div className="p-8 lg:p-12 pb-6 relative">
                 <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-600 via-cyan-400 to-blue-600"></div>
@@ -334,12 +334,12 @@ const App: React.FC = () => {
                   <div className="w-20 h-20 bg-white/5 rounded-2xl flex items-center justify-center border border-white/8 p-2.5 glow-box mb-4">
                     <img src={LOGO_URL} alt="Gonzacars Logo" className="w-full h-full object-contain" />
                   </div>
-                  <h1 className="text-2xl font-black uppercase tracking-tight text-gradient text-center" style={{ fontFamily: 'Outfit, sans-serif' }}>Gonzacars C.A.</h1>
+                  <h1 className="text-2xl font-black uppercase tracking-tight text-gradient text-center" style={{ fontFamily: 'Outfit, sans-serif' }}>DevMecanico online</h1>
                 </div>
-                
+
                 <h2 className="text-3xl font-black text-white mb-2 text-center lg:text-left tracking-tight" style={{ fontFamily: 'Outfit, sans-serif' }}>Iniciar Sesión</h2>
                 <p className="text-chrome-400 text-sm text-center lg:text-left">Ingresa tus credenciales para acceder</p>
-                
+
                 {store.isDemoMode && (
                   <div className="mt-6 bg-amber-500/10 text-amber-400 px-4 py-3 rounded-xl border border-amber-500/20 flex items-center gap-3 shadow-inner">
                     <AlertTriangle size={18} className="flex-shrink-0" />
@@ -427,10 +427,10 @@ const App: React.FC = () => {
                   className="w-full bg-white/5 hover:bg-white/10 border border-white/10 py-3.5 rounded-xl font-bold text-sm flex items-center justify-center gap-3 transition-all hover:border-white/20 active:scale-[0.98] disabled:opacity-70 text-chrome-200 hover:text-white shadow-sm"
                 >
                   <svg className="w-5 h-5" viewBox="0 0 24 24">
-                    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                    <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
-                    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+                    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                    <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" />
+                    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" />
                   </svg>
                   Google Workspace
                 </button>
@@ -446,24 +446,24 @@ const App: React.FC = () => {
   const renderModule = () => {
     const moduleProps = { store, toast };
     switch (activeTab) {
-      case 'customers':   return <CustomerModule   {...moduleProps} />;
-      case 'vehicles':    return <VehiclesModule />;
-      case 'quotes':      return <QuotesModule localRate={localRate} />;
+      case 'customers': return <CustomerModule   {...moduleProps} />;
+      case 'vehicles': return <VehiclesModule />;
+      case 'quotes': return <QuotesModule localRate={localRate} />;
       case 'appointments': return <AppointmentsModule {...moduleProps} onGoToRepairs={() => handleTabChange('repair-rep')} />;
-      case 'repair-reg':  return <RepairRegistration {...moduleProps} />;
-      case 'repair-rep':  return <RepairReport       {...moduleProps} />;
-      case 'sales':       return <SalesPOS           {...moduleProps} />;
-      case 'inventory':   return <InventoryModule    {...moduleProps} />;
+      case 'repair-reg': return <RepairRegistration {...moduleProps} />;
+      case 'repair-rep': return <RepairReport       {...moduleProps} />;
+      case 'sales': return <SalesPOS           {...moduleProps} />;
+      case 'inventory': return <InventoryModule    {...moduleProps} />;
       case 'consignment': return <ConsignmentInventoryModule {...moduleProps} />;
-      case 'purchases':   return <PurchaseRegistry   {...moduleProps} />;
-      case 'finance':     return <FinanceModule      {...moduleProps} />;
-      case 'cxc':         return <AccountsReceivableModule />;
-      case 'cxp':         return <AccountsPayableModule />;
-      case 'tech-reports':return <TechnicalReportsModule />;
+      case 'purchases': return <PurchaseRegistry   {...moduleProps} />;
+      case 'finance': return <FinanceModule      {...moduleProps} />;
+      case 'cxc': return <AccountsReceivableModule />;
+      case 'cxp': return <AccountsPayableModule />;
+      case 'tech-reports': return <TechnicalReportsModule />;
       case 'fin-reports': return <FinancialReportsModule />;
-      case 'expenses':    return <ExpenseModule      {...moduleProps} />;
-      case 'payroll':     return <PayrollModule      {...moduleProps} />;
-      case 'user-mgmt':   return <UserManagement     {...moduleProps} />;
+      case 'expenses': return <ExpenseModule      {...moduleProps} />;
+      case 'payroll': return <PayrollModule      {...moduleProps} />;
+      case 'user-mgmt': return <UserManagement     {...moduleProps} />;
       default: return <DashboardModule store={store} localRate={localRate} setLocalRate={setLocalRate} handleRateUpdate={handleRateUpdate} />;
     }
   };
@@ -486,7 +486,7 @@ const App: React.FC = () => {
       )}
 
       {/* SIDEBAR — Floating Panel */}
-      <div 
+      <div
         className={`fixed inset-y-0 left-0 z-40 w-72 glass-panel shadow-2xl transform transition-transform duration-300 ease-in-out lg:translate-x-0 ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'} ${store.isDemoMode ? 'top-7' : ''}`}
       >
         <div className={`flex flex-col h-full m-2.5 rounded-2xl sidebar-panel overflow-hidden ${store.isDemoMode ? 'mt-0' : ''}`}>
@@ -520,31 +520,31 @@ const App: React.FC = () => {
 
           {/* Nav */}
           <nav className="flex-1 px-3 py-1 space-y-0.5 overflow-y-auto">
-            <NavItem icon={<LayoutDashboard size={17}/>} label="Escritorio"      tab="dashboard"   active={activeTab} onClick={handleTabChange} visible={hasPermission('dashboard')} badge={store.loading ? '…' : ''} />
+            <NavItem icon={<LayoutDashboard size={17} />} label="Escritorio" tab="dashboard" active={activeTab} onClick={handleTabChange} visible={hasPermission('dashboard')} badge={store.loading ? '…' : ''} />
             <MenuHeader label="Base de Datos" />
-            <NavItem icon={<UserRound size={17}/>}       label="Clientes"        tab="customers"   active={activeTab} onClick={handleTabChange} visible={hasPermission('customers')} badge={store.customers?.length > 0 ? String(store.customers.length) : ''} />
-            <NavItem icon={<Car size={17}/>}             label="Vehículos"       tab="vehicles"    active={activeTab} onClick={handleTabChange} visible={hasPermission('vehicles')} badge={store.vehicles?.length > 0 ? String(store.vehicles.length) : ''} />
-            <NavItem icon={<FileText size={17}/>}        label="Cotizaciones"    tab="quotes"      active={activeTab} onClick={handleTabChange} visible={hasPermission('quotes')} badge={store.quotes?.filter((q: any) => q.status === 'Borrador').length ? String(store.quotes.filter((q: any) => q.status === 'Borrador').length) : ''} badgeColor="amber" />
+            <NavItem icon={<UserRound size={17} />} label="Clientes" tab="customers" active={activeTab} onClick={handleTabChange} visible={hasPermission('customers')} badge={store.customers?.length > 0 ? String(store.customers.length) : ''} />
+            <NavItem icon={<Car size={17} />} label="Vehículos" tab="vehicles" active={activeTab} onClick={handleTabChange} visible={hasPermission('vehicles')} badge={store.vehicles?.length > 0 ? String(store.vehicles.length) : ''} />
+            <NavItem icon={<FileText size={17} />} label="Cotizaciones" tab="quotes" active={activeTab} onClick={handleTabChange} visible={hasPermission('quotes')} badge={store.quotes?.filter((q: any) => q.status === 'Borrador').length ? String(store.quotes.filter((q: any) => q.status === 'Borrador').length) : ''} badgeColor="amber" />
             <MenuHeader label="Servicio Técnico" />
-            <NavItem icon={<CalendarDays size={17}/>} label="Citas"          tab="appointments" active={activeTab} onClick={handleTabChange} visible={hasPermission('appointments')} badge={String(store.appointments?.filter((a: any) => a.scheduledDate === new Date().toISOString().split('T')[0] && (a.status === 'Pendiente' || a.status === 'Confirmada')).length || '')} badgeColor="amber" />
-            <NavItem icon={<Wrench size={17}/>}          label="Reg. Vehículo"   tab="repair-reg"  active={activeTab} onClick={handleTabChange} visible={hasPermission('repair-reg')} />
-            <NavItem icon={<ClipboardList size={17}/>}   label="Informes"        tab="repair-rep"  active={activeTab} onClick={handleTabChange} visible={hasPermission('repair-rep')} badge={String(store.repairs?.filter((r: any) => r.status !== 'Entregado').length || '')} />
+            <NavItem icon={<CalendarDays size={17} />} label="Citas" tab="appointments" active={activeTab} onClick={handleTabChange} visible={hasPermission('appointments')} badge={String(store.appointments?.filter((a: any) => a.scheduledDate === new Date().toISOString().split('T')[0] && (a.status === 'Pendiente' || a.status === 'Confirmada')).length || '')} badgeColor="amber" />
+            <NavItem icon={<Wrench size={17} />} label="Reg. Vehículo" tab="repair-reg" active={activeTab} onClick={handleTabChange} visible={hasPermission('repair-reg')} />
+            <NavItem icon={<ClipboardList size={17} />} label="Informes" tab="repair-rep" active={activeTab} onClick={handleTabChange} visible={hasPermission('repair-rep')} badge={String(store.repairs?.filter((r: any) => r.status !== 'Entregado').length || '')} />
             <MenuHeader label="Unidad Comercial" />
-            <NavItem icon={<ShoppingCart size={17}/>}    label="Punto de Venta"  tab="sales"       active={activeTab} onClick={handleTabChange} visible={hasPermission('sales')} />
-            <NavItem icon={<Package size={17}/>}         label="Inventario"      tab="inventory"   active={activeTab} onClick={handleTabChange} visible={hasPermission('inventory')} badge={String(store.inventory?.filter((p: any) => p.quantity <= 5 && !p.isConsignment).length || '')} badgeColor="amber" />
-            <NavItem icon={<Package size={17}/>}         label="Consignación"    tab="consignment" active={activeTab} onClick={handleTabChange} visible={hasPermission('consignment')} />
-            <NavItem icon={<Truck size={17}/>}           label="Compras"         tab="purchases"   active={activeTab} onClick={handleTabChange} visible={hasPermission('purchases')} />
+            <NavItem icon={<ShoppingCart size={17} />} label="Punto de Venta" tab="sales" active={activeTab} onClick={handleTabChange} visible={hasPermission('sales')} />
+            <NavItem icon={<Package size={17} />} label="Inventario" tab="inventory" active={activeTab} onClick={handleTabChange} visible={hasPermission('inventory')} badge={String(store.inventory?.filter((p: any) => p.quantity <= 5 && !p.isConsignment).length || '')} badgeColor="amber" />
+            <NavItem icon={<Package size={17} />} label="Consignación" tab="consignment" active={activeTab} onClick={handleTabChange} visible={hasPermission('consignment')} />
+            <NavItem icon={<Truck size={17} />} label="Compras" tab="purchases" active={activeTab} onClick={handleTabChange} visible={hasPermission('purchases')} />
             <MenuHeader label="Administración" />
-            <NavItem icon={<BarChart3 size={17}/>}       label="Finanzas"        tab="finance"     active={activeTab} onClick={handleTabChange} visible={hasPermission('finance')} />
-            <NavItem icon={<Wallet size={17}/>}          label="Por Cobrar"      tab="cxc"         active={activeTab} onClick={handleTabChange} visible={hasPermission('cxc')} badge={String(store.accountsReceivable?.filter(a => a.status !== 'Pagado').length || '')} badgeColor="amber" />
-            <NavItem icon={<Truck size={17}/>}           label="Por Pagar"       tab="cxp"         active={activeTab} onClick={handleTabChange} visible={hasPermission('cxp')} badge={String(store.accountsPayable?.filter(a => a.status !== 'Pagado').length || '')} badgeColor="amber" />
-            <NavItem icon={<Wallet size={17}/>}          label="Gastos"          tab="expenses"    active={activeTab} onClick={handleTabChange} visible={hasPermission('expenses')} />
-            <NavItem icon={<Users size={17}/>}           label="Nómina"          tab="payroll"     active={activeTab} onClick={handleTabChange} visible={hasPermission('payroll')} />
+            <NavItem icon={<BarChart3 size={17} />} label="Finanzas" tab="finance" active={activeTab} onClick={handleTabChange} visible={hasPermission('finance')} />
+            <NavItem icon={<Wallet size={17} />} label="Por Cobrar" tab="cxc" active={activeTab} onClick={handleTabChange} visible={hasPermission('cxc')} badge={String(store.accountsReceivable?.filter(a => a.status !== 'Pagado').length || '')} badgeColor="amber" />
+            <NavItem icon={<Truck size={17} />} label="Por Pagar" tab="cxp" active={activeTab} onClick={handleTabChange} visible={hasPermission('cxp')} badge={String(store.accountsPayable?.filter(a => a.status !== 'Pagado').length || '')} badgeColor="amber" />
+            <NavItem icon={<Wallet size={17} />} label="Gastos" tab="expenses" active={activeTab} onClick={handleTabChange} visible={hasPermission('expenses')} />
+            <NavItem icon={<Users size={17} />} label="Nómina" tab="payroll" active={activeTab} onClick={handleTabChange} visible={hasPermission('payroll')} />
             <MenuHeader label="Reportes y Estadísticas" />
-            <NavItem icon={<Wrench size={17}/>}          label="Técnicos"        tab="tech-reports" active={activeTab} onClick={handleTabChange} visible={hasPermission('tech-reports')} />
-            <NavItem icon={<BarChart3 size={17}/>}       label="Financieros"     tab="fin-reports"  active={activeTab} onClick={handleTabChange} visible={hasPermission('fin-reports')} />
+            <NavItem icon={<Wrench size={17} />} label="Técnicos" tab="tech-reports" active={activeTab} onClick={handleTabChange} visible={hasPermission('tech-reports')} />
+            <NavItem icon={<BarChart3 size={17} />} label="Financieros" tab="fin-reports" active={activeTab} onClick={handleTabChange} visible={hasPermission('fin-reports')} />
             <MenuHeader label="Sistema" />
-            <NavItem icon={<ShieldCheck size={17}/>}     label="Usuarios"        tab="user-mgmt"   active={activeTab} onClick={handleTabChange} visible={hasPermission('user-mgmt')} />
+            <NavItem icon={<ShieldCheck size={17} />} label="Usuarios" tab="user-mgmt" active={activeTab} onClick={handleTabChange} visible={hasPermission('user-mgmt')} />
           </nav>
 
           {/* Logout */}
@@ -554,7 +554,7 @@ const App: React.FC = () => {
               className="w-full flex items-center justify-center gap-2 p-3 rounded-xl text-chrome-500 hover:text-red-400 transition-all text-[10px] font-black uppercase tracking-widest metallic-shine"
               style={{ background: 'linear-gradient(180deg, #1c2030, #161922)', border: '1px solid #2a2f42' }}
             >
-              <LogOut size={15}/> Cerrar Sesión
+              <LogOut size={15} /> Cerrar Sesión
             </button>
           </div>
         </div>
@@ -623,10 +623,10 @@ interface NavItemProps {
 const NavItem: React.FC<NavItemProps> = ({ icon, label, tab, active, onClick, visible = true, badge, badgeColor = 'blue' }) => {
   if (!visible) return null;
   const isActive = active === tab;
-  const badgeColors = { 
-    blue: 'bg-blue-500/15 text-blue-400', 
-    amber: 'bg-amber-500/15 text-amber-400', 
-    red: 'bg-red-500/15 text-red-400' 
+  const badgeColors = {
+    blue: 'bg-blue-500/15 text-blue-400',
+    amber: 'bg-amber-500/15 text-amber-400',
+    red: 'bg-red-500/15 text-red-400'
   };
 
   return (
