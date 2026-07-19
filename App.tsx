@@ -258,7 +258,7 @@ const App: React.FC = () => {
           <img src={LOGO_URL} alt="Gonzacars Logo" className="w-full h-full object-contain" />
         </div>
         <div className="text-center">
-          <h1 className="text-2xl font-black uppercase tracking-tight text-gradient" style={{ fontFamily: 'Outfit, sans-serif' }}>Gonzacars C.A.</h1>
+          <h1 className="text-2xl font-black uppercase tracking-tight text-gradient" style={{ fontFamily: 'Outfit, sans-serif' }}>DevMecanico online</h1>
           <p className="text-chrome-500 text-[10px] font-bold uppercase tracking-[0.2em] mt-2">Conectando con el servidor…</p>
         </div>
         <div className="flex gap-1.5">

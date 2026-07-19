@@ -1,15 +1,16 @@
-
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Gonzacars C.A. — Sistema de Gestión Integral</title>
-  <meta name="description" content="Sistema integral de gestión para Gonzacars C.A. — Taller Mecánico y Repuestos. Administra clientes, vehículos, inventario, ventas, finanzas y nómina.">
+  <title>DevMecanicoOnline — Sistema de Gestión Integral</title>
+  <meta name="description"
+    content="Sistema integral de gestión para DevMecanicoOnline. Administra clientes, vehículos, inventario, ventas, finanzas y nómina.">
   <meta name="theme-color" content="#0a0f1e">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="Gonzacars">
+  <meta name="apple-mobile-web-app-title" content="DevMecanicoOnline">
   <link rel="manifest" href="/manifest.json">
   <link rel="icon" type="image/png" href="https://i.ibb.co/MDhy5tzK/image-2.png">
   <link rel="apple-touch-icon" href="https://i.ibb.co/MDhy5tzK/image-2.png">
@@ -27,21 +28,34 @@
   <!-- Google Fonts: Outfit (headings) + Inter (body) -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700;800;900&display=swap"
+    rel="stylesheet">
 
   <style>
     /* Critical above-the-fold: prevent FOUC */
-    html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; }
+    html,
+    body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      overflow: hidden;
+    }
+
     body {
       font-family: 'Inter', system-ui, sans-serif;
       background: #f1f5f9;
       color: #0f172a;
     }
-    #root { height: 100%; }
+
+    #root {
+      height: 100%;
+    }
 
     /* App-loading splash */
     #app-loader {
-      position: fixed; inset: 0;
+      position: fixed;
+      inset: 0;
       background: #0a0f1e;
       display: flex;
       align-items: center;
@@ -51,21 +65,30 @@
       z-index: 99999;
       transition: opacity 0.5s ease, visibility 0.5s ease;
     }
+
     #app-loader.hidden {
       opacity: 0;
       visibility: hidden;
       pointer-events: none;
     }
+
     .loader-ring {
-      width: 40px; height: 40px;
-      border: 3px solid rgba(255,255,255,0.1);
+      width: 40px;
+      height: 40px;
+      border: 3px solid rgba(255, 255, 255, 0.1);
       border-top-color: #3b82f6;
       border-radius: 50%;
       animation: spin 0.8s linear infinite;
     }
-    @keyframes spin { to { transform: rotate(360deg); } }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
     .loader-text {
-      color: rgba(255,255,255,0.5);
+      color: rgba(255, 255, 255, 0.5);
       font-size: 0.75rem;
       font-weight: 600;
       letter-spacing: 0.15em;
@@ -73,6 +96,7 @@
     }
   </style>
 </head>
+
 <body>
   <!-- App-loading splash screen -->
   <div id="app-loader">
@@ -88,7 +112,7 @@
 
   <!-- Hide loader once React mounts -->
   <script>
-    window.__hideLoader = function() {
+    window.__hideLoader = function () {
       var el = document.getElementById('app-loader');
       if (el) el.classList.add('hidden');
     };
@@ -107,4 +131,5 @@
   }
 }
 </script>
+
 </html>
