@@ -61,7 +61,7 @@ import AccountsPayableModule from './modules/AccountsPayableModule';
 import TechnicalReportsModule from './modules/TechnicalReportsModule';
 import FinancialReportsModule from './modules/FinancialReportsModule';
 import AppointmentsModule from './modules/AppointmentsModule';
-const LOGO_URL = "https://i.ibb.co/MDhy5tzK/image-2.png";
+const LOGO_URL = "https://i.ibb.co/Cs1vQvD1/Generated-Image-July-19-2026-1-23-PM.png";
 
 /* ============================================================
    TOAST SYSTEM
@@ -273,109 +273,169 @@ const App: React.FC = () => {
   /* ---- LOGIN SCREEN ---- */
   if (!store.currentUser) {
     return (
-      <div className="h-screen w-screen flex items-center justify-center animated-gradient relative overflow-hidden p-4">
+      <div className="h-screen w-screen flex animated-gradient relative overflow-hidden">
         {/* Ambient blobs */}
         <div className="absolute top-[-15%] left-[-10%] w-[45%] h-[45%] bg-blue-600/15 rounded-full blur-[130px] pointer-events-none animate-pulse-slow" />
         <div className="absolute bottom-[-10%] right-[-10%] w-[35%] h-[35%] bg-cyan-500/10 rounded-full blur-[110px] pointer-events-none animate-pulse-slow" style={{ animationDelay: '1.5s' }} />
-        <div className="absolute top-[40%] right-[20%] w-[20%] h-[20%] bg-blue-400/5 rounded-full blur-[80px] pointer-events-none" />
 
-        <div className="w-full max-w-md relative z-10 animate-scale-in">
-          <div className="glass-panel rounded-2xl overflow-hidden glow-box">
-            {/* Header */}
-            <div className="p-8 lg:p-10 text-center border-b border-white/5">
-              <div className="w-20 h-20 lg:w-24 lg:h-24 bg-white/5 rounded-2xl flex items-center justify-center mx-auto mb-5 border border-white/8 p-2.5" style={{ boxShadow: '0 8px 24px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05)' }}>
-                <img src={LOGO_URL} alt="Gonzacars Logo" className="w-full h-full object-contain" />
-              </div>
-              <h1 className="text-3xl font-black uppercase tracking-tight leading-none text-gradient" style={{ fontFamily: 'Outfit, sans-serif' }}>
-                Gonzacars C.A.
-              </h1>
-              <p className="text-chrome-400 font-semibold uppercase text-[10px] tracking-[0.25em] mt-2">
-                Sistema de Gestión Integral
+        {/* Left Side: Brand & Visual (Hidden on mobile) */}
+        <div className="hidden lg:flex flex-col justify-between w-[55%] p-14 relative z-10 border-r border-white/5 bg-black/20 backdrop-blur-3xl">
+          <div className="flex items-center gap-4 animate-fade-in-up">
+            <div className="w-14 h-14 bg-white/5 rounded-2xl flex items-center justify-center border border-white/8 p-2.5 glow-box">
+              <img src={LOGO_URL} alt="Gonzacars Logo" className="w-full h-full object-contain drop-shadow-md" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-black uppercase tracking-tight text-gradient drop-shadow-lg" style={{ fontFamily: 'Outfit, sans-serif' }}>Gonzacars C.A.</h1>
+              <p className="text-chrome-400 font-semibold uppercase text-[9px] tracking-[0.25em]">Sistema de Gestión Integral</p>
+            </div>
+          </div>
+          
+          <div className="flex-1 flex items-center justify-between w-full mt-4 mb-4">
+            <div className="space-y-6 animate-fade-in-up stagger-2 max-w-md xl:max-w-lg relative z-10">
+              <h2 className="text-5xl xl:text-6xl font-black text-white leading-[1.1]" style={{ fontFamily: 'Outfit, sans-serif' }}>
+                Control total <br/> de tu <span className="text-gradient drop-shadow-lg">negocio.</span>
+              </h2>
+              <p className="text-chrome-300 max-w-md text-base leading-relaxed">
+                Plataforma integral para la gestión de talleres mecánicos, venta de repuestos y administración financiera con análisis de rendimiento en tiempo real.
               </p>
-              {store.isDemoMode && (
-                <div className="mt-4 bg-amber-500/10 text-amber-400 px-4 py-2.5 rounded-xl border border-amber-500/20 animate-fade-in">
-                  <p className="text-[10px] font-black uppercase tracking-widest">⚡ Modo Demostración</p>
-                  <p className="text-[10px] mt-1 opacity-80">usuario: <b>admin</b> / clave: <b>admin</b></p>
-                </div>
-              )}
+              
+              <div className="flex flex-wrap gap-4 pt-6">
+                 <div className="flex items-center gap-2 text-xs font-bold text-chrome-300 bg-white/5 px-5 py-2.5 rounded-full border border-white/10 shadow-lg backdrop-blur-md">
+                   <Zap size={16} className="text-blue-400" /> Rendimiento
+                 </div>
+                 <div className="flex items-center gap-2 text-xs font-bold text-chrome-300 bg-white/5 px-5 py-2.5 rounded-full border border-white/10 shadow-lg backdrop-blur-md">
+                   <ShieldCheck size={16} className="text-emerald-400" /> Seguridad
+                 </div>
+                 <div className="flex items-center gap-2 text-xs font-bold text-chrome-300 bg-white/5 px-5 py-2.5 rounded-full border border-white/10 shadow-lg backdrop-blur-md">
+                   <Activity size={16} className="text-amber-400" /> Tiempo Real
+                 </div>
+              </div>
             </div>
 
-            {/* Form */}
-            <form onSubmit={handleLogin} className="p-8 lg:p-10 space-y-5">
-              <div className="space-y-2">
-                <label className="text-[10px] font-black text-chrome-500 uppercase tracking-widest ml-1">Usuario</label>
-                <div className="relative">
-                  <UserRound className="absolute left-4 top-1/2 -translate-y-1/2 text-chrome-500" size={18} />
-                  <input
-                    required
-                    type="text"
-                    className={`w-full pl-12 pr-4 py-3.5 bg-white/5 border rounded-xl text-white outline-none transition-all font-semibold text-sm placeholder:text-chrome-500/50
-                      ${loginError ? 'border-red-500/50 focus:border-red-500 focus:ring-red-500/20' : 'border-white/8 focus:border-blue-500 focus:ring-blue-500/20'} focus:ring-4`}
-                    placeholder="admin, vendedor, cajero…"
-                    value={username}
-                    onChange={e => setUsername(e.target.value)}
-                    autoComplete="username"
-                  />
-                </div>
-              </div>
+            <div className="hidden xl:flex flex-1 justify-center animate-float pointer-events-none z-10 pl-8">
+              <img src={LOGO_URL} alt="Gonzacars Vista" className="w-[350px] 2xl:w-[450px] object-contain drop-shadow-[0_20px_50px_rgba(0,0,0,0.5)]" />
+            </div>
+          </div>
+          
+          <div className="text-chrome-500 text-xs font-medium animate-fade-in-up stagger-3 flex items-center gap-2">
+            &copy; {new Date().getFullYear()} Gonzacars C.A. Todos los derechos reservados.
+          </div>
+        </div>
 
-              <div className="space-y-2">
-                <label className="text-[10px] font-black text-chrome-500 uppercase tracking-widest ml-1">Contraseña</label>
-                <div className="relative">
-                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-chrome-500" size={18} />
-                  <input
-                    required
-                    type="password"
-                    className={`w-full pl-12 pr-4 py-3.5 bg-white/5 border rounded-xl text-white outline-none transition-all font-semibold text-sm placeholder:text-chrome-500/50
-                      ${loginError ? 'border-red-500/50 focus:border-red-500 focus:ring-red-500/20' : 'border-white/8 focus:border-blue-500 focus:ring-blue-500/20'} focus:ring-4`}
-                    placeholder="••••••••"
-                    value={password}
-                    onChange={e => setPassword(e.target.value)}
-                    autoComplete="current-password"
-                  />
+        {/* Right Side: Login Form */}
+        <div className="w-full lg:w-[45%] flex items-center justify-center p-6 lg:p-12 relative z-10">
+          <div className="w-full max-w-md animate-scale-in">
+            <div className="glass-panel rounded-3xl overflow-hidden glow-box hover-lift bg-metal-base/80 shadow-2xl border border-white/10">
+              
+              {/* Form Header */}
+              <div className="p-8 lg:p-12 pb-6 relative">
+                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-600 via-cyan-400 to-blue-600"></div>
+                <div className="lg:hidden flex flex-col items-center mb-8">
+                  <div className="w-20 h-20 bg-white/5 rounded-2xl flex items-center justify-center border border-white/8 p-2.5 glow-box mb-4">
+                    <img src={LOGO_URL} alt="Gonzacars Logo" className="w-full h-full object-contain" />
+                  </div>
+                  <h1 className="text-2xl font-black uppercase tracking-tight text-gradient text-center" style={{ fontFamily: 'Outfit, sans-serif' }}>Gonzacars C.A.</h1>
                 </div>
-              </div>
-
-              {loginError && (
-                <div className="flex items-center gap-2 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-2.5 animate-fade-in">
-                  <AlertCircle size={14} className="text-red-400 flex-shrink-0" />
-                  <p className="text-red-400 text-xs font-black uppercase tracking-widest">Credenciales inválidas</p>
-                </div>
-              )}
-
-              <button
-                type="submit"
-                disabled={loginLoading}
-                className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3.5 px-4 rounded-xl transition-all shadow-[0_0_20px_rgba(59,130,246,0.3)] hover:shadow-[0_0_30px_rgba(59,130,246,0.5)] active:scale-95 disabled:opacity-50 mt-2 flex justify-center items-center gap-2 btn-pulse"
-              >
-                {loginLoading ? (
-                  <><RefreshCw size={16} className="animate-spin" /> Verificando…</>
-                ) : (
-                  <>Acceder al Sistema <ChevronRight size={16} /></>
+                
+                <h2 className="text-3xl font-black text-white mb-2 text-center lg:text-left tracking-tight" style={{ fontFamily: 'Outfit, sans-serif' }}>Iniciar Sesión</h2>
+                <p className="text-chrome-400 text-sm text-center lg:text-left">Ingresa tus credenciales para acceder</p>
+                
+                {store.isDemoMode && (
+                  <div className="mt-6 bg-amber-500/10 text-amber-400 px-4 py-3 rounded-xl border border-amber-500/20 flex items-center gap-3 shadow-inner">
+                    <AlertTriangle size={18} className="flex-shrink-0" />
+                    <div>
+                      <p className="text-[10px] font-black uppercase tracking-widest">Modo Demostración</p>
+                      <p className="text-xs mt-0.5 opacity-80">usuario: <b className="text-amber-300">admin</b> / clave: <b className="text-amber-300">admin</b></p>
+                    </div>
+                  </div>
                 )}
-              </button>
-
-              <div className="relative flex py-2 items-center">
-                <div className="flex-grow border-t border-white/5"></div>
-                <span className="flex-shrink mx-4 text-chrome-500 text-[10px] font-black uppercase tracking-widest">O</span>
-                <div className="flex-grow border-t border-white/5"></div>
               </div>
 
-              <button
-                type="button"
-                onClick={handleGoogleLogin}
-                disabled={loginLoading}
-                className="btn-metallic w-full py-4 rounded-xl font-black uppercase text-xs tracking-[0.2em] flex items-center justify-center gap-3 transition-all active:scale-95 disabled:opacity-70"
-              >
-                <svg className="w-5 h-5" viewBox="0 0 24 24">
-                  <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                  <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                  <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
-                  <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
-                </svg>
-                Continuar con Google
-              </button>
-            </form>
+              {/* Form */}
+              <form onSubmit={handleLogin} className="p-8 lg:p-12 pt-0 space-y-6">
+                <div className="space-y-2.5 group">
+                  <label className="text-[10px] font-black text-chrome-400 group-focus-within:text-blue-400 uppercase tracking-widest ml-1 transition-colors">Usuario</label>
+                  <div className="relative">
+                    <UserRound className="absolute left-4 top-1/2 -translate-y-1/2 text-chrome-500 group-focus-within:text-blue-400 transition-colors" size={18} />
+                    <input
+                      required
+                      type="text"
+                      className={`w-full pl-12 pr-4 py-4 bg-black/30 border rounded-xl text-white outline-none transition-all font-semibold text-sm placeholder:text-chrome-500/40 shadow-inner
+                        ${loginError ? 'border-red-500/50 focus:border-red-500 focus:ring-red-500/20' : 'border-white/10 focus:border-blue-500 focus:ring-blue-500/20 focus:bg-blue-500/5'} focus:ring-4`}
+                      placeholder="Ej. admin, vendedor…"
+                      value={username}
+                      onChange={e => setUsername(e.target.value)}
+                      autoComplete="username"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2.5 group">
+                  <div className="flex justify-between items-center ml-1">
+                    <label className="text-[10px] font-black text-chrome-400 group-focus-within:text-blue-400 uppercase tracking-widest transition-colors">Contraseña</label>
+                    <a href="#" className="text-[10px] font-bold text-blue-400 hover:text-blue-300 transition-colors uppercase tracking-wider hover:underline underline-offset-2">¿Olvidaste tu clave?</a>
+                  </div>
+                  <div className="relative">
+                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-chrome-500 group-focus-within:text-blue-400 transition-colors" size={18} />
+                    <input
+                      required
+                      type="password"
+                      className={`w-full pl-12 pr-4 py-4 bg-black/30 border rounded-xl text-white outline-none transition-all font-semibold text-sm placeholder:text-chrome-500/40 shadow-inner
+                        ${loginError ? 'border-red-500/50 focus:border-red-500 focus:ring-red-500/20' : 'border-white/10 focus:border-blue-500 focus:ring-blue-500/20 focus:bg-blue-500/5'} focus:ring-4`}
+                      placeholder="••••••••"
+                      value={password}
+                      onChange={e => setPassword(e.target.value)}
+                      autoComplete="current-password"
+                    />
+                  </div>
+                </div>
+
+                {loginError && (
+                  <div className="flex items-center gap-3 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3 animate-fade-in shadow-inner">
+                    <div className="w-6 h-6 rounded-full bg-red-500/20 flex items-center justify-center flex-shrink-0">
+                      <AlertCircle size={14} className="text-red-400" />
+                    </div>
+                    <p className="text-red-400 text-xs font-black uppercase tracking-wider">Credenciales inválidas</p>
+                  </div>
+                )}
+
+                <button
+                  type="submit"
+                  disabled={loginLoading}
+                  className="w-full bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white font-black uppercase tracking-wider text-sm py-4 px-4 rounded-xl transition-all shadow-lg hover:shadow-blue-500/30 active:scale-[0.98] disabled:opacity-50 mt-2 flex justify-center items-center gap-2 btn-pulse relative overflow-hidden group"
+                >
+                  <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-in-out"></div>
+                  <span className="relative flex items-center gap-2 z-10 drop-shadow-md">
+                    {loginLoading ? (
+                      <><RefreshCw size={18} className="animate-spin" /> Autenticando…</>
+                    ) : (
+                      <>Ingresar <ArrowUpRight size={18} /></>
+                    )}
+                  </span>
+                </button>
+
+                <div className="relative flex py-2 items-center">
+                  <div className="flex-grow border-t border-white/5"></div>
+                  <span className="flex-shrink mx-4 text-chrome-500 text-[10px] font-black uppercase tracking-widest">O conéctate con</span>
+                  <div className="flex-grow border-t border-white/5"></div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleGoogleLogin}
+                  disabled={loginLoading}
+                  className="w-full bg-white/5 hover:bg-white/10 border border-white/10 py-3.5 rounded-xl font-bold text-sm flex items-center justify-center gap-3 transition-all hover:border-white/20 active:scale-[0.98] disabled:opacity-70 text-chrome-200 hover:text-white shadow-sm"
+                >
+                  <svg className="w-5 h-5" viewBox="0 0 24 24">
+                    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                    <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+                    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+                  </svg>
+                  Google Workspace
+                </button>
+              </form>
+            </div>
           </div>
         </div>
       </div>
