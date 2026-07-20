@@ -42,7 +42,8 @@ import {
 } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { useGonzacarsStore } from './store';
-import RepairRegistration from './modules/RepairRegistration';
+// RepairRegistration fusionado en VehiclesModule — se mantiene el import para uso futuro si se necesita standalone
+// import RepairRegistration from './modules/RepairRegistration';
 import RepairReport from './modules/RepairReport';
 import SalesPOS from './modules/SalesPOS';
 import PurchaseRegistry from './modules/PurchaseRegistry';
@@ -158,7 +159,6 @@ const TAB_LABELS: Record<string, string> = {
   vehicles: 'Vehículos',
   quotes: 'Cotizaciones',
   appointments: 'Citas del Taller',
-  'repair-reg': 'Registro de Vehículo',
   'repair-rep': 'Informes de Taller',
   sales: 'Punto de Venta',
   inventory: 'Inventario General',
@@ -447,10 +447,9 @@ const App: React.FC = () => {
     const moduleProps = { store, toast };
     switch (activeTab) {
       case 'customers': return <CustomerModule   {...moduleProps} />;
-      case 'vehicles': return <VehiclesModule />;
+      case 'vehicles': return <VehiclesModule store={store} toast={toast} />;
       case 'quotes': return <QuotesModule localRate={localRate} />;
       case 'appointments': return <AppointmentsModule {...moduleProps} onGoToRepairs={() => handleTabChange('repair-rep')} />;
-      case 'repair-reg': return <RepairRegistration {...moduleProps} />;
       case 'repair-rep': return <RepairReport       {...moduleProps} />;
       case 'sales': return <SalesPOS           {...moduleProps} />;
       case 'inventory': return <InventoryModule    {...moduleProps} />;
@@ -523,11 +522,10 @@ const App: React.FC = () => {
             <NavItem icon={<LayoutDashboard size={17} />} label="Escritorio" tab="dashboard" active={activeTab} onClick={handleTabChange} visible={hasPermission('dashboard')} badge={store.loading ? '…' : ''} />
             <MenuHeader label="Base de Datos" />
             <NavItem icon={<UserRound size={17} />} label="Clientes" tab="customers" active={activeTab} onClick={handleTabChange} visible={hasPermission('customers')} badge={store.customers?.length > 0 ? String(store.customers.length) : ''} />
-            <NavItem icon={<Car size={17} />} label="Vehículos" tab="vehicles" active={activeTab} onClick={handleTabChange} visible={hasPermission('vehicles')} badge={store.vehicles?.length > 0 ? String(store.vehicles.length) : ''} />
             <NavItem icon={<FileText size={17} />} label="Cotizaciones" tab="quotes" active={activeTab} onClick={handleTabChange} visible={hasPermission('quotes')} badge={store.quotes?.filter((q: any) => q.status === 'Borrador').length ? String(store.quotes.filter((q: any) => q.status === 'Borrador').length) : ''} badgeColor="amber" />
             <MenuHeader label="Servicio Técnico" />
             <NavItem icon={<CalendarDays size={17} />} label="Citas" tab="appointments" active={activeTab} onClick={handleTabChange} visible={hasPermission('appointments')} badge={String(store.appointments?.filter((a: any) => a.scheduledDate === new Date().toISOString().split('T')[0] && (a.status === 'Pendiente' || a.status === 'Confirmada')).length || '')} badgeColor="amber" />
-            <NavItem icon={<Wrench size={17} />} label="Reg. Vehículo" tab="repair-reg" active={activeTab} onClick={handleTabChange} visible={hasPermission('repair-reg')} />
+            <NavItem icon={<Car size={17} />} label="Vehículos" tab="vehicles" active={activeTab} onClick={handleTabChange} visible={hasPermission('vehicles')} />
             <NavItem icon={<ClipboardList size={17} />} label="Informes" tab="repair-rep" active={activeTab} onClick={handleTabChange} visible={hasPermission('repair-rep')} badge={String(store.repairs?.filter((r: any) => r.status !== 'Entregado').length || '')} />
             <MenuHeader label="Unidad Comercial" />
             <NavItem icon={<ShoppingCart size={17} />} label="Punto de Venta" tab="sales" active={activeTab} onClick={handleTabChange} visible={hasPermission('sales')} />

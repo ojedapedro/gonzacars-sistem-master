@@ -55,6 +55,27 @@ export interface Installment {
   method: PaymentMethod;
 }
 
+export type FuelLevel = 'Vacío' | '1/4' | '1/2' | '3/4' | 'Lleno';
+
+export interface VehicleChecklist {
+  // Nivel de combustible
+  fuelLevel: FuelLevel;
+  // Verificación de serial (VIN/serial de chasis)
+  serialVerified: boolean;
+  serialNumber?: string;    // Serial registrado manualmente si se verifica
+  serialMismatch?: boolean; // True si el serial no coincide con documentación
+  // Vehículo llegó en grúa
+  arrivedByTow: boolean;
+  // Estado de las luces
+  lightsRear: 'OK' | 'Falla' | 'Sin verificar';
+  lightsFront: 'OK' | 'Falla' | 'Sin verificar';
+  // Observaciones adicionales del checklist
+  checklistNotes?: string;
+  // Quién realizó el checklist y cuándo
+  checkedBy?: string;
+  checkedAt?: string;
+}
+
 export interface VehicleRepair {
   id: string;
   customerId: string;
@@ -70,6 +91,7 @@ export interface VehicleRepair {
   mechanicId: string;
   evidencePhotos?: string[];
   mileage?: number;
+  checklist?: VehicleChecklist;
   items: RepairItem[];
   installments?: Installment[];
   createdAt: string;
