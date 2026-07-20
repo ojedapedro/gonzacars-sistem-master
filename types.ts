@@ -3,7 +3,7 @@ export type ServiceStatus = 'Ingresado' | 'En Diagnóstico' | 'En Reparación' |
 
 export type PaymentMethod = 'Efectivo Bs' | 'Efectivo $' | 'Pago Móvil' | 'TDD' | 'TDC' | 'Zelle' | 'Binance' | 'Crédito';
 
-export type UserRole = 'administrador' | 'vendedor' | 'cajero';
+export type UserRole = 'administrador' | 'vendedor' | 'cajero' | 'mecanico';
 
 export interface User {
   id: string;

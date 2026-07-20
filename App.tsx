@@ -201,6 +201,14 @@ const App: React.FC = () => {
     return () => window.removeEventListener('resize', handler);
   }, []);
 
+  // Redirect if user doesn't have permission to view the active tab
+  useEffect(() => {
+    if (store.currentUser && !hasPermission(activeTab)) {
+      const role = store.currentUser.role;
+      if (role === 'mecanico') setActiveTab('appointments');
+    }
+  }, [store.currentUser, activeTab]);
+
   // --- CHART DATA & KPI DELTAS moved to DashboardModule ---
 
   const handleTabChange = (tab: string) => {
@@ -245,6 +253,7 @@ const App: React.FC = () => {
     if (role === 'administrador') return true;
     if (role === 'vendedor') return ['dashboard', 'customers', 'vehicles', 'quotes', 'appointments', 'repair-reg', 'repair-rep', 'sales', 'inventory', 'consignment'].includes(tab);
     if (role === 'cajero') return ['dashboard', 'sales', 'expenses', 'finance', 'payroll', 'quotes', 'cxc', 'cxp', 'fin-reports', 'tech-reports'].includes(tab);
+    if (role === 'mecanico') return ['vehicles', 'appointments', 'repair-rep', 'tech-reports'].includes(tab);
     return false;
   };
 
@@ -520,28 +529,28 @@ const App: React.FC = () => {
           {/* Nav */}
           <nav className="flex-1 px-3 py-1 space-y-0.5 overflow-y-auto">
             <NavItem icon={<LayoutDashboard size={17} />} label="Escritorio" tab="dashboard" active={activeTab} onClick={handleTabChange} visible={hasPermission('dashboard')} badge={store.loading ? '…' : ''} />
-            <MenuHeader label="Base de Datos" />
+            <MenuHeader label="Base de Datos" visible={hasPermission('customers') || hasPermission('quotes')} />
             <NavItem icon={<UserRound size={17} />} label="Clientes" tab="customers" active={activeTab} onClick={handleTabChange} visible={hasPermission('customers')} badge={store.customers?.length > 0 ? String(store.customers.length) : ''} />
             <NavItem icon={<FileText size={17} />} label="Cotizaciones" tab="quotes" active={activeTab} onClick={handleTabChange} visible={hasPermission('quotes')} badge={store.quotes?.filter((q: any) => q.status === 'Borrador').length ? String(store.quotes.filter((q: any) => q.status === 'Borrador').length) : ''} badgeColor="amber" />
-            <MenuHeader label="Servicio Técnico" />
+            <MenuHeader label="Servicio Técnico" visible={hasPermission('appointments') || hasPermission('vehicles') || hasPermission('repair-rep')} />
             <NavItem icon={<CalendarDays size={17} />} label="Citas" tab="appointments" active={activeTab} onClick={handleTabChange} visible={hasPermission('appointments')} badge={String(store.appointments?.filter((a: any) => a.scheduledDate === new Date().toISOString().split('T')[0] && (a.status === 'Pendiente' || a.status === 'Confirmada')).length || '')} badgeColor="amber" />
             <NavItem icon={<Car size={17} />} label="Vehículos" tab="vehicles" active={activeTab} onClick={handleTabChange} visible={hasPermission('vehicles')} />
             <NavItem icon={<ClipboardList size={17} />} label="Informes" tab="repair-rep" active={activeTab} onClick={handleTabChange} visible={hasPermission('repair-rep')} badge={String(store.repairs?.filter((r: any) => r.status !== 'Entregado').length || '')} />
-            <MenuHeader label="Unidad Comercial" />
+            <MenuHeader label="Unidad Comercial" visible={hasPermission('sales') || hasPermission('inventory') || hasPermission('consignment') || hasPermission('purchases')} />
             <NavItem icon={<ShoppingCart size={17} />} label="Punto de Venta" tab="sales" active={activeTab} onClick={handleTabChange} visible={hasPermission('sales')} />
             <NavItem icon={<Package size={17} />} label="Inventario" tab="inventory" active={activeTab} onClick={handleTabChange} visible={hasPermission('inventory')} badge={String(store.inventory?.filter((p: any) => p.quantity <= 5 && !p.isConsignment).length || '')} badgeColor="amber" />
             <NavItem icon={<Package size={17} />} label="Consignación" tab="consignment" active={activeTab} onClick={handleTabChange} visible={hasPermission('consignment')} />
             <NavItem icon={<Truck size={17} />} label="Compras" tab="purchases" active={activeTab} onClick={handleTabChange} visible={hasPermission('purchases')} />
-            <MenuHeader label="Administración" />
+            <MenuHeader label="Administración" visible={hasPermission('finance') || hasPermission('cxc') || hasPermission('cxp') || hasPermission('expenses') || hasPermission('payroll')} />
             <NavItem icon={<BarChart3 size={17} />} label="Finanzas" tab="finance" active={activeTab} onClick={handleTabChange} visible={hasPermission('finance')} />
             <NavItem icon={<Wallet size={17} />} label="Por Cobrar" tab="cxc" active={activeTab} onClick={handleTabChange} visible={hasPermission('cxc')} badge={String(store.accountsReceivable?.filter(a => a.status !== 'Pagado').length || '')} badgeColor="amber" />
             <NavItem icon={<Truck size={17} />} label="Por Pagar" tab="cxp" active={activeTab} onClick={handleTabChange} visible={hasPermission('cxp')} badge={String(store.accountsPayable?.filter(a => a.status !== 'Pagado').length || '')} badgeColor="amber" />
             <NavItem icon={<Wallet size={17} />} label="Gastos" tab="expenses" active={activeTab} onClick={handleTabChange} visible={hasPermission('expenses')} />
             <NavItem icon={<Users size={17} />} label="Nómina" tab="payroll" active={activeTab} onClick={handleTabChange} visible={hasPermission('payroll')} />
-            <MenuHeader label="Reportes y Estadísticas" />
+            <MenuHeader label="Reportes y Estadísticas" visible={hasPermission('tech-reports') || hasPermission('fin-reports')} />
             <NavItem icon={<Wrench size={17} />} label="Técnicos" tab="tech-reports" active={activeTab} onClick={handleTabChange} visible={hasPermission('tech-reports')} />
             <NavItem icon={<BarChart3 size={17} />} label="Financieros" tab="fin-reports" active={activeTab} onClick={handleTabChange} visible={hasPermission('fin-reports')} />
-            <MenuHeader label="Sistema" />
+            <MenuHeader label="Sistema" visible={hasPermission('user-mgmt')} />
             <NavItem icon={<ShieldCheck size={17} />} label="Usuarios" tab="user-mgmt" active={activeTab} onClick={handleTabChange} visible={hasPermission('user-mgmt')} />
           </nav>
 
@@ -608,9 +617,10 @@ const App: React.FC = () => {
 /* ============================================================
    SIDEBAR COMPONENTS
    ============================================================ */
-const MenuHeader: React.FC<{ label: string }> = ({ label }) => (
-  <div className="pt-4 pb-1.5 px-3 text-[9px] font-black uppercase tracking-[0.2em] text-chrome-500">{label}</div>
-);
+const MenuHeader: React.FC<{ label: string; visible?: boolean }> = ({ label, visible = true }) => {
+  if (!visible) return null;
+  return <div className="pt-4 pb-1.5 px-3 text-[9px] font-black uppercase tracking-[0.2em] text-chrome-500">{label}</div>;
+};
 
 interface NavItemProps {
   icon: React.ReactNode; label: string; tab: string;

@@ -63,6 +63,7 @@ const UserManagement: React.FC<{ store: any }> = ({ store }) => {
       case 'administrador': return 'bg-purple-500/15 text-purple-400 border-purple-500/20';
       case 'vendedor': return 'bg-blue-500/15 text-blue-400 border-blue-500/20';
       case 'cajero': return 'bg-emerald-500/15 text-emerald-400 border-emerald-500/20';
+      case 'mecanico': return 'bg-orange-500/15 text-orange-400 border-orange-500/20';
       default: return 'bg-white/5 text-chrome-400 border-metal-border';
     }
   };
@@ -233,8 +234,8 @@ const UserManagement: React.FC<{ store: any }> = ({ store }) => {
 
               <div className="space-y-1.5">
                 <label className="text-[10px] font-black text-chrome-500 uppercase tracking-widest ml-1">Rol en la Empresa</label>
-                <div className="grid grid-cols-3 gap-2">
-                  {(['administrador', 'vendedor', 'cajero'] as UserRole[]).map((r) => (
+                <div className="grid grid-cols-4 gap-2">
+                  {(['administrador', 'vendedor', 'cajero', 'mecanico'] as UserRole[]).map((r) => (
                     <button
                       key={r}
                       type="button"
