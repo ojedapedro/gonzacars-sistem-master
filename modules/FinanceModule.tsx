@@ -451,7 +451,7 @@ const FinanceModule: React.FC<{ store: any }> = ({ store }) => {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div className="lg:col-span-2 bg-metal-mid p-8 rounded-2xl border border-metal-border shadow-sm h-96 relative">
               <h4 className="absolute top-8 left-8 text-[10px] font-black text-chrome-500 uppercase tracking-widest z-10">Flujo de Caja por Fuente</h4>
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
                 <BarChart data={chartData} margin={{ top: 40, right: 10, left: 0, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#2a2f42"/>
                   <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 10, fontWeight: 900, fill: '#8890a6'}} />
@@ -469,7 +469,7 @@ const FinanceModule: React.FC<{ store: any }> = ({ store }) => {
             </div>
             <div className="bg-metal-mid p-8 rounded-2xl border border-metal-border shadow-sm h-96 relative">
               <h4 className="absolute top-8 left-8 text-[10px] font-black text-chrome-500 uppercase tracking-widest z-10">Desglose de Gastos</h4>
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
                 <PieChart>
                   <Pie data={categoryData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={100} innerRadius={60} paddingAngle={5} label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}>
                     {categoryData.map((_, index) => <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />)}

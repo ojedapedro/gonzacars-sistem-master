@@ -183,8 +183,8 @@ const DashboardModule: React.FC<DashboardModuleProps> = ({ store, localRate, set
               <p className="text-xs text-chrome-500 font-medium mt-1">Comparativa de Ventas POS vs Taller (Últimos 14 días)</p>
             </div>
           </div>
-          <div className="flex-1 min-h-0">
-            <ResponsiveContainer width="100%" height="100%">
+          <div className="flex-1 min-h-0 min-w-0">
+            <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
               <AreaChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                 <defs>
                   <linearGradient id="colorVentas" x1="0" y1="0" x2="0" y2="1">
@@ -221,11 +221,11 @@ const DashboardModule: React.FC<DashboardModuleProps> = ({ store, localRate, set
             </h3>
             <p className="text-xs text-chrome-500 font-medium mt-1">Origen de ingresos</p>
           </div>
-          <div className="flex-1 flex justify-center items-center">
+          <div className="flex-1 flex justify-center items-center w-full min-h-0 min-w-0">
             {donutData[0].value === 0 && donutData[1].value === 0 ? (
                <div className="text-chrome-500 text-sm font-bold">No hay datos suficientes</div>
             ) : (
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
                 <PieChart>
                   <Pie
                     data={donutData}

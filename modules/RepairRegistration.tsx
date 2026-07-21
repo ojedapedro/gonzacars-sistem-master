@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { Camera, Save, Sparkles, Loader2, X, Plus, Car, User, Wrench, FileText, ChevronDown, ChevronUp, CheckCircle, AlertCircle } from 'lucide-react';
 import { VehicleRepair, ServiceStatus, Customer } from '../types';
 import { improveDiagnosis } from '../lib/gemini';
+import { uploadBase64Image, deleteImageFromUrl } from '../lib/services/storageService';
 
 /* ─── Status badge config ─── */
 const STATUS_CONFIG: Record<ServiceStatus, { label: string; color: string; bg: string; dot: string }> = {
@@ -72,6 +73,7 @@ const RepairRegistration: React.FC<{ store: any; toast?: any }> = ({ store, toas
   const [isCompressing, setIsCompressing] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState<Partial<VehicleRepair>>({
+    id: Math.random().toString(36).substr(2, 9),
     status: 'Ingresado',
     year: new Date().getFullYear(),
     items: [],
@@ -97,10 +99,12 @@ const RepairRegistration: React.FC<{ store: any; toast?: any }> = ({ store, toas
     }
   };
 
-  /* Image compression */
+  /* Image compression — max 600×600px, quality 0.30
+     Target: ≤ 80 KB base64 per photo so 5 photos stay well under Firestore's 1 MB doc limit */
   const compressImage = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
-      const maxW = 1024, maxH = 1024;
+      const MAX_DIM = 600;
+      const QUALITY = 0.30;
       const reader = new FileReader();
       reader.readAsDataURL(file);
       reader.onload = evt => {
@@ -108,14 +112,14 @@ const RepairRegistration: React.FC<{ store: any; toast?: any }> = ({ store, toas
         img.src = evt.target?.result as string;
         img.onload = () => {
           let w = img.width, h = img.height;
-          if (w > h) { if (w > maxW) { h = Math.round(h * maxW / w); w = maxW; } }
-          else        { if (h > maxH) { w = Math.round(w * maxH / h); h = maxH; } }
+          if (w > h) { if (w > MAX_DIM) { h = Math.round(h * MAX_DIM / w); w = MAX_DIM; } }
+          else        { if (h > MAX_DIM) { w = Math.round(w * MAX_DIM / h); h = MAX_DIM; } }
           const canvas = document.createElement('canvas');
           canvas.width = w; canvas.height = h;
           const ctx = canvas.getContext('2d');
           if (!ctx) { resolve(evt.target?.result as string); return; }
           ctx.drawImage(img, 0, 0, w, h);
-          resolve(canvas.toDataURL('image/jpeg', 0.72));
+          resolve(canvas.toDataURL('image/jpeg', QUALITY));
         };
         img.onerror = reject;
       };
@@ -129,11 +133,15 @@ const RepairRegistration: React.FC<{ store: any; toast?: any }> = ({ store, toas
     setIsCompressing(true);
     try {
       const compressed = await compressImage(file);
+      
+      const photoName = `photo_${Date.now()}.jpg`;
+      const url = await uploadBase64Image(compressed, `repairs/${formData.id}/${photoName}`);
+      
       const photos = formData.evidencePhotos || [];
-      if (photos.length < 5) set('evidencePhotos', [...photos, compressed]);
-      toast?.success('Foto agregada', 'Imagen comprimida y lista.');
+      if (photos.length < 5) set('evidencePhotos', [...photos, url]);
+      toast?.success('Foto agregada', 'Imagen subida y lista.');
     } catch {
-      toast?.error('Error de imagen', 'No se pudo procesar la foto. Intente con otra.');
+      toast?.error('Error de imagen', 'No se pudo subir la foto. Verifique su conexión y permisos.');
     } finally {
       setIsCompressing(false);
       e.target.value = '';
@@ -142,8 +150,12 @@ const RepairRegistration: React.FC<{ store: any; toast?: any }> = ({ store, toas
 
   const removePhoto = (idx: number) => {
     const photos = [...(formData.evidencePhotos || [])];
-    photos.splice(idx, 1);
+    const removedUrl = photos.splice(idx, 1)[0];
     set('evidencePhotos', photos);
+    
+    if (removedUrl) {
+      deleteImageFromUrl(removedUrl).catch(console.error);
+    }
   };
 
   /* Submit */
@@ -175,13 +187,13 @@ const RepairRegistration: React.FC<{ store: any; toast?: any }> = ({ store, toas
     const customer = store.customers.find((c: Customer) => c.id === formData.customerId);
     const newRepair: VehicleRepair = {
       ...formData as VehicleRepair,
-      id: Math.random().toString(36).substr(2, 9),
+      id: formData.id || Math.random().toString(36).substr(2, 9),
       ownerName: customer?.name || '',
       createdAt: new Date().toISOString(),
     };
     store.addRepair(newRepair);
     toast?.success('Vehículo registrado', `${formData.brand || ''} ${formData.model || ''} (${formData.plate?.toUpperCase()}) ingresado al taller.`);
-    setFormData({ status: 'Ingresado', year: new Date().getFullYear(), items: [], evidencePhotos: [], serviceType: 'Mecánica General' });
+    setFormData({ id: Math.random().toString(36).substr(2, 9), status: 'Ingresado', year: new Date().getFullYear(), items: [], evidencePhotos: [], serviceType: 'Mecánica General' });
     setIsSubmitting(false);
   };
 
@@ -371,7 +383,7 @@ const RepairRegistration: React.FC<{ store: any; toast?: any }> = ({ store, toas
                 <label className="cursor-pointer flex flex-col items-center justify-center aspect-square border-2 border-dashed border-metal-border hover:border-cyan-400 rounded-xl hover:bg-cyan-500/10 transition-all text-chrome-500 hover:text-cyan-400 group bg-metal-mid/50">
                   <Plus size={22} className="mb-1 group-hover:scale-110 transition-transform"/>
                   <span className="text-[9px] font-black uppercase">Foto {photoCount + 1}</span>
-                  <input type="file" accept="image/*" capture="environment" className="hidden" onChange={handlePhotoUpload}/>
+                  <input type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload}/>
                 </label>
               )}
 

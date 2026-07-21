@@ -1,5 +1,5 @@
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import {
   Search,
   Plus,
@@ -23,10 +23,14 @@ import {
   Clock,
   CreditCard,
   AlertCircle,
-  CheckCircle2
+  CheckCircle2,
+  Camera,
+  Loader2,
+  ZoomIn
 } from 'lucide-react';
 import { VehicleRepair, RepairItem, PaymentMethod, Product, ServiceStatus, Installment } from '../types';
 import { fuzzySearch } from '../lib/utils/search';
+import { uploadBase64Image, deleteImageFromUrl } from '../lib/services/storageService';
 
 /* ─── Status visual config ─── */
 const STATUS_STYLE: Record<ServiceStatus, { label: string; headerBg: string; badge: string; dot: string }> = {
@@ -48,6 +52,11 @@ const RepairReport: React.FC<{ store: any }> = ({ store }) => {
   const [showAbonoModal, setShowAbonoModal] = useState(false);
   const [showInventorySearch, setShowInventorySearch] = useState(false);
   const [invSearchTerm, setInvSearchTerm] = useState('');
+
+  // Photo evidence states
+  const [isCompressingPhoto, setIsCompressingPhoto] = useState(false);
+  const [lightboxPhoto, setLightboxPhoto] = useState<string | null>(null);
+  const photoInputRef = useRef<HTMLInputElement>(null);
 
   // Estado para servicio manual
   const [showServiceModal, setShowServiceModal] = useState(false);
@@ -157,6 +166,81 @@ const RepairReport: React.FC<{ store: any }> = ({ store }) => {
     if (!currentRepair) return 0;
     return currentRepair.items.reduce((acc, item) => acc + (item.price * item.quantity), 0);
   };
+
+  // ─── Photo Evidence helpers ───────────────────────────────────────────────
+
+  const compressImage = (file: File): Promise<string> =>
+    new Promise((resolve, reject) => {
+      const MAX_DIM = 600;
+      const QUALITY = 0.30;
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = evt => {
+        const img = new Image();
+        img.src = evt.target?.result as string;
+        img.onload = () => {
+          let w = img.width, h = img.height;
+          if (w > h) { if (w > MAX_DIM) { h = Math.round(h * MAX_DIM / w); w = MAX_DIM; } }
+          else        { if (h > MAX_DIM) { w = Math.round(w * MAX_DIM / h); h = MAX_DIM; } }
+          const canvas = document.createElement('canvas');
+          canvas.width = w; canvas.height = h;
+          const ctx = canvas.getContext('2d');
+          if (!ctx) { resolve(evt.target?.result as string); return; }
+          ctx.drawImage(img, 0, 0, w, h);
+          resolve(canvas.toDataURL('image/jpeg', QUALITY));
+        };
+        img.onerror = reject;
+      };
+      reader.onerror = reject;
+    });
+
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !currentRepair) return;
+    setIsCompressingPhoto(true);
+    try {
+      const compressed = await compressImage(file);
+      
+      const photoName = `photo_${Date.now()}.jpg`;
+      const url = await uploadBase64Image(compressed, `repairs/${currentRepair.id}/${photoName}`);
+      
+      const photos = currentRepair.evidencePhotos || [];
+      if (photos.length < 5) {
+        const updated = { ...currentRepair, evidencePhotos: [...photos, url] };
+        setCurrentRepair(updated);
+        try {
+          await store.updateRepair(updated);
+        } catch (saveErr: any) {
+          // Roll back local state if Firebase save failed
+          setCurrentRepair(currentRepair);
+          alert(`⚠️ Error al guardar la foto en el servidor: ${saveErr?.message}`);
+        }
+      }
+    } catch {
+      alert('No se pudo subir la foto. Verifique su conexión y permisos.');
+    } finally {
+      setIsCompressingPhoto(false);
+      e.target.value = '';
+    }
+  };
+
+  const removePhoto = async (idx: number) => {
+    if (!currentRepair) return;
+    const photos = [...(currentRepair.evidencePhotos || [])];
+    const removedUrl = photos.splice(idx, 1)[0];
+    const updated = { ...currentRepair, evidencePhotos: photos };
+    setCurrentRepair(updated);
+    
+    try {
+      await store.updateRepair(updated);
+      if (removedUrl) {
+        await deleteImageFromUrl(removedUrl);
+      }
+    } catch (e) {
+      console.error('Error al borrar imagen:', e);
+    }
+  };
+  // ─────────────────────────────────────────────────────────────────────────
 
   const calculatePaid = () => {
     if (!currentRepair || !currentRepair.installments) return 0;
@@ -696,6 +780,91 @@ const RepairReport: React.FC<{ store: any }> = ({ store }) => {
                 </div>
               </div>
 
+              {/* ─── EVIDENCIAS FOTOGRÁFICAS ─────────────────────────────── */}
+              <div className="border-t border-metal-border pt-8">
+                <div className="flex items-center justify-between mb-4 px-2">
+                  <h3 className="text-xl font-black text-chrome-100 uppercase tracking-tighter flex items-center gap-3">
+                    <Camera size={24} className="text-cyan-500" /> Evidencias Fotográficas
+                  </h3>
+                  <div className="flex items-center gap-3">
+                    <span className={`text-[10px] font-black px-2.5 py-1 rounded-full ${
+                      (currentRepair.evidencePhotos?.length || 0) >= 5
+                        ? 'bg-emerald-500/15 text-emerald-400'
+                        : 'bg-metal-mid text-chrome-400'
+                    }`}>
+                      {currentRepair.evidencePhotos?.length || 0} / 5
+                    </span>
+                    {(currentRepair.evidencePhotos?.length || 0) < 5 && (
+                      <label className="cursor-pointer flex items-center gap-2 bg-cyan-600 hover:bg-cyan-500 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all active:scale-95">
+                        {isCompressingPhoto
+                          ? <><Loader2 size={13} className="animate-spin" /> Procesando…</>
+                          : <><Plus size={13} /> Agregar Foto</>
+                        }
+                        <input
+                          ref={photoInputRef}
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={handlePhotoUpload}
+                          disabled={isCompressingPhoto}
+                        />
+                      </label>
+                    )}
+                  </div>
+                </div>
+
+                {(currentRepair.evidencePhotos?.length || 0) > 0 ? (
+                  <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 gap-3">
+                    {(currentRepair.evidencePhotos || []).map((photo, idx) => (
+                      <div key={idx} className="relative aspect-square group rounded-xl overflow-hidden border border-metal-border shadow-sm">
+                        <img
+                          src={photo}
+                          alt={`Evidencia ${idx + 1}`}
+                          className="w-full h-full object-cover transition-transform group-hover:scale-105 duration-300"
+                        />
+                        {/* Overlay actions */}
+                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/50 transition-all duration-200 flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100">
+                          <button
+                            onClick={() => setLightboxPhoto(photo)}
+                            className="p-1.5 bg-white/20 hover:bg-white/40 rounded-lg text-white transition-all"
+                            title="Ver ampliada"
+                          >
+                            <ZoomIn size={14} />
+                          </button>
+                          <button
+                            onClick={() => removePhoto(idx)}
+                            className="p-1.5 bg-red-500/80 hover:bg-red-500 rounded-lg text-white transition-all"
+                            title="Eliminar foto"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                        <div className="absolute bottom-1 left-1 bg-black/60 text-white text-[8px] font-black px-1.5 py-0.5 rounded">
+                          {idx + 1}
+                        </div>
+                      </div>
+                    ))}
+                    {/* Placeholder vacíos */}
+                    {isCompressingPhoto && (
+                      <div className="aspect-square border-2 border-dashed border-cyan-400/50 rounded-xl bg-cyan-500/5 flex flex-col items-center justify-center">
+                        <Loader2 className="animate-spin text-cyan-500 mb-1" size={20} />
+                        <span className="text-[9px] font-bold text-chrome-400">Comprimiendo…</span>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div
+                    className="border-2 border-dashed border-metal-border rounded-2xl bg-metal-dark/30 flex flex-col items-center justify-center py-10 cursor-pointer hover:border-cyan-400/50 hover:bg-cyan-500/5 transition-all"
+                    onClick={() => photoInputRef.current?.click()}
+                  >
+                    <Camera size={36} className="text-chrome-500 mb-3" />
+                    <p className="text-sm font-black text-chrome-500 uppercase tracking-wide">Sin fotografías</p>
+                    <p className="text-xs text-chrome-500 font-medium mt-1">Haz clic para agregar la primera evidencia</p>
+                  </div>
+                )}
+              </div>
+              {/* ──────────────────────────────────────────────────────────── */}
+
               <div className="pt-6 border-t border-metal-border flex flex-col sm:flex-row gap-3">
                 <button
                   onClick={() => handlePrint('report')}
@@ -722,6 +891,29 @@ const RepairReport: React.FC<{ store: any }> = ({ store }) => {
           </div>
         )}
       </div>
+
+      {/* LIGHTBOX */}
+      {lightboxPhoto && (
+        <div
+          className="fixed inset-0 bg-black/90 backdrop-blur-md z-[200] flex items-center justify-center p-4 print:hidden"
+          onClick={() => setLightboxPhoto(null)}
+        >
+          <div className="relative max-w-4xl max-h-[90vh] w-full" onClick={e => e.stopPropagation()}>
+            <img
+              src={lightboxPhoto}
+              alt="Evidencia ampliada"
+              className="w-full h-full object-contain rounded-2xl shadow-2xl"
+              style={{ maxHeight: '85vh' }}
+            />
+            <button
+              onClick={() => setLightboxPhoto(null)}
+              className="absolute -top-4 -right-4 w-10 h-10 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center shadow-xl transition-all"
+            >
+              <X size={18} />
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* MODAL SERVICIO MANUAL */}
       {showServiceModal && (

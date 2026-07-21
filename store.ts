@@ -7,6 +7,7 @@ import { roundTo } from './lib/utils/finance';
 import { addAuditLog } from './lib/services/auditService';
 import { createProduct, updateProduct, deleteProduct } from './lib/services/inventoryService';
 import { processSaleTransaction, registerPurchaseBatchService, payCreditInvoiceService } from './lib/services/accountingService';
+import { deleteImageFromUrl } from './lib/services/storageService';
 
 const STORED_USER = localStorage.getItem('gz_active_user');
 
@@ -490,6 +491,10 @@ export const useGonzacarsStore = () => {
   };
 
   const deleteRepair = async (id: string) => {
+    const repair = repairs.find(r => r.id === id);
+    if (repair && repair.evidencePhotos) {
+      await Promise.all(repair.evidencePhotos.map(url => deleteImageFromUrl(url).catch(console.error)));
+    }
     setRepairs(prev => prev.filter(r => r.id !== id));
     await deleteFromFirebase('Repairs', id);
   };
@@ -497,6 +502,14 @@ export const useGonzacarsStore = () => {
   // Deletes all repairs for a specific plate belonging to a specific customer
   const deleteVehicleByPlate = async (customerId: string, plate: string) => {
     const toDelete = repairs.filter(r => r.customerId === customerId && r.plate.toUpperCase() === plate.toUpperCase());
+    
+    // Delete photos first
+    for (const repair of toDelete) {
+      if (repair.evidencePhotos) {
+        await Promise.all(repair.evidencePhotos.map(url => deleteImageFromUrl(url).catch(console.error)));
+      }
+    }
+
     setRepairs(prev => prev.filter(r => !(r.customerId === customerId && r.plate.toUpperCase() === plate.toUpperCase())));
     await Promise.all(toDelete.map(r => deleteFromFirebase('Repairs', r.id)));
   };

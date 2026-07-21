@@ -200,7 +200,7 @@ const FinancialReportsModule: React.FC = () => {
             Ingresos vs Egresos
           </h3>
           <div className="h-72">
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
               <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                 <defs>
                   <linearGradient id="colorIngresos" x1="0" y1="0" x2="0" y2="1">
@@ -232,8 +232,8 @@ const FinancialReportsModule: React.FC = () => {
         <div className="flex flex-col gap-6">
           <div className="bg-metal-900 border border-metal-800 rounded-2xl p-6 flex-1 flex flex-col">
             <h3 className="text-sm font-bold text-chrome-100 mb-2">Composición de Ingresos</h3>
-            <div className="flex-1 min-h-[150px]">
-              <ResponsiveContainer width="100%" height="100%">
+            <div className="flex-1 min-h-[150px] min-w-0">
+              <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
                 <PieChart>
                   <Pie data={ingresosData} cx="50%" cy="50%" innerRadius={40} outerRadius={60} paddingAngle={5} dataKey="value" stroke="none">
                     {ingresosData.map((entry, index) => (
@@ -256,8 +256,8 @@ const FinancialReportsModule: React.FC = () => {
 
           <div className="bg-metal-900 border border-metal-800 rounded-2xl p-6 flex-1 flex flex-col">
             <h3 className="text-sm font-bold text-chrome-100 mb-2">Composición de Egresos</h3>
-            <div className="flex-1 min-h-[150px]">
-              <ResponsiveContainer width="100%" height="100%">
+            <div className="flex-1 min-h-[150px] min-w-0">
+              <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
                 <PieChart>
                   <Pie data={egresosData} cx="50%" cy="50%" innerRadius={40} outerRadius={60} paddingAngle={5} dataKey="value" stroke="none">
                     {egresosData.map((entry, index) => (
