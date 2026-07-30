@@ -62,6 +62,7 @@ import AccountsPayableModule from './modules/AccountsPayableModule';
 import TechnicalReportsModule from './modules/TechnicalReportsModule';
 import FinancialReportsModule from './modules/FinancialReportsModule';
 import AppointmentsModule from './modules/AppointmentsModule';
+import AuditLogModule from './modules/AuditLogModule';
 const LOGO_URL = "https://i.ibb.co/Cs1vQvD1/Generated-Image-July-19-2026-1-23-PM.png";
 
 /* ============================================================
@@ -172,6 +173,7 @@ const TAB_LABELS: Record<string, string> = {
   'fin-reports': 'Reportes Financieros',
   payroll: 'Nómina',
   'user-mgmt': 'Gestión de Usuarios',
+  audit: 'Bitácora de Registro',
 };
 
 const App: React.FC = () => {
@@ -256,6 +258,9 @@ const App: React.FC = () => {
     if (role === 'mecanico') return ['vehicles', 'appointments', 'repair-rep', 'tech-reports'].includes(tab);
     return false;
   };
+
+  // Solo administradores pueden ver la bitácora
+  const canViewAudit = store.currentUser?.role === 'administrador';
 
   /* ---- INITIAL FIREBASE LOADING SCREEN ---- */
   if (!store.currentUser && store.isInitialLoading) {
@@ -472,6 +477,7 @@ const App: React.FC = () => {
       case 'expenses': return <ExpenseModule      {...moduleProps} />;
       case 'payroll': return <PayrollModule      {...moduleProps} />;
       case 'user-mgmt': return <UserManagement     {...moduleProps} />;
+      case 'audit':     return <AuditLogModule />;
       default: return <DashboardModule store={store} localRate={localRate} setLocalRate={setLocalRate} handleRateUpdate={handleRateUpdate} />;
     }
   };
@@ -550,8 +556,9 @@ const App: React.FC = () => {
             <MenuHeader label="Reportes y Estadísticas" visible={hasPermission('tech-reports') || hasPermission('fin-reports')} />
             <NavItem icon={<Wrench size={17} />} label="Técnicos" tab="tech-reports" active={activeTab} onClick={handleTabChange} visible={hasPermission('tech-reports')} />
             <NavItem icon={<BarChart3 size={17} />} label="Financieros" tab="fin-reports" active={activeTab} onClick={handleTabChange} visible={hasPermission('fin-reports')} />
-            <MenuHeader label="Sistema" visible={hasPermission('user-mgmt')} />
+            <MenuHeader label="Sistema" visible={hasPermission('user-mgmt') || canViewAudit} />
             <NavItem icon={<ShieldCheck size={17} />} label="Usuarios" tab="user-mgmt" active={activeTab} onClick={handleTabChange} visible={hasPermission('user-mgmt')} />
+            <NavItem icon={<ClipboardList size={17} />} label="Bitácora" tab="audit" active={activeTab} onClick={handleTabChange} visible={canViewAudit} badge={''} badgeColor="amber" />
           </nav>
 
           {/* Logout */}
