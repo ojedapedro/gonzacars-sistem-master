@@ -6,7 +6,7 @@ import {
   ChevronDown, FileText
 } from 'lucide-react';
 import { useGonzacarsStore } from '../store';
-import { VehicleRepair, Customer, VehicleChecklist, FuelLevel } from '../types';
+import { VehicleRepair, Customer, VehicleChecklist, FuelLevel, ServiceStatus } from '../types';
 import { fuzzySearch } from '../lib/utils/search';
 import CurrencyBadge from '../components/CurrencyBadge';
 

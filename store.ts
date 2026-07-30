@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Product, VehicleRepair, Sale, Purchase, Expense, Employee, PayrollRecord, Customer, User, Vehicle, Quote, AccountReceivable, ReceivablePayment, AccountPayable, PayablePayment, Appointment } from './types';
+import { Product, VehicleRepair, Sale, Purchase, Expense, Employee, PayrollRecord, Customer, User, Vehicle, Quote, AccountReceivable, ReceivablePayment, AccountPayable, PayablePayment, Appointment, CXCEntry } from './types';
 import { db, auth, googleProvider } from './lib/firebase';
 import { collection, getDocs, doc, setDoc, deleteDoc, writeBatch } from 'firebase/firestore';
 import { signInWithPopup } from 'firebase/auth';
@@ -476,6 +476,104 @@ export const useGonzacarsStore = () => {
     await deleteFromFirebase('Customers', id);
   };
 
+  // ─── CXC SYNC ─────────────────────────────────────────────────────────────
+  /**
+   * Crea o actualiza la CXC asociada a un VehicleRepair.
+   * - Se llama cada vez que se guarda un informe (addRepair / updateRepair).
+   * - Si el informe no tiene ítems, no abre cuenta.
+   * - Construye el libro de movimientos (entries) desde cero a partir de
+   *   repair.items (Cargos) y repair.installments (Abonos).
+   */
+  const syncRepairWithCXC = async (repair: VehicleRepair, currentAR?: AccountReceivable[]) => {
+    if (isDemoMode) return;
+    // Sin ítems → no hay cuenta que abrir o actualizar
+    if (!repair.items || repair.items.length === 0) return;
+
+    const arList = currentAR || accountsReceivable;
+    const existing = arList.find(a => a.repairId === repair.id);
+
+    // ── 1. Construir entradas de CARGO (productos/servicios del informe) ──
+    const cargoEntries: CXCEntry[] = repair.items.map(item => ({
+      id: `cargo-${item.id}`,
+      date: repair.createdAt,
+      type: 'Cargo' as const,
+      description: `${item.description}${item.quantity > 1 ? ` x${item.quantity}` : ''}`,
+      amount: item.price * item.quantity,
+      repairItemId: item.id,
+    }));
+
+    // ── 2. Construir entradas de ABONO (cuotas del informe) ──
+    const abonoEntries: CXCEntry[] = (repair.installments || []).map(inst => ({
+      id: `abono-${inst.id}`,
+      date: inst.date,
+      type: 'Abono' as const,
+      description: `Abono - ${inst.method || 'Efectivo $'}`,
+      amount: inst.amount,
+      method: inst.method,
+      installmentId: inst.id,
+    }));
+
+    // ── 3. Combinar y ordenar cronológicamente ──
+    const allEntries: CXCEntry[] = [...cargoEntries, ...abonoEntries].sort(
+      (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
+    );
+
+    // ── 4. Calcular totales ──
+    const totalAmount = cargoEntries.reduce((s, e) => s + e.amount, 0);
+    const paidAmount = abonoEntries.reduce((s, e) => s + e.amount, 0);
+
+    let status: AccountReceivable['status'] = 'Pendiente';
+    if (paidAmount >= totalAmount && totalAmount > 0) status = 'Pagado';
+    else if (paidAmount > 0) status = 'Parcial';
+    else if (existing?.dueDate && new Date(existing.dueDate) < new Date()) status = 'Vencido';
+
+    if (existing) {
+      // ── Actualizar cuenta existente ──
+      const updated: AccountReceivable = {
+        ...existing,
+        totalAmount,
+        paidAmount,
+        status,
+        entries: allEntries,
+        vehiclePlate: repair.plate,
+        vehicleBrand: repair.brand,
+        vehicleModel: repair.model,
+        vehicleYear: repair.year,
+        customerName: repair.ownerName || existing.customerName,
+      };
+      await saveToFirebase('AccountsReceivable', updated);
+      setAccountsReceivable(prev => prev.map(a => a.id === updated.id ? updated : a));
+    } else {
+      // ── Crear nueva cuenta ──
+      const newId = Math.random().toString(36).substr(2, 9);
+      // Fecha de vencimiento: 30 días desde la apertura del informe
+      const due = new Date(repair.createdAt);
+      due.setDate(due.getDate() + 30);
+
+      const newAccount: AccountReceivable = {
+        id: newId,
+        repairId: repair.id,
+        referenceId: repair.id,
+        customerId: repair.customerId,
+        customerName: repair.ownerName || '',
+        vehiclePlate: repair.plate,
+        vehicleBrand: repair.brand,
+        vehicleModel: repair.model,
+        vehicleYear: repair.year,
+        date: repair.createdAt,
+        dueDate: due.toISOString(),
+        totalAmount,
+        paidAmount,
+        status,
+        payments: [],
+        entries: allEntries,
+      };
+      await saveToFirebase('AccountsReceivable', newAccount);
+      setAccountsReceivable(prev => [...prev, newAccount]);
+    }
+  };
+  // ─────────────────────────────────────────────────────────────────────────
+
   const addRepair = async (repair: VehicleRepair) => {
     const newRepair = { 
       ...repair, 
@@ -483,11 +581,17 @@ export const useGonzacarsStore = () => {
     };
     setRepairs(prev => [...prev, newRepair]);
     await saveToFirebase('Repairs', newRepair);
+    // Abrir CXC si ya tiene ítems al momento de crear
+    if (newRepair.items && newRepair.items.length > 0) {
+      await syncRepairWithCXC(newRepair);
+    }
   };
 
   const updateRepair = async (updated: VehicleRepair) => {
     setRepairs(prev => prev.map(r => r.id === updated.id ? updated : r));
     await saveToFirebase('Repairs', updated);
+    // Sincronizar CXC en cada actualización del informe
+    await syncRepairWithCXC(updated);
   };
 
   const deleteRepair = async (id: string) => {
@@ -497,6 +601,12 @@ export const useGonzacarsStore = () => {
     }
     setRepairs(prev => prev.filter(r => r.id !== id));
     await deleteFromFirebase('Repairs', id);
+    // Eliminar CXC asociada
+    const linkedCXC = accountsReceivable.find(a => a.repairId === id);
+    if (linkedCXC) {
+      await deleteFromFirebase('AccountsReceivable', linkedCXC.id);
+      setAccountsReceivable(prev => prev.filter(a => a.id !== linkedCXC.id));
+    }
   };
 
   // Deletes all repairs for a specific plate belonging to a specific customer
@@ -829,6 +939,70 @@ export const useGonzacarsStore = () => {
     setQuotes(prev => prev.map(q => q.id === quote.id ? quote : q));
   };
 
+  /**
+   * Aprueba una cotización y descuenta del inventario SOLO los productos físicos.
+   * Los ítems cuya categoría sea "Servicio" o que no tengan productId NO descuentan stock.
+   */
+  const approveQuoteAndDeductStock = async (quote: Quote): Promise<Quote> => {
+    const updatedQuote = { ...quote, status: 'Aprobada' as const };
+
+    // Recopilar los descuentos necesarios por productId
+    const stockDeductions: { id: string; newQuantity: number; item: Product }[] = [];
+
+    for (const qItem of updatedQuote.items) {
+      if (!qItem.productId) continue; // Item manual sin producto, no hay nada que descontar
+
+      const product = inventory.find(p => p.id === qItem.productId);
+      if (!product) continue;
+
+      // Los servicios son estáticos — nunca descuentan inventario
+      if (product.category === 'Servicio') continue;
+
+      const newQty = Math.max(0, product.quantity - qItem.quantity);
+      stockDeductions.push({ id: product.id, newQuantity: newQty, item: product });
+    }
+
+    if (!isDemoMode) {
+      const batch = writeBatch(db);
+
+      // 1. Guardar la cotización aprobada
+      batch.set(doc(db, "Quotes", updatedQuote.id), updatedQuote);
+
+      // 2. Aplicar descuentos de stock
+      for (const deduction of stockDeductions) {
+        const updatedWStock = deductStockFromWarehouseStock(
+          deduction.item.warehouseStock || {},
+          deduction.item.quantity - deduction.newQuantity
+        );
+        batch.update(doc(db, "Inventory", deduction.id), {
+          quantity: deduction.newQuantity,
+          warehouseStock: updatedWStock
+        });
+      }
+
+      await batch.commit();
+    }
+
+    // Actualizar estado local
+    setQuotes(prev => prev.map(q => q.id === updatedQuote.id ? updatedQuote : q));
+    if (stockDeductions.length > 0) {
+      setInventory(prev => prev.map(p => {
+        const d = stockDeductions.find(x => x.id === p.id);
+        if (!d) return p;
+        return {
+          ...p,
+          quantity: d.newQuantity,
+          warehouseStock: deductStockFromWarehouseStock(
+            p.warehouseStock || {},
+            p.quantity - d.newQuantity
+          )
+        };
+      }));
+    }
+
+    return updatedQuote;
+  };
+
   const deleteQuote = async (id: string) => {
     if (!isDemoMode) {
       await deleteDoc(doc(db, "Quotes", id));
@@ -892,8 +1066,8 @@ export const useGonzacarsStore = () => {
     employees, setEmployees, addEmployee, updateEmployee, deleteEmployee,
     payroll, setPayroll, addPayrollRecord,
     vehicles, setVehicles, addVehicle, updateVehicle, deleteVehicle,
-    quotes, setQuotes, addQuote, updateQuote, deleteQuote,
-    accountsReceivable, setAccountsReceivable,
+    quotes, setQuotes, addQuote, updateQuote, deleteQuote, approveQuoteAndDeductStock,
+    accountsReceivable, setAccountsReceivable, syncRepairWithCXC,
     accountsPayable, setAccountsPayable,
     appointments, setAppointments, addAppointment, updateAppointment, deleteAppointment,
     saveToFirebase,

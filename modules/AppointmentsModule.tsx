@@ -349,9 +349,23 @@ const AppointmentsModule: React.FC<{ store: any; toast?: any; onGoToRepairs?: ()
         toast?.warning('Campos requeridos', 'Nombre y teléfono son obligatorios.');
         return;
       }
+      setIsNewVehicle(true);
+      setSelectedVehicle(null);
     } else if (!selectedCustomer) {
       toast?.warning('Selecciona un cliente', 'Busca o elige un cliente existente, o marca "Cliente nuevo".');
       return;
+    } else {
+      // Si el cliente seleccionado tiene vehículos asociados, auto-seleccionar el primero si no hay ninguno seleccionado
+      const vList = (store.vehicles as Vehicle[]).filter(v => v.customerId === selectedCustomer.id);
+      if (vList.length > 0) {
+        // Encontrar primer vehículo sin informe activo
+        const available = vList.find(v => !checkActiveRepair(v.plate));
+        setSelectedVehicle(available || vList[0]);
+        setIsNewVehicle(false);
+      } else {
+        setIsNewVehicle(true);
+        setSelectedVehicle(null);
+      }
     }
     setWizardStep(2);
   };
@@ -361,16 +375,16 @@ const AppointmentsModule: React.FC<{ store: any; toast?: any; onGoToRepairs?: ()
   // ─────────────────────────────
   const handleStep2Next = () => {
     let plate = '';
-    if (isNewVehicle) {
+    if (isNewVehicle || customerVehicles.length === 0) {
       if (!newVehicleData.plate.trim() || !newVehicleData.brand.trim() || !newVehicleData.model.trim()) {
-        toast?.warning('Campos requeridos', 'Placa, marca y modelo son obligatorios.');
+        toast?.warning('Campos requeridos', 'Placa, marca y modelo son obligatorios para el vehículo nuevo.');
         return;
       }
       plate = newVehicleData.plate.toUpperCase();
     } else if (selectedVehicle) {
       plate = selectedVehicle.plate.toUpperCase();
     } else {
-      toast?.warning('Selecciona un vehículo', 'Elige un vehículo registrado o ingresa uno nuevo.');
+      toast?.warning('Selecciona un vehículo', 'Elige un vehículo registrado o haz clic en "Agregar otro vehículo".');
       return;
     }
 

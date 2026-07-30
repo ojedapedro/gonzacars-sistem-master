@@ -221,6 +221,7 @@ export interface QuoteItem {
   description: string;
   quantity: number;
   price: number; // Unit price in USD
+  isService?: boolean; // true = servicio estático, nunca descuenta del inventario
 }
 
 export interface Quote {
@@ -247,17 +248,40 @@ export interface ReceivablePayment {
   reference?: string;
 }
 
+/**
+ * Entrada individual del libro contable de CXC.
+ * type='Cargo'  → producto o servicio agregado al informe
+ * type='Abono'  → pago parcial o total registrado
+ */
+export interface CXCEntry {
+  id: string;
+  date: string;
+  type: 'Cargo' | 'Abono';
+  description: string;       // ej: "Aceite 20W50 x2", "Abono - Efectivo $"
+  amount: number;
+  method?: PaymentMethod;    // solo para Abonos
+  reference?: string;        // número de referencia de pago
+  repairItemId?: string;     // ID del RepairItem origen (para Cargos)
+  installmentId?: string;    // ID del Installment origen (para Abonos)
+}
+
 export interface AccountReceivable {
   id: string;
-  referenceId?: string; // id de Venta o Reparación
+  referenceId?: string;      // id de Venta o Reparación (legacy)
+  repairId?: string;         // ID del VehicleRepair asociado
   customerId: string;
   customerName: string;
-  date: string;
+  vehiclePlate?: string;     // Placa del vehículo
+  vehicleBrand?: string;     // Marca
+  vehicleModel?: string;     // Modelo
+  vehicleYear?: number;      // Año
+  date: string;              // Fecha de apertura de la cuenta
   dueDate: string;
-  totalAmount: number;
-  paidAmount: number;
+  totalAmount: number;       // Suma de todos los Cargos
+  paidAmount: number;        // Suma de todos los Abonos
   status: 'Pendiente' | 'Parcial' | 'Pagado' | 'Vencido';
-  payments: ReceivablePayment[];
+  payments: ReceivablePayment[];  // legacy - se mantiene por compatibilidad
+  entries?: CXCEntry[];           // Libro de movimientos (Cargos y Abonos)
 }
 
 export interface PayablePayment {
