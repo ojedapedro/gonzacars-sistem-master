@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Product, VehicleRepair, Sale, Purchase, Expense, Employee, PayrollRecord, Customer, User, Vehicle, Quote, AccountReceivable, ReceivablePayment, AccountPayable, PayablePayment, Appointment, CXCEntry } from './types';
 import { db, auth, googleProvider } from './lib/firebase';
-import { collection, getDocs, doc, setDoc, deleteDoc, writeBatch } from 'firebase/firestore';
+import { collection, getDocs, doc, setDoc, deleteDoc, writeBatch, onSnapshot, query, orderBy } from 'firebase/firestore';
 import { signInWithPopup } from 'firebase/auth';
 import { roundTo } from './lib/utils/finance';
 import { addAuditLog } from './lib/services/auditService';
@@ -250,80 +250,155 @@ export const useGonzacarsStore = () => {
     return Math.floor(100000000000 + Math.random() * 900000000000).toString();
   };
 
-  const refreshData = async (isInitial = false) => {
+  // ─── Contador de listeners listos para saber cuándo está todo cargado ─────
+  const [_readyCount, setReadyCount] = useState(0);
+  const TOTAL_COLLECTIONS = 15;
+
+  /**
+   * refreshData se mantiene como función de compatibilidad.
+   * Con onSnapshot los datos se sincronizan en tiempo real, pero
+   * exponemos esta función para que los botones de Sync den feedback visual.
+   */
+  const refreshData = async (_isInitial = false) => {
     if (isDemoMode) return;
-    if (isProcessingBatch) return;
-
+    // Pulso visual de "sincronizando" sin necesidad de volver a pedir datos
     setLoading(true);
-    try {
-      const [
-        usersSnap, custSnap, invSnap, repSnap, 
-        salesSnap, purchSnap, expSnap, empSnap, paySnap, setSnap,
-        vehiclesSnap, quotesSnap, arSnap, apSnap, apptSnap
-      ] = await Promise.all([
-        getDocs(collection(db, "Users")),
-        getDocs(collection(db, "Customers")),
-        getDocs(collection(db, "Inventory")),
-        getDocs(collection(db, "Repairs")),
-        getDocs(collection(db, "Sales")),
-        getDocs(collection(db, "Purchases")),
-        getDocs(collection(db, "Expenses")),
-        getDocs(collection(db, "Employees")),
-        getDocs(collection(db, "Payroll")),
-        getDocs(collection(db, "Settings")),
-        getDocs(collection(db, "Vehicles")),
-        getDocs(collection(db, "Quotes")),
-        getDocs(collection(db, "AccountsReceivable")),
-        getDocs(collection(db, "AccountsPayable")),
-        getDocs(collection(db, "Appointments"))
-      ]);
-
-      setUsers(usersSnap.docs.map(d => ({ id: d.id, ...d.data() } as User)));
-      setCustomers(custSnap.docs.map(d => ({ id: d.id, ...d.data() } as Customer)));
-      setInventory(invSnap.docs.map(d => ({ id: d.id, ...d.data() } as Product)));
-      setRepairs(repSnap.docs.map(d => ({ id: d.id, ...d.data() } as VehicleRepair)));
-      setSales(salesSnap.docs.map(d => ({ id: d.id, ...d.data() } as Sale)));
-      setPurchases(purchSnap.docs.map(d => ({ id: d.id, ...d.data() } as Purchase)));
-      setVehicles(vehiclesSnap.docs.map(d => ({ id: d.id, ...d.data() } as Vehicle)));
-      setQuotes(quotesSnap.docs.map(d => ({ id: d.id, ...d.data() } as Quote)));
-      setAccountsReceivable(arSnap.docs.map(d => ({ id: d.id, ...d.data() } as AccountReceivable)));
-      setAccountsPayable(apSnap.docs.map(d => ({ id: d.id, ...d.data() } as AccountPayable)));
-      setAppointments(apptSnap.docs.map(d => ({ id: d.id, ...d.data() } as Appointment)));
-      const migratedExpenses = expSnap.docs.map(d => {
-        const exp = { id: d.id, ...d.data() } as any;
-        if (!exp.expenseType) {
-          const oldCategory = exp.category;
-          if (['Limpieza', 'Víveres', 'Imprevistos', 'Repuestos Adicionales', 'Herramientas', 'Mantenimiento', 'Viáticos'].includes(oldCategory)) {
-            exp.expenseType = 'Gasto Variable';
-          } else if (['Oficina', 'Impuesto', 'Aseo Urbano', 'Internet', 'Alquiler', 'Luz', 'Agua', 'Impuestos', 'Nómina Administrativa', 'Servicios de Aseo'].includes(oldCategory)) {
-            exp.expenseType = 'Gasto Fijo';
-            if (oldCategory === 'Impuesto') exp.category = 'Impuestos';
-            if (oldCategory === 'Aseo Urbano') exp.category = 'Servicios de Aseo';
-          } else {
-            exp.expenseType = 'Gasto Variable'; // Default fallback
-          }
-        }
-        return exp as Expense;
-      });
-      setExpenses(migratedExpenses);
-      setEmployees(empSnap.docs.map(d => ({ id: d.id, ...d.data() } as Employee)));
-      setPayroll(paySnap.docs.map(d => ({ id: d.id, ...d.data() } as PayrollRecord)));
-
-      const exRateDoc = setSnap.docs.find(d => d.id === 'exchangeRate');
-      if (exRateDoc) {
-        setExchangeRate(Number(exRateDoc.data().value));
-      }
-    } catch (error) {
-      console.error("Error cargando datos de Firebase:", error);
-    } finally {
-      setLoading(false);
-      if (isInitial) setIsInitialLoading(false);
-    }
+    await new Promise(r => setTimeout(r, 600));
+    setLoading(false);
   };
 
+  // ─── Listeners en tiempo real (onSnapshot) ────────────────────────────────
   useEffect(() => {
-    refreshData(true);
-  }, []);
+    if (isDemoMode) {
+      loadDemoData();
+      return;
+    }
+
+    let resolved = 0;
+    const markReady = () => {
+      resolved++;
+      setReadyCount(resolved);
+      if (resolved >= TOTAL_COLLECTIONS) {
+        setIsInitialLoading(false);
+      }
+    };
+
+    // Migración inline de gastos (igual lógica que antes)
+    const migrateExpense = (exp: any): Expense => {
+      if (!exp.expenseType) {
+        const oldCategory = exp.category;
+        if (['Limpieza', 'Víveres', 'Imprevistos', 'Repuestos Adicionales', 'Herramientas', 'Mantenimiento', 'Viáticos'].includes(oldCategory)) {
+          exp.expenseType = 'Gasto Variable';
+        } else if (['Oficina', 'Impuesto', 'Aseo Urbano', 'Internet', 'Alquiler', 'Luz', 'Agua', 'Impuestos', 'Nómina Administrativa', 'Servicios de Aseo'].includes(oldCategory)) {
+          exp.expenseType = 'Gasto Fijo';
+          if (oldCategory === 'Impuesto') exp.category = 'Impuestos';
+          if (oldCategory === 'Aseo Urbano') exp.category = 'Servicios de Aseo';
+        } else {
+          exp.expenseType = 'Gasto Variable';
+        }
+      }
+      return exp as Expense;
+    };
+
+    let firstUsers = true;
+    const unsubUsers = onSnapshot(collection(db, 'Users'), snap => {
+      setUsers(snap.docs.map(d => ({ id: d.id, ...d.data() } as User)));
+      if (firstUsers) { firstUsers = false; markReady(); }
+    }, err => console.error('Listener Users:', err));
+
+    let firstCust = true;
+    const unsubCust = onSnapshot(collection(db, 'Customers'), snap => {
+      setCustomers(snap.docs.map(d => ({ id: d.id, ...d.data() } as Customer)));
+      if (firstCust) { firstCust = false; markReady(); }
+    }, err => console.error('Listener Customers:', err));
+
+    let firstInv = true;
+    const unsubInv = onSnapshot(collection(db, 'Inventory'), snap => {
+      setInventory(snap.docs.map(d => ({ id: d.id, ...d.data() } as Product)));
+      if (firstInv) { firstInv = false; markReady(); }
+    }, err => console.error('Listener Inventory:', err));
+
+    let firstRep = true;
+    const unsubRep = onSnapshot(collection(db, 'Repairs'), snap => {
+      setRepairs(snap.docs.map(d => ({ id: d.id, ...d.data() } as VehicleRepair)));
+      if (firstRep) { firstRep = false; markReady(); }
+    }, err => console.error('Listener Repairs:', err));
+
+    let firstSales = true;
+    const unsubSales = onSnapshot(collection(db, 'Sales'), snap => {
+      setSales(snap.docs.map(d => ({ id: d.id, ...d.data() } as Sale)));
+      if (firstSales) { firstSales = false; markReady(); }
+    }, err => console.error('Listener Sales:', err));
+
+    let firstPurch = true;
+    const unsubPurch = onSnapshot(collection(db, 'Purchases'), snap => {
+      setPurchases(snap.docs.map(d => ({ id: d.id, ...d.data() } as Purchase)));
+      if (firstPurch) { firstPurch = false; markReady(); }
+    }, err => console.error('Listener Purchases:', err));
+
+    let firstExp = true;
+    const unsubExp = onSnapshot(collection(db, 'Expenses'), snap => {
+      setExpenses(snap.docs.map(d => migrateExpense({ id: d.id, ...d.data() })));
+      if (firstExp) { firstExp = false; markReady(); }
+    }, err => console.error('Listener Expenses:', err));
+
+    let firstEmp = true;
+    const unsubEmp = onSnapshot(collection(db, 'Employees'), snap => {
+      setEmployees(snap.docs.map(d => ({ id: d.id, ...d.data() } as Employee)));
+      if (firstEmp) { firstEmp = false; markReady(); }
+    }, err => console.error('Listener Employees:', err));
+
+    let firstPay = true;
+    const unsubPay = onSnapshot(collection(db, 'Payroll'), snap => {
+      setPayroll(snap.docs.map(d => ({ id: d.id, ...d.data() } as PayrollRecord)));
+      if (firstPay) { firstPay = false; markReady(); }
+    }, err => console.error('Listener Payroll:', err));
+
+    let firstSet = true;
+    const unsubSet = onSnapshot(collection(db, 'Settings'), snap => {
+      const exRateDoc = snap.docs.find(d => d.id === 'exchangeRate');
+      if (exRateDoc) setExchangeRate(Number(exRateDoc.data().value));
+      if (firstSet) { firstSet = false; markReady(); }
+    }, err => console.error('Listener Settings:', err));
+
+    let firstVeh = true;
+    const unsubVeh = onSnapshot(collection(db, 'Vehicles'), snap => {
+      setVehicles(snap.docs.map(d => ({ id: d.id, ...d.data() } as Vehicle)));
+      if (firstVeh) { firstVeh = false; markReady(); }
+    }, err => console.error('Listener Vehicles:', err));
+
+    let firstQ = true;
+    const unsubQ = onSnapshot(collection(db, 'Quotes'), snap => {
+      setQuotes(snap.docs.map(d => ({ id: d.id, ...d.data() } as Quote)));
+      if (firstQ) { firstQ = false; markReady(); }
+    }, err => console.error('Listener Quotes:', err));
+
+    let firstAR = true;
+    const unsubAR = onSnapshot(collection(db, 'AccountsReceivable'), snap => {
+      setAccountsReceivable(snap.docs.map(d => ({ id: d.id, ...d.data() } as AccountReceivable)));
+      if (firstAR) { firstAR = false; markReady(); }
+    }, err => console.error('Listener AccountsReceivable:', err));
+
+    let firstAP = true;
+    const unsubAP = onSnapshot(collection(db, 'AccountsPayable'), snap => {
+      setAccountsPayable(snap.docs.map(d => ({ id: d.id, ...d.data() } as AccountPayable)));
+      if (firstAP) { firstAP = false; markReady(); }
+    }, err => console.error('Listener AccountsPayable:', err));
+
+    let firstAppt = true;
+    const unsubAppt = onSnapshot(collection(db, 'Appointments'), snap => {
+      setAppointments(snap.docs.map(d => ({ id: d.id, ...d.data() } as Appointment)));
+      if (firstAppt) { firstAppt = false; markReady(); }
+    }, err => console.error('Listener Appointments:', err));
+
+    // Cleanup: desuscribir todos los listeners al desmontar
+    return () => {
+      unsubUsers(); unsubCust(); unsubInv(); unsubRep();
+      unsubSales(); unsubPurch(); unsubExp(); unsubEmp();
+      unsubPay(); unsubSet(); unsubVeh(); unsubQ();
+      unsubAR(); unsubAP(); unsubAppt();
+    };
+  }, [isDemoMode]);
 
   const saveToFirebase = async (collectionName: string, item: any) => {
     if (isDemoMode) return;

@@ -6,7 +6,7 @@ import {
 import { 
   TrendingUp, DollarSign, Wrench, UserRound, Package, 
   ArrowUpRight, ArrowDownRight, Minus, RefreshCw, Activity,
-  Calendar, CheckCircle2, Database, Coins
+  Calendar, CheckCircle2, Coins
 } from 'lucide-react';
 
 interface DashboardModuleProps {
@@ -125,16 +125,21 @@ const DashboardModule: React.FC<DashboardModuleProps> = ({ store, localRate, set
           </p>
         </div>
         <div className="flex gap-2.5 items-center">
-          <div className="flex items-center gap-3 mr-4 p-2 px-4 rounded-xl border border-metal-border bg-metal-dark/50">
-             <Database size={16} className="text-emerald-400"/>
-             <span className="text-xs font-black text-chrome-200 uppercase tracking-widest">En Línea</span>
+          <div className="flex items-center gap-2 mr-2 p-2 px-4 rounded-xl border border-emerald-500/20 bg-emerald-500/5">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400"></span>
+            </span>
+            <span className="text-xs font-black text-emerald-400 uppercase tracking-widest">Tiempo Real</span>
           </div>
           <button
             onClick={() => store.refreshData()}
             disabled={store.loading}
             className="btn-metallic flex items-center gap-2 px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest disabled:opacity-50"
+            title="Sincronización automática activa — pulsa para refrescar manualmente"
           >
-            <RefreshCw size={14} className={store.loading ? 'animate-spin text-blue-400' : ''}/> Sync
+            <RefreshCw size={14} className={store.loading ? 'animate-spin text-blue-400' : ''}/>
+            {store.loading ? 'Sync…' : 'Sync'}
           </button>
         </div>
       </div>

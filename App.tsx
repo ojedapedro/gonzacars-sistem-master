@@ -601,9 +601,19 @@ const App: React.FC = () => {
               onClick={() => store.refreshData()}
               disabled={store.loading}
               className="hidden sm:flex items-center gap-2 btn-metallic px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest disabled:opacity-50"
+              title="Sincronización en tiempo real — pulsa para refrescar manualmente"
             >
-              <RefreshCw size={14} className={store.loading ? 'animate-spin text-blue-400' : ''} />
-              {store.loading ? 'Sync…' : 'Sync'}
+              <span className="relative flex items-center gap-1.5">
+                {store.loading ? (
+                  <RefreshCw size={14} className="animate-spin text-blue-400" />
+                ) : (
+                  <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400"></span>
+                  </span>
+                )}
+                {store.loading ? 'Sync…' : 'En Vivo'}
+              </span>
             </button>
             <div className="text-right px-3 py-1.5 rounded-lg" style={{ background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.15)' }}>
               <p className="text-[9px] font-black text-chrome-500 uppercase tracking-widest leading-tight">Tasa Bs/$</p>
