@@ -109,8 +109,8 @@ const AuditLogModule: React.FC = () => {
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const paginated  = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
-  const uniqueModules = [...new Set(logs.map(l => l.resModel))].sort();
-  const uniqueUsers   = [...new Set(logs.map(l => l.userName))].sort();
+  const uniqueModules = [...new Set(logs.map(l => l.resModel).filter(Boolean) as string[])].sort();
+  const uniqueUsers   = [...new Set(logs.map(l => l.userName).filter(Boolean) as string[])].sort();
 
   /* ── CSV Export ── */
   const exportCSV = () => {

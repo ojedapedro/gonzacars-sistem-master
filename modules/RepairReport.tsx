@@ -217,7 +217,7 @@ const RepairReport: React.FC<{ store: any }> = ({ store }) => {
         }
       }
     } catch {
-      alert('No se pudo subir la foto. Verifique su conexión y permisos.');
+      alert('No se pudo procesar la foto. Intente con una imagen más pequeña o en formato JPG/PNG.');
     } finally {
       setIsCompressingPhoto(false);
       e.target.value = '';

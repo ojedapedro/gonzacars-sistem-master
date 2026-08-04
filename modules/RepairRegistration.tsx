@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { Camera, Save, Sparkles, Loader2, X, Plus, Car, User, Wrench, FileText, ChevronDown, ChevronUp, CheckCircle, AlertCircle } from 'lucide-react';
 import { VehicleRepair, ServiceStatus, Customer } from '../types';
 import { improveDiagnosis } from '../lib/gemini';
-import { uploadBase64Image, deleteImageFromUrl } from '../lib/services/storageService';
+import { uploadBase64Image } from '../lib/services/storageService';
 
 /* ─── Status badge config ─── */
 const STATUS_CONFIG: Record<ServiceStatus, { label: string; color: string; bg: string; dot: string }> = {
@@ -139,9 +139,9 @@ const RepairRegistration: React.FC<{ store: any; toast?: any }> = ({ store, toas
       
       const photos = formData.evidencePhotos || [];
       if (photos.length < 5) set('evidencePhotos', [...photos, url]);
-      toast?.success('Foto agregada', 'Imagen subida y lista.');
+      toast?.success('Foto agregada', 'Imagen comprimida y guardada correctamente.');
     } catch {
-      toast?.error('Error de imagen', 'No se pudo subir la foto. Verifique su conexión y permisos.');
+      toast?.error('Error de imagen', 'No se pudo procesar la foto. Intente con una imagen más pequeña.');
     } finally {
       setIsCompressing(false);
       e.target.value = '';
@@ -150,12 +150,8 @@ const RepairRegistration: React.FC<{ store: any; toast?: any }> = ({ store, toas
 
   const removePhoto = (idx: number) => {
     const photos = [...(formData.evidencePhotos || [])];
-    const removedUrl = photos.splice(idx, 1)[0];
+    photos.splice(idx, 1);
     set('evidencePhotos', photos);
-    
-    if (removedUrl) {
-      deleteImageFromUrl(removedUrl).catch(console.error);
-    }
   };
 
   /* Submit */
