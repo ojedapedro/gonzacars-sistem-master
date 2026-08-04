@@ -952,24 +952,6 @@ const VehiclesModule: React.FC<VehiclesModuleProps> = ({ store: storeProp, toast
                     />
                   </div>
 
-                  {/* Fotos */}
-                  <div className="p-5 space-y-3">
-                    <SectionLabel icon={<Search size={12} />} label="Evidencias Fotográficas" />
-                    <div className="grid grid-cols-5 gap-2">
-                      {[1, 2, 3, 4, 5].map(i => (
-                        <div
-                          key={i}
-                          className="aspect-square rounded-lg flex flex-col items-center justify-center gap-1.5 cursor-pointer transition-all"
-                          style={{ border: '2px dashed rgba(255,255,255,0.08)', color: 'var(--chrome-600)' }}
-                          onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(59,130,246,0.3)'; e.currentTarget.style.color = '#60a5fa'; }}
-                          onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; e.currentTarget.style.color = 'var(--chrome-600)'; }}
-                        >
-                          <Plus size={16} />
-                          <span className="text-[9px] font-bold uppercase tracking-wider">Foto {i}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
                 </div>
 
                 {/* ═ RIGHT: Checklist ════════════════════════════════════ */}
