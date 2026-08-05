@@ -1,4 +1,5 @@
 import { db } from '../firebase';
+import { cleanForFirestore } from '../firebase';
 import { doc, updateDoc, addDoc, collection, setDoc, deleteDoc } from 'firebase/firestore';
 import { Product } from '../../types';
 import { addAuditLog } from './auditService';
@@ -19,9 +20,11 @@ export const createProduct = async (product: Omit<Product, 'id'>, user: UserCont
     price: roundTo(product.price, 4)
   };
   
-  const docRef = await addDoc(collection(db, 'Inventory'), roundedProduct);
+  const cleanRoundedProduct = cleanForFirestore(roundedProduct);
+  const docRef = await addDoc(collection(db, 'Inventory'), cleanRoundedProduct);
   const newProduct: Product = { id: docRef.id, ...roundedProduct };
-  await setDoc(docRef, newProduct);
+  const cleanNewProduct = cleanForFirestore(newProduct);
+  await setDoc(docRef, cleanNewProduct);
 
   await addAuditLog({
     resModel: 'Inventory',
@@ -63,7 +66,8 @@ export const updateProduct = async (
 
   if (Object.keys(changes).length === 0) return;
 
-  await updateDoc(ref, updatedFields);
+  const cleanUpdatedFields = cleanForFirestore(updatedFields);
+  await updateDoc(ref, cleanUpdatedFields);
 
   await addAuditLog({
     resModel: 'Inventory',

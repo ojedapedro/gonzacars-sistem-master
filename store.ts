@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Product, VehicleRepair, Sale, Purchase, Expense, Employee, PayrollRecord, Customer, User, Vehicle, Quote, AccountReceivable, ReceivablePayment, AccountPayable, PayablePayment, Appointment, CXCEntry } from './types';
-import { db, auth, googleProvider } from './lib/firebase';
+import { db, auth, googleProvider, cleanForFirestore } from './lib/firebase';
 import { collection, getDocs, doc, setDoc, deleteDoc, writeBatch, onSnapshot, query, orderBy } from 'firebase/firestore';
 import { signInWithPopup } from 'firebase/auth';
 import { roundTo } from './lib/utils/finance';
@@ -404,32 +404,35 @@ export const useGonzacarsStore = () => {
     if (isDemoMode) return;
     try {
       const user = getUserContext();
-      if (item.id) {
-        const ref = doc(db, collectionName, item.id);
-        await setDoc(ref, item);
+      const cleanItem = cleanForFirestore(item);
+      
+      if (cleanItem.id) {
+        const ref = doc(db, collectionName, cleanItem.id);
+        await setDoc(ref, cleanItem);
         await addAuditLog({
           resModel: collectionName,
-          resId: item.id,
+          resId: cleanItem.id,
           userId: user.id,
           userName: user.name,
           action: 'write',
-          changes: { data: [null, item] }
+          changes: { data: [null, cleanItem] }
         });
       } else {
         const docRef = doc(collection(db, collectionName));
-        item.id = docRef.id;
-        await setDoc(docRef, item);
+        cleanItem.id = docRef.id;
+        await setDoc(docRef, cleanItem);
         await addAuditLog({
           resModel: collectionName,
-          resId: item.id,
+          resId: cleanItem.id,
           userId: user.id,
           userName: user.name,
           action: 'create',
-          changes: { data: [null, item] }
+          changes: { data: [null, cleanItem] }
         });
       }
     } catch (error) {
       console.error(`Error guardando en ${collectionName}:`, error);
+      alert(`Ocurrió un error al guardar en la base de datos (${collectionName}). Por favor, revisa tu conexión e inténtalo nuevamente.`);
       throw error;
     }
   };
@@ -957,10 +960,11 @@ export const useGonzacarsStore = () => {
             const updatedItem = { ...item, quantity: update.quantity, warehouseStock: updatedWStock };
             currentInventory[index] = updatedItem;
             if (updatedItem.id) {
-              batch.update(doc(db, "Inventory", updatedItem.id), { 
+              const cleanUpdates = cleanForFirestore({
                 quantity: update.quantity,
                 warehouseStock: updatedWStock
               });
+              batch.update(doc(db, "Inventory", updatedItem.id), cleanUpdates);
             }
         }
       });
@@ -981,14 +985,16 @@ export const useGonzacarsStore = () => {
 
   const addVehicle = async (vehicle: Vehicle) => {
     if (!isDemoMode) {
-      await setDoc(doc(db, "Vehicles", vehicle.id), vehicle);
+      const cleanData = cleanForFirestore(vehicle);
+      await setDoc(doc(db, "Vehicles", cleanData.id), cleanData);
     }
     setVehicles(prev => [...prev, vehicle]);
   };
 
   const updateVehicle = async (vehicle: Vehicle) => {
     if (!isDemoMode) {
-      await setDoc(doc(db, "Vehicles", vehicle.id), vehicle);
+      const cleanData = cleanForFirestore(vehicle);
+      await setDoc(doc(db, "Vehicles", cleanData.id), cleanData);
     }
     setVehicles(prev => prev.map(v => v.id === vehicle.id ? vehicle : v));
   };
@@ -1002,14 +1008,16 @@ export const useGonzacarsStore = () => {
 
   const addQuote = async (quote: Quote) => {
     if (!isDemoMode) {
-      await setDoc(doc(db, "Quotes", quote.id), quote);
+      const cleanData = cleanForFirestore(quote);
+      await setDoc(doc(db, "Quotes", cleanData.id), cleanData);
     }
     setQuotes(prev => [...prev, quote]);
   };
 
   const updateQuote = async (quote: Quote) => {
     if (!isDemoMode) {
-      await setDoc(doc(db, "Quotes", quote.id), quote);
+      const cleanData = cleanForFirestore(quote);
+      await setDoc(doc(db, "Quotes", cleanData.id), cleanData);
     }
     setQuotes(prev => prev.map(q => q.id === quote.id ? quote : q));
   };
@@ -1041,7 +1049,8 @@ export const useGonzacarsStore = () => {
       const batch = writeBatch(db);
 
       // 1. Guardar la cotización aprobada
-      batch.set(doc(db, "Quotes", updatedQuote.id), updatedQuote);
+      const cleanQuote = cleanForFirestore(updatedQuote);
+      batch.set(doc(db, "Quotes", cleanQuote.id), cleanQuote);
 
       // 2. Aplicar descuentos de stock
       for (const deduction of stockDeductions) {
@@ -1049,10 +1058,11 @@ export const useGonzacarsStore = () => {
           deduction.item.warehouseStock || {},
           deduction.item.quantity - deduction.newQuantity
         );
-        batch.update(doc(db, "Inventory", deduction.id), {
+        const cleanUpdates = cleanForFirestore({
           quantity: deduction.newQuantity,
           warehouseStock: updatedWStock
         });
+        batch.update(doc(db, "Inventory", deduction.id), cleanUpdates);
       }
 
       await batch.commit();

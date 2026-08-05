@@ -30,3 +30,36 @@ export const storage = getStorage(app);
 export const googleProvider = new GoogleAuthProvider();
 export { app, analytics };
 
+/**
+ * Removes undefined properties from an object (or arrays) recursively.
+ * Firestore will throw an error if undefined is passed to setDoc or updateDoc.
+ */
+export const cleanForFirestore = <T>(obj: T): T => {
+  if (obj === null || obj === undefined) {
+    return obj;
+  }
+
+  if (Array.isArray(obj)) {
+    return obj.map(item => cleanForFirestore(item)) as unknown as T;
+  }
+
+  if (typeof obj === 'object') {
+    // If it's a Date object, leave it as is
+    if (obj instanceof Date) {
+      return obj;
+    }
+    const cleanObj: any = {};
+    for (const key in obj) {
+      if (Object.prototype.hasOwnProperty.call(obj, key)) {
+        const value = obj[key];
+        if (value !== undefined) {
+          cleanObj[key] = cleanForFirestore(value);
+        }
+      }
+    }
+    return cleanObj;
+  }
+
+  return obj;
+};
+

@@ -1,4 +1,5 @@
 import { db } from '../firebase';
+import { cleanForFirestore } from '../firebase';
 import { runTransaction, doc, collection, setDoc, writeBatch, getDoc, getDocs, query, where } from 'firebase/firestore';
 import { Sale, Purchase, Product } from '../../types';
 import { addAuditLog } from './auditService';
@@ -116,10 +117,10 @@ export const processSaleTransaction = async (
         const updatedWStockConsignment = deductStockFromWarehouseStock(wStockConsignment, saleQty);
         const newTotalQtyConsignment = Object.values(updatedWStockConsignment).reduce((a, b) => a + b, 0);
 
-        transaction.update(snap.ref, {
+        transaction.update(snap.ref, cleanForFirestore({
           quantity: newTotalQtyConsignment,
           warehouseStock: updatedWStockConsignment
-        });
+        }));
 
         // 2. Transfer stock to the general (Gonzacars) inventory
         const matchId = consignmentProductMap.get(snap.id);
@@ -137,10 +138,10 @@ export const processSaleTransaction = async (
 
           const finalTotalQtyGen = Object.values(genWStock).reduce((a, b) => a + b, 0);
 
-          transaction.update(genSnap.ref, {
+          transaction.update(genSnap.ref, cleanForFirestore({
             quantity: finalTotalQtyGen,
             warehouseStock: genWStock
-          });
+          }));
         } else {
           // Create new general product with 0 quantity (was created with saleQty then sold immediately)
           const newGenRef = doc(collection(db, 'Inventory'));
@@ -162,7 +163,7 @@ export const processSaleTransaction = async (
             lastEntry: new Date().toISOString().split('T')[0],
             warehouseStock: genWStock
           };
-          transaction.set(newGenRef, newGenProduct);
+          transaction.set(newGenRef, cleanForFirestore(newGenProduct));
         }
       } else {
         // Normal own product sale: deduct stock from warehouses
@@ -195,21 +196,21 @@ export const processSaleTransaction = async (
         const newTotalQty = Object.values(wStock).reduce((a, b) => a + b, 0);
 
         // Update inventory stock inside the transaction
-        transaction.update(snap.ref, {
+        transaction.update(snap.ref, cleanForFirestore({
           quantity: newTotalQty,
           warehouseStock: wStock
-        });
+        }));
       }
     });
 
     // Save the sale
     const saleRef = doc(db, 'Sales', saleId);
-    transaction.set(saleRef, roundedSale);
+    transaction.set(saleRef, cleanForFirestore(roundedSale));
 
     // Generación de Cuenta por Cobrar si es a crédito
     if (roundedSale.type === 'Crédito') {
       const arRef = doc(collection(db, 'AccountsReceivable'));
-      transaction.set(arRef, {
+      transaction.set(arRef, cleanForFirestore({
         id: arRef.id,
         referenceId: saleId,
         customerId: roundedSale.customerId || '',
@@ -220,7 +221,7 @@ export const processSaleTransaction = async (
         paidAmount: 0,
         status: 'Pendiente',
         payments: []
-      });
+      }));
     }
   });
 
@@ -306,7 +307,7 @@ export const registerPurchaseBatchService = async (
           warehouseStock: wStock,
           lastEntry: new Date().toISOString().split('T')[0]
         };
-        transaction.set(newProductRef, newProduct);
+        transaction.set(newProductRef, cleanForFirestore(newProduct));
         existingProductsMap.set(productId, newProduct);
         existingProductsMap.set(p.productName.toLowerCase(), newProduct);
       } else {
@@ -317,11 +318,11 @@ export const registerPurchaseBatchService = async (
         
         const newTotalQty = Object.values(wStock).reduce((a, b) => a + b, 0);
         const productRef = doc(db, 'Inventory', productId as string);
-        transaction.update(productRef, {
+        transaction.update(productRef, cleanForFirestore({
           quantity: newTotalQty,
           cost: roundTo(p.price, 4), // Update latest cost
           warehouseStock: wStock
-        });
+        }));
         existingProductsMap.set(productId, { ...existingProduct, quantity: newTotalQty, warehouseStock: wStock });
       }
 
@@ -334,7 +335,7 @@ export const registerPurchaseBatchService = async (
         warehouseId: selectedWarehouse
       };
 
-      transaction.set(purchaseRef, roundedPurchase);
+      transaction.set(purchaseRef, cleanForFirestore(roundedPurchase));
       processedPurchases.push(roundedPurchase);
     });
 
@@ -350,7 +351,7 @@ export const registerPurchaseBatchService = async (
 
     creditInvoices.forEach((data, invoiceId) => {
       const apRef = doc(collection(db, 'AccountsPayable'));
-      transaction.set(apRef, {
+      transaction.set(apRef, cleanForFirestore({
         id: apRef.id,
         purchaseInvoiceId: invoiceId,
         provider: data.provider,
@@ -360,7 +361,7 @@ export const registerPurchaseBatchService = async (
         paidAmount: 0,
         status: 'Pendiente',
         payments: []
-      });
+      }));
     });
   });
 
