@@ -595,3 +595,376 @@ h1, h2, h3, h4, h5, h6 {
 .btn-pulse {
   animation: pulseGlow 2s infinite;
 }
+
+/* ============================================================
+   POS MODULE — Hallmark Workbench Redesign
+   ============================================================ */
+
+/* --- Stats Bar --- */
+.pos-stat-bar {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  background: linear-gradient(90deg, var(--metal-darker) 0%, var(--metal-dark) 100%);
+  border-bottom: 1px solid var(--metal-border);
+  padding: 0.625rem 1.5rem;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.pos-stat-bar::-webkit-scrollbar { display: none; }
+
+.pos-stat-item {
+  display: flex;
+  flex-direction: column;
+  padding: 0.375rem 1.25rem;
+  border-right: 1px solid var(--metal-border);
+  min-width: max-content;
+}
+.pos-stat-item:last-child { border-right: none; }
+.pos-stat-label {
+  font-size: 0.55rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--chrome-500);
+}
+.pos-stat-value {
+  font-size: 0.9rem;
+  font-weight: 900;
+  color: var(--chrome-100);
+  letter-spacing: -0.03em;
+  line-height: 1.2;
+  font-family: var(--font-heading);
+}
+.pos-stat-value.accent { color: var(--accent-primary); }
+.pos-stat-value.success { color: #34d399; }
+
+/* --- Category Chips --- */
+.pos-category-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding-bottom: 0.25rem;
+}
+.pos-category-row::-webkit-scrollbar { display: none; }
+
+.pos-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.375rem 0.875rem;
+  border-radius: 99px;
+  font-size: 0.6rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+  cursor: pointer;
+  border: 1px solid var(--metal-border);
+  background: var(--metal-dark);
+  color: var(--chrome-400);
+  transition: var(--transition);
+  user-select: none;
+}
+.pos-chip:hover {
+  background: var(--metal-mid);
+  color: var(--chrome-200);
+  border-color: var(--metal-border-light);
+}
+.pos-chip.active {
+  background: rgba(59,130,246,0.15);
+  color: #60a5fa;
+  border-color: rgba(59,130,246,0.4);
+  box-shadow: 0 0 12px rgba(59,130,246,0.15);
+}
+
+/* --- Product Card (Compact Workbench) --- */
+.pos-product-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 0.875rem;
+  border-radius: 1rem;
+  border: 1px solid var(--metal-border);
+  background: var(--metal-mid);
+  cursor: pointer;
+  overflow: hidden;
+  transition: transform 0.18s cubic-bezier(0.16,1,0.3,1),
+              box-shadow 0.18s cubic-bezier(0.16,1,0.3,1),
+              border-color 0.18s ease;
+  will-change: transform;
+}
+.pos-product-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 70% 0%, rgba(59,130,246,0.08) 0%, transparent 65%);
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+.pos-product-card:hover {
+  transform: translateY(-3px) scale(1.01);
+  box-shadow: 0 10px 32px rgba(0,0,0,0.45), 0 0 0 1px rgba(59,130,246,0.25);
+  border-color: rgba(59,130,246,0.35);
+}
+.pos-product-card:hover::before { opacity: 1; }
+.pos-product-card:active { transform: translateY(-1px) scale(0.99); }
+
+.pos-product-card.consignment {
+  background: rgba(88,28,135,0.12);
+  border-color: rgba(139,92,246,0.2);
+}
+.pos-product-card.consignment:hover {
+  border-color: rgba(139,92,246,0.5);
+  box-shadow: 0 10px 32px rgba(0,0,0,0.45), 0 0 0 1px rgba(139,92,246,0.3);
+}
+.pos-product-card.low-stock {
+  border-color: rgba(248,113,113,0.3);
+  animation: borderGlow-red 2s ease-in-out infinite;
+}
+@keyframes borderGlow-red {
+  0%, 100% { border-color: rgba(248,113,113,0.3); }
+  50%       { border-color: rgba(248,113,113,0.7); }
+}
+
+.pos-product-add-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--metal-dark);
+  color: var(--chrome-500);
+  border: 1px solid var(--metal-border);
+  transition: var(--transition);
+  flex-shrink: 0;
+}
+.pos-product-card:hover .pos-product-add-btn {
+  background: var(--accent-primary);
+  color: #fff;
+  border-color: transparent;
+  box-shadow: 0 4px 12px rgba(59,130,246,0.4);
+}
+
+/* --- Checkout Panel --- */
+.pos-checkout-panel {
+  background: linear-gradient(180deg, var(--metal-base) 0%, var(--metal-darker) 100%);
+  border-left: 1px solid var(--metal-border);
+  display: flex;
+  flex-direction: column;
+}
+.pos-checkout-header {
+  padding: 1.25rem 1.5rem 1rem;
+  border-bottom: 1px solid var(--metal-border);
+  background: linear-gradient(135deg, rgba(59,130,246,0.06) 0%, transparent 60%);
+}
+
+/* --- Cart Item --- */
+.pos-cart-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  border-radius: 0.875rem;
+  background: var(--metal-mid);
+  border: 1px solid var(--metal-border);
+  animation: slideInRight 0.25s cubic-bezier(0.16,1,0.3,1) both;
+  transition: background 0.15s ease;
+}
+.pos-cart-item:hover { background: var(--metal-light); }
+
+.pos-qty-control {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  background: var(--metal-dark);
+  border: 1px solid var(--metal-border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.pos-qty-btn {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--chrome-400);
+  transition: var(--transition);
+  cursor: pointer;
+  user-select: none;
+}
+.pos-qty-btn:hover { background: var(--metal-mid); color: var(--chrome-100); }
+.pos-qty-btn:active { background: var(--accent-primary); color: #fff; }
+.pos-qty-display {
+  width: 32px;
+  text-align: center;
+  font-size: 0.75rem;
+  font-weight: 900;
+  color: var(--chrome-100);
+  border-left: 1px solid var(--metal-border);
+  border-right: 1px solid var(--metal-border);
+  line-height: 32px;
+  font-family: var(--font-heading);
+}
+
+/* --- Payment Method Chips --- */
+.pos-payment-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.375rem;
+}
+.pos-payment-chip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem 0.25rem;
+  border-radius: 0.625rem;
+  border: 1px solid var(--metal-border);
+  background: var(--metal-dark);
+  cursor: pointer;
+  transition: var(--transition);
+  user-select: none;
+  gap: 0.125rem;
+}
+.pos-payment-chip span {
+  font-size: 0.55rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--chrome-500);
+  transition: color 0.15s ease;
+}
+.pos-payment-chip:hover {
+  background: var(--metal-mid);
+  border-color: var(--metal-border-light);
+}
+.pos-payment-chip:hover span { color: var(--chrome-200); }
+.pos-payment-chip.selected {
+  background: rgba(59,130,246,0.12);
+  border-color: rgba(59,130,246,0.45);
+  box-shadow: 0 0 0 0 rgba(59,130,246,0.2);
+}
+.pos-payment-chip.selected span { color: #60a5fa; }
+
+/* --- Process Button (active state pulse) --- */
+.pos-process-btn {
+  width: 100%;
+  padding: 1rem;
+  border-radius: 1rem;
+  font-size: 0.7rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.625rem;
+  transition: var(--transition);
+  background: linear-gradient(160deg, #3b82f6 0%, #2563eb 60%, #1d4ed8 100%);
+  border: 1px solid rgba(96,165,250,0.25);
+  color: #fff;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.12), 0 4px 20px rgba(37,99,235,0.35);
+  cursor: pointer;
+}
+.pos-process-btn:hover:not(:disabled) {
+  background: linear-gradient(160deg, #60a5fa 0%, #3b82f6 60%, #2563eb 100%);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.18), 0 8px 32px rgba(37,99,235,0.5);
+  transform: translateY(-1px);
+}
+.pos-process-btn:active:not(:disabled) {
+  transform: translateY(1px);
+  box-shadow: inset 0 2px 6px rgba(0,0,0,0.3);
+}
+.pos-process-btn.has-items {
+  animation: pulseGlow 2.5s ease-in-out infinite;
+}
+.pos-process-btn:disabled {
+  background: var(--metal-mid);
+  color: var(--chrome-500);
+  border-color: var(--metal-border);
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+/* --- Cart bounce animation --- */
+@keyframes cartBounce {
+  0%   { transform: scale(1); }
+  30%  { transform: scale(1.25) rotate(-8deg); }
+  60%  { transform: scale(0.9) rotate(4deg); }
+  80%  { transform: scale(1.08); }
+  100% { transform: scale(1); }
+}
+.cart-bounce { animation: cartBounce 0.4s cubic-bezier(0.36,0.07,0.19,0.97); }
+
+/* --- Live indicator dot --- */
+.live-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #34d399;
+  box-shadow: 0 0 0 0 rgba(52,211,153,0.4);
+  animation: livePulse 2s ease-in-out infinite;
+}
+@keyframes livePulse {
+  0%   { box-shadow: 0 0 0 0 rgba(52,211,153,0.5); }
+  60%  { box-shadow: 0 0 0 6px rgba(52,211,153,0); }
+  100% { box-shadow: 0 0 0 0 rgba(52,211,153,0); }
+}
+
+/* --- Empty cart illustration --- */
+.pos-empty-cart {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 2rem 1rem;
+  opacity: 0.35;
+}
+.pos-empty-cart svg { stroke-width: 1; }
+.pos-empty-cart p {
+  font-size: 0.6rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  color: var(--chrome-500);
+}
+
+/* --- Totals section --- */
+.pos-total-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+.pos-total-label {
+  font-size: 0.6rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--chrome-500);
+}
+.pos-total-amount {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--chrome-200);
+  font-family: var(--font-heading);
+}
+.pos-grand-total {
+  font-size: 1.6rem;
+  font-weight: 900;
+  color: #60a5fa;
+  letter-spacing: -0.04em;
+  font-family: var(--font-heading);
+  line-height: 1;
+}
+.pos-grand-total-bs {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--chrome-400);
+}
+
