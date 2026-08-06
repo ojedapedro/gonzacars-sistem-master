@@ -571,7 +571,7 @@ const VehiclesModule: React.FC<VehiclesModuleProps> = ({ store: storeProp, toast
                   />
                   <KpiCell
                     label="Total Invertido"
-                    custom={<CurrencyBadge amount={totalSpent} />}
+                    custom={<CurrencyBadge amountUsd={totalSpent} />}
                   />
                 </div>
               </div>
@@ -750,7 +750,7 @@ const VehiclesModule: React.FC<VehiclesModuleProps> = ({ store: storeProp, toast
 
                                 {/* Amount */}
                                 <div className="flex-shrink-0 text-right">
-                                  <CurrencyBadge amount={repairTotal} />
+                                  <CurrencyBadge amountUsd={repairTotal} />
                                   {repair.items.length > 0 && (
                                     <p className="text-[9px] mt-1" style={{ color: 'var(--chrome-600)' }}>
                                       {repair.items.length} ítem{repair.items.length !== 1 ? 's' : ''}
