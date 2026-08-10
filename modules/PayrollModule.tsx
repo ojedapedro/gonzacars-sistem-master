@@ -103,9 +103,19 @@ const PayReceipt: React.FC<PayReceiptProps> = ({ record, emp, exchangeRate, onCl
       {/* Print stylesheet */}
       <style>{`
         @media print {
-          body > * { display: none !important; }
-          #pay-receipt-printable { display: block !important; position: fixed; top: 0; left: 0; width: 100%; }
+          body { visibility: hidden !important; background: white !important; }
+          #pay-receipt-printable {
+            visibility: visible !important;
+            position: absolute !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100% !important;
+            height: auto !important;
+            overflow: visible !important;
+          }
+          #pay-receipt-printable * { visibility: visible !important; }
           .no-print { display: none !important; }
+          tr { page-break-inside: avoid; }
         }
       `}</style>
 

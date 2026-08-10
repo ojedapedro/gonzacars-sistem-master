@@ -914,7 +914,28 @@ const QuotesModule: React.FC<QuotesModuleProps> = ({ localRate }) => {
       {/* Print Modal */}
       {showPrintModal && selectedQuote && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl w-full max-w-3xl overflow-hidden shadow-2xl animate-scale-in text-black p-8">
+          {/* Estilos de impresión para cotizaciones */}
+          <style>{`
+            @media print {
+              body { visibility: hidden !important; background: white !important; }
+              #quote-print-doc {
+                visibility: visible !important;
+                position: absolute !important;
+                top: 0 !important;
+                left: 0 !important;
+                width: 100% !important;
+                height: auto !important;
+                overflow: visible !important;
+                box-shadow: none !important;
+                border-radius: 0 !important;
+                max-height: none !important;
+              }
+              #quote-print-doc * { visibility: visible !important; }
+              .no-print { display: none !important; }
+              tr { page-break-inside: avoid; }
+            }
+          `}</style>
+          <div id="quote-print-doc" className="bg-white rounded-xl w-full max-w-3xl shadow-2xl animate-scale-in text-black p-8 overflow-y-auto max-h-[90vh]">
             <div className="flex justify-between items-start border-b pb-6 mb-6">
               <div>
                 <img src={LOGO_URL} alt="Logo" className="h-16 mb-2" style={{ filter: 'invert(1)' }} />

@@ -305,12 +305,339 @@ const RepairReport: React.FC<{ store: any }> = ({ store }) => {
     setShowSuccessModal(true);
   };
 
+  // ─── Generador de ventana de impresión dedicada ────────────────────────────
+  // Enfoque senior: genera HTML puro en ventana nueva, sin interferencia del CSS de la app.
+  // Garantiza impresión completa y multipágina en todos los navegadores.
   const handlePrint = (mode: 'report' | 'receipt' | 'abono') => {
-    setPrintMode(mode);
-    // Pequeño delay para asegurar que el DOM se actualice antes de imprimir
-    setTimeout(() => {
-      window.print();
-    }, 100);
+    if (!currentRepair) return;
+
+    const total   = currentRepair.items.reduce((s, i) => s + i.price * i.quantity, 0);
+    const paid    = (currentRepair.installments || []).reduce((s, i) => s + Number(i.amount), 0);
+    const balance = Math.max(0, total - paid);
+    const fmt     = (n: number) => `$${n.toFixed(2)}`;
+    const fmtDate = (d: string) => new Date(d).toLocaleDateString('es-VE');
+    const orderId = currentRepair.id.slice(-6).toUpperCase();
+    const now     = new Date().toLocaleString('es-VE');
+
+    let html = '';
+
+    if (mode === 'report') {
+      // ── INFORME CORPORATIVO ───────────────────────────────────────────────
+      const itemsRows = currentRepair.items.map(item => `
+        <tr>
+          <td class="center">${item.quantity}</td>
+          <td><strong>${item.description.toUpperCase()}</strong></td>
+          <td class="center type">${item.type}</td>
+          <td class="right">${fmt(item.price)}</td>
+          <td class="right bold">${fmt(item.price * item.quantity)}</td>
+        </tr>
+      `).join('');
+
+      const paymentsRows = (currentRepair.installments || []).length > 0
+        ? (currentRepair.installments || []).map(inst => `
+            <tr>
+              <td>${fmtDate(inst.date)}</td>
+              <td class="bold">${inst.method.toUpperCase()}</td>
+              <td class="right green bold">${fmt(inst.amount)}</td>
+            </tr>
+          `).join('')
+        : '<tr><td colspan="3" class="muted italic">No hay pagos registrados.</td></tr>';
+
+      const diagnosisBlock = currentRepair.diagnosis ? `
+        <div class="section">
+          <div class="section-title">Diagnóstico / Observaciones</div>
+          <p style="font-size:11px;line-height:1.5;color:#333;">${currentRepair.diagnosis}</p>
+        </div>
+      ` : '';
+
+      html = `
+        <!DOCTYPE html><html lang="es"><head>
+        <meta charset="UTF-8"/>
+        <title>Informe de Servicio – Gonzacars C.A.</title>
+        <style>
+          @page { size: letter; margin: 18mm 20mm 22mm 20mm; }
+          * { box-sizing: border-box; margin: 0; padding: 0; }
+          body { font-family: 'Helvetica Neue', Arial, sans-serif; font-size: 11px; color: #111; background: #fff; }
+          /* ── Header ── */
+          .header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 3px solid #111; padding-bottom: 14px; margin-bottom: 18px; }
+          .logo { width: 60px; height: 60px; object-fit: contain; }
+          .company h1 { font-size: 20px; font-weight: 900; text-transform: uppercase; letter-spacing: -0.5px; }
+          .company p  { font-size: 9px; color: #555; margin-top: 2px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; }
+          .doc-info { text-align: right; }
+          .doc-info h2 { font-size: 16px; font-weight: 900; text-transform: uppercase; }
+          .doc-info .doc-id { font-size: 22px; font-weight: 900; color: #444; margin-top: 2px; }
+          .doc-info .doc-date { font-size: 9px; color: #888; margin-top: 4px; text-transform: uppercase; }
+          /* ── Grid cliente/vehículo ── */
+          .meta-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 18px; }
+          .meta-box .label { font-size: 8px; font-weight: 900; text-transform: uppercase; letter-spacing: 1.5px; color: #888; border-bottom: 1px solid #ddd; padding-bottom: 4px; margin-bottom: 6px; }
+          .meta-box .name  { font-size: 14px; font-weight: 900; text-transform: uppercase; }
+          .meta-box .sub   { font-size: 10px; color: #555; margin-top: 2px; }
+          .plate { font-family: monospace; font-size: 13px; font-weight: 900; background: #f0f0f0; border: 1px solid #ccc; padding: 3px 8px; border-radius: 4px; display: inline-block; margin-top: 4px; }
+          /* ── Tabla items ── */
+          .section { margin-bottom: 18px; }
+          .section-title { font-size: 8px; font-weight: 900; text-transform: uppercase; letter-spacing: 1.5px; color: #888; border-bottom: 1px solid #ddd; padding-bottom: 4px; margin-bottom: 8px; }
+          table { width: 100%; border-collapse: collapse; }
+          thead tr { border-bottom: 2px solid #111; }
+          thead th { font-size: 8px; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; color: #555; padding: 6px 4px; }
+          tbody tr { border-bottom: 1px solid #eee; page-break-inside: avoid; }
+          tbody td { padding: 7px 4px; font-size: 11px; vertical-align: middle; }
+          tbody tr:last-child { border-bottom: none; }
+          .type { font-size: 9px; color: #888; text-transform: uppercase; }
+          /* ── Totales ── */
+          .totals-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 32px; margin-top: 8px; }
+          .payments-section { flex: 1; }
+          .totals-box { width: 220px; background: #f7f7f7; border: 1px solid #ddd; border-radius: 8px; padding: 14px; }
+          .totals-box .row { display: flex; justify-content: space-between; font-size: 10px; font-weight: 700; margin-bottom: 6px; color: #555; text-transform: uppercase; }
+          .totals-box .row.total-row { border-top: 2px solid #222; padding-top: 8px; margin-top: 4px; }
+          .totals-box .row.total-row span:last-child { font-size: 20px; font-weight: 900; color: #111; }
+          .totals-box .row.green { color: #16a34a; }
+          /* ── Estado ── */
+          .status-badge { display: inline-block; font-size: 9px; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; border: 1.5px solid #ccc; border-radius: 20px; padding: 2px 10px; color: #444; margin-bottom: 14px; }
+          /* ── Firmas ── */
+          .signatures { display: grid; grid-template-columns: 1fr 1fr; gap: 60px; margin-top: 40px; padding-top: 8px; }
+          .sig-line { border-top: 1px solid #999; text-align: center; padding-top: 6px; font-size: 8px; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; color: #888; }
+          .footer { text-align: center; margin-top: 24px; padding-top: 10px; border-top: 1px solid #eee; font-size: 8px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #aaa; }
+          /* ── Utils ── */
+          .center { text-align: center; }
+          .right  { text-align: right; }
+          .bold   { font-weight: 900; }
+          .green  { color: #16a34a; }
+          .muted  { color: #999; }
+          .italic { font-style: italic; }
+        </style>
+        </head><body>
+
+          <div class="header">
+            <div style="display:flex;align-items:center;gap:14px;">
+              <img class="logo" src="${LOGO_URL}" alt="Logo" />
+              <div class="company">
+                <h1>Gonzacars C.A.</h1>
+                <p>RIF: J-50030426-9</p>
+                <p>Valencia, Edo. Carabobo</p>
+                <p>Taller Mecánico &amp; Repuestos</p>
+              </div>
+            </div>
+            <div class="doc-info">
+              <h2>${currentRepair.status === 'Entregado' ? 'Informe de Servicio' : 'Presupuesto'}</h2>
+              <div class="doc-id">#${orderId}</div>
+              <div class="doc-date">Emisión: ${now}</div>
+            </div>
+          </div>
+
+          <span class="status-badge">Estado: ${currentRepair.status}</span>
+
+          <div class="meta-grid">
+            <div class="meta-box">
+              <div class="label">Cliente</div>
+              <div class="name">${currentRepair.ownerName}</div>
+              <div class="sub">CI / ID: ${currentRepair.customerId || '—'}</div>
+              ${currentRepair.phone ? `<div class="sub">Tel: ${currentRepair.phone}</div>` : ''}
+            </div>
+            <div class="meta-box">
+              <div class="label">Vehículo</div>
+              <div class="name">${currentRepair.brand} ${currentRepair.model}</div>
+              <div class="sub">Año: ${currentRepair.year} &nbsp;|&nbsp; Color: ${currentRepair.color || '—'}</div>
+              <div class="sub">Km: ${currentRepair.mileage ? currentRepair.mileage.toLocaleString() : '—'}</div>
+              <div class="plate">${currentRepair.plate.toUpperCase()}</div>
+            </div>
+          </div>
+
+          <div class="section">
+            <div class="label" style="font-size:8px;font-weight:900;text-transform:uppercase;letter-spacing:1.5px;color:#888;border-bottom:1px solid #ddd;padding-bottom:4px;margin-bottom:8px;">Servicio / Tipo</div>
+            <p style="font-size:11px;font-weight:700;">${currentRepair.serviceType || '—'}</p>
+          </div>
+
+          ${diagnosisBlock}
+
+          <div class="section">
+            <div class="section-title">Detalle de Trabajos y Repuestos</div>
+            <table>
+              <thead>
+                <tr>
+                  <th class="center" style="width:40px;">Cant.</th>
+                  <th>Descripción</th>
+                  <th class="center" style="width:80px;">Tipo</th>
+                  <th class="right" style="width:90px;">P. Unit.</th>
+                  <th class="right" style="width:90px;">Importe</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${itemsRows}
+              </tbody>
+            </table>
+          </div>
+
+          <div class="totals-row">
+            <div class="payments-section">
+              <div class="section-title">Historial de Pagos</div>
+              <table>
+                <thead>
+                  <tr>
+                    <th style="width:90px;">Fecha</th>
+                    <th>Método</th>
+                    <th class="right" style="width:90px;">Monto</th>
+                  </tr>
+                </thead>
+                <tbody>${paymentsRows}</tbody>
+              </table>
+            </div>
+            <div class="totals-box">
+              <div class="row"><span>Total Servicio:</span><span>${fmt(total)}</span></div>
+              <div class="row green"><span>Total Pagado:</span><span>−${fmt(paid)}</span></div>
+              <div class="row total-row"><span>Saldo Pendiente:</span><span>${fmt(balance)}</span></div>
+            </div>
+          </div>
+
+          <div class="signatures">
+            <div class="sig-line">Recibí Conforme (Cliente)</div>
+            <div class="sig-line">Autorizado Por (Taller)</div>
+          </div>
+
+          <div class="footer">Gonzacars C.A. — Garantía de Servicio — RIF: J-50030426-9</div>
+        </body></html>
+      `;
+
+    } else if (mode === 'receipt') {
+      // ── RECIBO DE COBRO (TICKET) ──────────────────────────────────────────
+      const itemLines = currentRepair.items.map(item => `
+        <div class="item-row">
+          <span>${item.quantity} x ${item.description.toUpperCase()}</span>
+          <span>${fmt(item.price * item.quantity)}</span>
+        </div>
+      `).join('');
+
+      html = `
+        <!DOCTYPE html><html lang="es"><head>
+        <meta charset="UTF-8"/>
+        <title>Recibo – Gonzacars C.A.</title>
+        <style>
+          @page { size: 80mm auto; margin: 6mm 4mm; }
+          * { box-sizing: border-box; margin: 0; padding: 0; }
+          body { font-family: 'Courier New', monospace; font-size: 11px; color: #111; background: #fff; width: 72mm; }
+          .center { text-align: center; }
+          .logo { width: 48px; height: 48px; object-fit: contain; }
+          .title { font-size: 14px; font-weight: 900; text-transform: uppercase; margin: 6px 0 2px; }
+          .company { font-weight: 700; font-size: 11px; }
+          .address { font-size: 9px; color: #666; margin-top: 2px; }
+          .divider-dash { border: none; border-top: 1px dashed #999; margin: 8px 0; }
+          .divider-solid { border: none; border-top: 1px solid #111; margin: 8px 0; }
+          .meta-row { display: flex; justify-content: space-between; margin: 3px 0; font-size: 10px; }
+          .meta-row .label { color: #555; }
+          .item-row { display: flex; justify-content: space-between; font-size: 10px; margin: 3px 0; }
+          .item-row span:first-child { max-width: 150px; overflow: hidden; }
+          .section-label { font-size: 8px; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid #ddd; padding-bottom: 2px; margin-bottom: 4px; color: #666; }
+          .totals .row { display: flex; justify-content: space-between; font-size: 11px; font-weight: 700; margin: 3px 0; }
+          .totals .final { display: flex; justify-content: space-between; font-size: 14px; font-weight: 900; border-top: 2px solid #111; padding-top: 5px; margin-top: 5px; }
+          .thanks { text-align: center; margin-top: 12px; border-top: 1px solid #ddd; padding-top: 8px; font-size: 9px; font-weight: 700; text-transform: uppercase; }
+        </style></head><body>
+          <div class="center">
+            <img class="logo" src="${LOGO_URL}" alt="Logo"/>
+            <div class="title">Recibo de Cobro</div>
+            <div class="company">Gonzacars C.A.</div>
+            <div class="address">RIF: J-50030426-9 | Valencia, Carabobo</div>
+          </div>
+          <hr class="divider-dash"/>
+          <div class="meta-row"><span class="label">ORDEN:</span><span><strong>#${orderId}</strong></span></div>
+          <div class="meta-row"><span class="label">FECHA:</span><span>${new Date().toLocaleDateString('es-VE')}</span></div>
+          <div class="meta-row"><span class="label">PLACA:</span><span><strong>${currentRepair.plate.toUpperCase()}</strong></span></div>
+          <div class="meta-row"><span class="label">CLIENTE:</span><span>${currentRepair.ownerName.toUpperCase()}</span></div>
+          <div class="meta-row"><span class="label">VEHÍCULO:</span><span>${currentRepair.brand} ${currentRepair.model} ${currentRepair.year}</span></div>
+          <hr class="divider-dash"/>
+          <div class="section-label">Conceptos</div>
+          ${itemLines}
+          <hr class="divider-dash"/>
+          <div class="totals">
+            <div class="row"><span>TOTAL SERVICIO:</span><span>${fmt(total)}</span></div>
+            <div class="row"><span>TOTAL PAGADO:</span><span>${fmt(paid)}</span></div>
+            <div class="final"><span>SALDO:</span><span>${fmt(balance)}</span></div>
+          </div>
+          <div class="thanks">¡Gracias por su preferencia!<br/>Conserve este ticket como comprobante.</div>
+        </body></html>
+      `;
+
+    } else if (mode === 'abono' && lastInstallment) {
+      // ── ESTADO DE CUENTA / ABONO ─────────────────────────────────────────
+      const paymentRows = (currentRepair.installments || []).map(inst => `
+        <div class="meta-row">
+          <span>${fmtDate(inst.date)}</span>
+          <span>${inst.method.toUpperCase()}</span>
+          <span class="green bold">${fmt(inst.amount)}</span>
+        </div>
+      `).join('');
+
+      html = `
+        <!DOCTYPE html><html lang="es"><head>
+        <meta charset="UTF-8"/>
+        <title>Estado de Cuenta – Gonzacars C.A.</title>
+        <style>
+          @page { size: 80mm auto; margin: 6mm 4mm; }
+          * { box-sizing: border-box; margin: 0; padding: 0; }
+          body { font-family: 'Courier New', monospace; font-size: 11px; color: #111; background: #fff; width: 72mm; }
+          .center { text-align: center; }
+          .logo { width: 48px; height: 48px; object-fit: contain; }
+          .title { font-size: 14px; font-weight: 900; text-transform: uppercase; margin: 6px 0 2px; }
+          .company { font-weight: 700; font-size: 11px; }
+          .address { font-size: 9px; color: #666; margin-top: 2px; }
+          .divider-dash { border: none; border-top: 1px dashed #999; margin: 8px 0; }
+          .meta-row { display: flex; justify-content: space-between; margin: 3px 0; font-size: 10px; gap: 4px; }
+          .section-label { font-size: 8px; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid #ddd; padding-bottom: 2px; margin-bottom: 6px; color: #666; }
+          .highlight { background: #f0f0f0; border: 1px solid #ccc; border-radius: 4px; padding: 6px 8px; margin: 6px 0; }
+          .highlight .label { font-size: 8px; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; color: #888; }
+          .highlight .amount { font-size: 16px; font-weight: 900; }
+          .totals .row { display: flex; justify-content: space-between; font-size: 11px; font-weight: 700; margin: 3px 0; }
+          .totals .final { display: flex; justify-content: space-between; font-size: 14px; font-weight: 900; border-top: 2px solid #111; padding-top: 5px; margin-top: 5px; }
+          .green { color: #16a34a; }
+          .bold  { font-weight: 900; }
+          .thanks { text-align: center; margin-top: 12px; border-top: 1px solid #ddd; padding-top: 8px; font-size: 9px; font-weight: 700; text-transform: uppercase; }
+        </style></head><body>
+          <div class="center">
+            <img class="logo" src="${LOGO_URL}" alt="Logo"/>
+            <div class="title">Estado de Cuenta</div>
+            <div class="company">Gonzacars C.A.</div>
+            <div class="address">RIF: J-50030426-9 | Valencia, Carabobo</div>
+          </div>
+          <hr class="divider-dash"/>
+          <div class="meta-row"><span>FECHA:</span><span>${new Date().toLocaleString('es-VE')}</span></div>
+          <div class="meta-row"><span>CLIENTE:</span><span>${currentRepair.ownerName.toUpperCase()}</span></div>
+          <div class="meta-row"><span>PLACA:</span><span><strong>${currentRepair.plate.toUpperCase()}</strong></span></div>
+          <div class="meta-row"><span>ORDEN:</span><span>#${orderId}</span></div>
+          <hr class="divider-dash"/>
+          <div class="highlight">
+            <div class="label">Último Abono Registrado</div>
+            <div class="amount green">${fmt(lastInstallment.amount)}</div>
+            <div style="font-size:9px;color:#666;margin-top:2px;">${lastInstallment.method.toUpperCase()} — ${fmtDate(lastInstallment.date)}</div>
+          </div>
+          <div class="section-label">Historial Completo de Pagos</div>
+          ${paymentRows}
+          <hr class="divider-dash"/>
+          <div class="totals">
+            <div class="row"><span>PRESUPUESTO TOTAL:</span><span>${fmt(total)}</span></div>
+            <div class="row green"><span>TOTAL ABONADO:</span><span>−${fmt(paid)}</span></div>
+            <div class="final"><span>SALDO PENDIENTE:</span><span>${fmt(balance)}</span></div>
+          </div>
+          <div class="thanks">Este documento certifica el estado de cuenta actual.<br/>¡Gracias por su preferencia!</div>
+        </body></html>
+      `;
+    }
+
+    if (!html) return;
+
+    // Abrir ventana dedicada y disparar impresión automáticamente
+    const win = window.open('', '_blank', 'width=900,height=700');
+    if (!win) {
+      alert('Por favor permite ventanas emergentes para imprimir.');
+      return;
+    }
+    win.document.open();
+    win.document.write(html);
+    win.document.close();
+    // Esperar a que cargue el logo antes de imprimir
+    win.onload = () => {
+      setTimeout(() => {
+        win.focus();
+        win.print();
+      }, 400);
+    };
   };
 
   const handleFinishProcess = () => {
@@ -328,265 +655,7 @@ const RepairReport: React.FC<{ store: any }> = ({ store }) => {
 
   return (
     <div className="module-page max-w-7xl mx-auto h-full flex flex-col">
-
-      {/* 1. INFORME CORPORATIVO TAMAÑO CARTA (PRINT ONLY - REPORT MODE) */}
-      {currentRepair && printMode === 'report' && (
-        <div className="hidden print:block print-only bg-metal-mid text-chrome-100 p-10 font-sans min-h-screen max-w-[216mm] mx-auto">
-          {/* Header Compacto */}
-          <div className="flex justify-between items-start border-b-2 border-slate-900 pb-4 mb-6">
-            <div className="flex gap-4 items-center">
-              <img src={LOGO_URL} alt="Logo" className="w-14 h-14 object-contain grayscale opacity-80" />
-              <div>
-                <h1 className="text-xl font-black uppercase tracking-tight text-chrome-100 leading-none">Gonzacars C.A.</h1>
-                <p className="text-[10px] font-bold text-chrome-400 uppercase tracking-widest mt-1">RIF: J-50030426-9</p>
-                <p className="text-[9px] font-medium text-chrome-500 max-w-[250px] leading-tight mt-1">
-                  Valencia, Edo. Carabobo | Taller Mecánico & Repuestos
-                </p>
-              </div>
-            </div>
-            <div className="text-right">
-              <h2 className="text-lg font-black uppercase text-chrome-100 tracking-tight leading-none">
-                {currentRepair.status === 'Entregado' ? 'INFORME DE SERVICIO' : 'PRESUPUESTO'}
-              </h2>
-              <p className="text-xl font-black text-chrome-400">#{currentRepair.id.toUpperCase().slice(-6)}</p>
-              <p className="text-[9px] font-bold text-chrome-500 mt-1 uppercase">
-                EMISIÓN: {new Date().toLocaleString()}
-              </p>
-            </div>
-          </div>
-
-          {/* Datos Cliente y Vehículo (Compacto) */}
-          <div className="grid grid-cols-2 gap-x-8 gap-y-4 mb-6 text-xs">
-            <div>
-              <h3 className="text-[9px] font-black text-chrome-500 uppercase tracking-widest border-b border-metal-border pb-1 mb-2">Cliente</h3>
-              <p className="font-bold text-chrome-100 uppercase text-sm">{currentRepair.ownerName}</p>
-              <p className="font-medium text-chrome-400">ID / CI: {currentRepair.customerId}</p>
-            </div>
-            <div>
-              <h3 className="text-[9px] font-black text-chrome-500 uppercase tracking-widest border-b border-metal-border pb-1 mb-2">Vehículo</h3>
-              <div className="flex justify-between items-end">
-                <div>
-                  <p className="font-bold text-chrome-100 uppercase text-sm">{currentRepair.brand} {currentRepair.model}</p>
-                  <p className="font-medium text-chrome-400">Año: {currentRepair.year}</p>
-                </div>
-                <span className="font-mono font-black text-sm bg-metal-mid px-2 py-0.5 rounded border border-metal-border">
-                  {currentRepair.plate.toUpperCase()}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* Tabla de Items (Estilo Minimalista) */}
-          <div className="mb-6">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="border-b-2 border-slate-900 text-[9px] font-black uppercase tracking-widest text-chrome-200">
-                  <th className="py-2 text-center w-12">Cant.</th>
-                  <th className="py-2">Descripción del Item</th>
-                  <th className="py-2 text-center w-24">Tipo</th>
-                  <th className="py-2 text-right w-24">Precio Unit.</th>
-                  <th className="py-2 text-right w-24">Importe</th>
-                </tr>
-              </thead>
-              <tbody className="text-[11px] divide-y divide-slate-100 leading-none">
-                {currentRepair.items.map((item, idx) => (
-                  <tr key={idx}>
-                    <td className="py-2 text-center font-bold text-chrome-400">{item.quantity}</td>
-                    <td className="py-2 font-bold text-chrome-100 uppercase tracking-tight">
-                      {item.description}
-                    </td>
-                    <td className="py-2 text-center text-[9px] uppercase font-medium text-chrome-500">{item.type}</td>
-                    <td className="py-2 text-right font-medium text-chrome-200">${item.price.toFixed(2)}</td>
-                    <td className="py-2 text-right font-black text-chrome-100">${(item.price * item.quantity).toFixed(2)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Historial de Pagos (Compacto) */}
-          <div className="flex gap-8 mb-8">
-            <div className="flex-1">
-              <h4 className="text-[9px] font-black text-chrome-500 uppercase tracking-widest mb-2 border-b border-metal-border pb-1">Desglose de Pagos</h4>
-              {currentRepair.installments && currentRepair.installments.length > 0 ? (
-                <table className="w-full text-[10px]">
-                  <tbody>
-                    {currentRepair.installments.map((inst, idx) => (
-                      <tr key={idx} className="border-b border-slate-50 last:border-0">
-                        <td className="py-1 text-chrome-400">{new Date(inst.date).toLocaleDateString()}</td>
-                        <td className="py-1 font-bold text-chrome-200 uppercase">{inst.method}</td>
-                        <td className="py-1 text-right font-black text-emerald-600">${inst.amount.toFixed(2)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              ) : (
-                <p className="text-[9px] text-chrome-500 italic">No hay pagos registrados.</p>
-              )}
-            </div>
-
-            {/* Totales */}
-            <div className="w-64">
-              <div className="bg-metal-dark p-4 rounded-xl border border-metal-border space-y-2">
-                <div className="flex justify-between text-[10px] font-bold text-chrome-400 uppercase">
-                  <span>Total Servicio:</span>
-                  <span>${calculateTotal().toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between text-[10px] font-bold text-emerald-600 uppercase">
-                  <span>Total Pagado:</span>
-                  <span>-${calculatePaid().toFixed(2)}</span>
-                </div>
-                <div className="border-t border-metal-border pt-2 mt-1 flex justify-between items-end">
-                  <span className="text-xs font-black uppercase tracking-widest text-chrome-100">Saldo Pendiente:</span>
-                  <span className="text-xl font-black text-chrome-100 leading-none">${Math.max(0, calculateBalance()).toFixed(2)}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Footer / Firmas */}
-          <div className="mt-auto grid grid-cols-2 gap-16 pt-8 pb-4">
-            <div className="text-center">
-              <div className="border-t border-metal-border w-3/4 mx-auto mb-2"></div>
-              <p className="text-[9px] font-black uppercase tracking-widest text-chrome-500">Recibí Conforme (Cliente)</p>
-            </div>
-            <div className="text-center">
-              <div className="border-t border-metal-border w-3/4 mx-auto mb-2"></div>
-              <p className="text-[9px] font-black uppercase tracking-widest text-chrome-500">Autorizado Por (Taller)</p>
-            </div>
-          </div>
-          <div className="text-center text-[8px] font-medium text-chrome-500 uppercase tracking-widest">
-            Gonzacars C.A. - Garantía de Servicio
-          </div>
-        </div>
-      )}
-
-      {/* 2. RECIBO DE COBRO - FORMATO TICKET (PRINT ONLY - RECEIPT MODE) */}
-      {currentRepair && printMode === 'receipt' && (
-        <div className="hidden print:block print-only bg-metal-mid text-chrome-100 p-6 font-mono text-[11px] leading-tight w-full max-w-[80mm] mx-auto">
-          <div className="text-center mb-4">
-            <img src={LOGO_URL} alt="Logo" className="w-12 h-12 mx-auto mb-2 object-contain grayscale" />
-            <h3 className="font-black text-sm uppercase">Recibo de Cobro</h3>
-            <p className="font-bold">Gonzacars C.A.</p>
-            <p>RIF: J-50030426-9</p>
-            <p className="text-[9px] mt-1">Av. Bolivar, Valencia</p>
-          </div>
-
-          <div className="border-y border-dashed border-slate-400 py-3 my-4 space-y-1 text-[10px]">
-            <div className="flex justify-between">
-              <span>ORDEN:</span>
-              <span className="font-bold">#{currentRepair.id.substring(0, 6).toUpperCase()}</span>
-            </div>
-            <div className="flex justify-between">
-              <span>FECHA:</span>
-              <span>{new Date().toLocaleDateString()}</span>
-            </div>
-            <div className="flex justify-between">
-              <span>PLACA:</span>
-              <span className="font-bold">{currentRepair.plate.toUpperCase()}</span>
-            </div>
-            <div className="flex justify-between">
-              <span>CLIENTE:</span>
-              <span className="uppercase truncate max-w-[100px]">{currentRepair.ownerName.split(' ')[0]}</span>
-            </div>
-          </div>
-
-          <div className="mb-4">
-            <p className="text-[9px] font-bold uppercase border-b border-metal-border mb-1">Conceptos</p>
-            {currentRepair.items.map((item, i) => (
-              <div key={i} className="flex justify-between text-[10px]">
-                <span className="truncate max-w-[140px] uppercase">{item.quantity} x {item.description}</span>
-                <span>${(item.price * item.quantity).toFixed(2)}</span>
-              </div>
-            ))}
-          </div>
-
-          <div className="border-t border-dashed border-slate-900 pt-2 space-y-1 font-bold text-xs">
-            <div className="flex justify-between">
-              <span>TOTAL SERVICIO:</span>
-              <span>${calculateTotal().toFixed(2)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span>TOTAL PAGADO:</span>
-              <span>${calculatePaid().toFixed(2)}</span>
-            </div>
-            <div className="flex justify-between mt-2 text-sm font-black">
-              <span>SALDO:</span>
-              <span>${Math.max(0, calculateBalance()).toFixed(2)}</span>
-            </div>
-          </div>
-
-          <div className="text-center mt-6 pt-4 border-t border-metal-border">
-            <p className="text-[9px] font-black uppercase">¡Gracias por su preferencia!</p>
-            <p className="text-[8px] mt-1">Conserve este ticket como comprobante.</p>
-          </div>
-        </div>
-      )}
-
-      {/* 3. ESTADO DE CUENTA DETALLADO (PRINT ONLY) - Abono Mode */}
-      {lastInstallment && currentRepair && printMode === 'abono' && (
-        <div className="hidden print:block print-only bg-metal-mid text-chrome-100 p-6 font-mono text-[11px] leading-tight w-full max-w-[80mm] mx-auto">
-          <div className="text-center mb-4">
-            <img src={LOGO_URL} alt="Logo" className="w-12 h-12 mx-auto mb-2 object-contain grayscale" />
-            <h3 className="font-black text-sm uppercase">Estado de Cuenta</h3>
-            <p className="font-bold">Gonzacars C.A.</p>
-            <p>RIF: J-50030426-9</p>
-            <p className="text-[9px] mt-1">Av. Bolivar, Valencia</p>
-          </div>
-
-          <div className="border-y border-dashed border-slate-400 py-3 my-4 space-y-1 text-[10px]">
-            <div className="flex justify-between">
-              <span>FECHA:</span>
-              <span>{new Date().toLocaleString()}</span>
-            </div>
-            <div className="flex justify-between">
-              <span>CLIENTE:</span>
-              <span className="uppercase font-bold truncate max-w-[120px]">{currentRepair.ownerName.split(' ')[0]}</span>
-            </div>
-            <div className="flex justify-between">
-              <span>PLACA:</span>
-              <span className="font-bold">{currentRepair.plate.toUpperCase()}</span>
-            </div>
-            <div className="flex justify-between">
-              <span>ORDEN:</span>
-              <span className="font-bold">#{currentRepair.id.substring(0, 6).toUpperCase()}</span>
-            </div>
-          </div>
-
-          <div className="space-y-4 mb-4">
-            <p className="text-[9px] font-bold uppercase border-b border-metal-border mb-1">Historial de Pagos</p>
-            <div className="space-y-1">
-              {(currentRepair.installments || []).map((inst, idx) => (
-                <div key={idx} className="flex justify-between text-[10px]">
-                  <span className="text-chrome-400">{new Date(inst.date).toLocaleDateString()}</span>
-                  <span className="uppercase truncate max-w-[80px]">{inst.method}</span>
-                  <span className="font-bold">${inst.amount.toFixed(2)}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="border-t-2 border-dashed border-slate-900 pt-3 mt-4 space-y-1 font-bold text-xs">
-            <div className="flex justify-between">
-              <span>PRESUPUESTO TOTAL:</span>
-              <span>${calculateTotal().toFixed(2)}</span>
-            </div>
-            <div className="flex justify-between text-chrome-200">
-              <span>TOTAL ABONADO:</span>
-              <span>-${calculatePaid().toFixed(2)}</span>
-            </div>
-            <div className="flex justify-between mt-2 pt-2 border-t border-metal-border text-sm font-black">
-              <span>SALDO PENDIENTE:</span>
-              <span>${Math.max(0, calculateBalance()).toFixed(2)}</span>
-            </div>
-          </div>
-
-          <div className="text-center mt-6 border-t border-metal-border pt-4 text-[9px] uppercase font-bold">
-            <p>Este documento certifica el estado de cuenta actual.</p>
-            <p className="mt-1">¡Gracias por su preferencia!</p>
-          </div>
-        </div>
-      )}
+      {/* Los documentos PDF se generan en ventana dedicada via handlePrint() — sin DOM de impresión en la app */}
 
       {/* UI APLICACIÓN (NO-PRINT) */}
       <div className="print:hidden flex-1 flex flex-col animate-fade-in-up">
