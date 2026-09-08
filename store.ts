@@ -895,6 +895,17 @@ export const useGonzacarsStore = () => {
     }
   };
 
+  const removeProduct = async (id: string) => {
+    const item = inventory.find(p => p.id === id);
+    if (item) {
+      if (!isDemoMode) {
+        await deleteProduct(id, item, getUserContext());
+      }
+      setInventory(prev => prev.filter(p => p.id !== id));
+      await refreshData();
+    }
+  };
+
   const updateInventoryPrice = async (id: string, newPrice: number) => {
     const item = inventory.find(p => p.id === id);
     if (item) {
@@ -1142,7 +1153,7 @@ export const useGonzacarsStore = () => {
     users, addUser, updateUser, deleteUser,
     exchangeRate, setExchangeRate: updateExchangeRate,
     customers, addCustomer, updateCustomer, deleteCustomer,
-    inventory, setInventory, addProduct, updateInventoryPrice, updateProductName, updateInventoryQuantity, updateStockBatch, updateBarcode, updateProductFull, 
+    inventory, setInventory, addProduct, removeProduct, updateInventoryPrice, updateProductName, updateInventoryQuantity, updateStockBatch, updateBarcode, updateProductFull, 
     generateBarcode,
     repairs, setRepairs, addRepair, updateRepair, deleteRepair, deleteVehicleByPlate,
     sales, setSales, addSale,

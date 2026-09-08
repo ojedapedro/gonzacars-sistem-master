@@ -1,6 +1,6 @@
 
 import React, { useState, useMemo, useRef, useEffect } from 'react';
-import { Package, Search, Edit3, AlertCircle, Barcode, RotateCw, History, X, Truck, Calendar, DollarSign, ArrowRight, Filter, ChevronDown, ArrowUp, ArrowDown, ClipboardCheck, TrendingUp, TrendingDown, AlertTriangle, Save, FileSpreadsheet, UploadCloud, CheckCircle, ShieldCheck, Download, Calculator, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Package, Search, Edit3, AlertCircle, Barcode, RotateCw, History, X, Truck, Calendar, DollarSign, ArrowRight, Filter, ChevronDown, ArrowUp, ArrowDown, ClipboardCheck, TrendingUp, TrendingDown, AlertTriangle, Save, FileSpreadsheet, UploadCloud, CheckCircle, ShieldCheck, Download, Calculator, ChevronLeft, ChevronRight, Trash2 } from 'lucide-react';
 import { Product, Purchase, Sale } from '../types';
 import { ProductModal } from '../components/ProductModal';
 import { fuzzySearch } from '../lib/utils/search';
@@ -731,6 +731,19 @@ const InventoryModule: React.FC<{ store: any }> = ({ store }) => {
                     >
                       <RotateCw size={18}/>
                     </button>
+                    {store.currentUser?.role === 'administrador' && (
+                      <button 
+                        onClick={() => {
+                          if (window.confirm('¿Estás seguro de que deseas eliminar este producto permanentemente?')) {
+                            store.removeProduct(p.id);
+                          }
+                        }}
+                        title="Eliminar Producto"
+                        className="p-2 text-chrome-500 hover:text-red-400 hover:bg-red-500/10 rounded-xl transition-all"
+                      >
+                        <Trash2 size={18}/>
+                      </button>
+                    )}
                   </div>
                 </td>
               </tr>
