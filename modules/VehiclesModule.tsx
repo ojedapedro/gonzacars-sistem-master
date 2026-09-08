@@ -1,9 +1,3 @@
-/* Hallmark · macrostructure: Workbench · theme: Cobalt · genre: modern-minimal
- * nav: embedded-module · footer: none
- * audience: workshop operators · tone: utilitarian
- * pre-emit critique: P4 H5 E4 S4 R5 V4
- */
-
 import React, { useState, useMemo } from 'react';
 import {
   Car, Search, Plus, User, Calendar, Wrench, X, Activity,
@@ -16,35 +10,7 @@ import { VehicleRepair, Customer, VehicleChecklist, FuelLevel, ServiceStatus } f
 import { fuzzySearch } from '../lib/utils/search';
 import CurrencyBadge from '../components/CurrencyBadge';
 
-// ─── Design tokens (Cobalt / Workbench) ──────────────────────────────────────
-
-const T = {
-  // surfaces
-  bg:          'var(--metal-darkest)',
-  surface:     'var(--metal-base)',
-  surfaceHigh: 'var(--metal-mid)',
-  border:      'var(--metal-border)',
-  borderLight: 'var(--metal-border-light)',
-
-  // text
-  textPrimary:   'var(--chrome-100)',
-  textSecondary: 'var(--chrome-300)',
-  textMuted:     'var(--chrome-500)',
-
-  // accent – cobalt blue/cyan
-  accent:        'var(--accent-primary)',
-  accentHover:   'var(--accent-hover)',
-  accentGlow:    'var(--accent-glow)',
-  accentSubtle:  'var(--accent-subtle)',
-
-  // status
-  success: 'var(--success)',
-  warning: 'var(--warning)',
-  danger:  'var(--danger)',
-  info:    'var(--info)',
-};
-
-// ─── Types ────────────────────────────────────────────────────────────────────
+// ─── Types ──────────────────────────────────────────────────────────────────
 
 interface VehicleRecord {
   plate: string;
@@ -57,22 +23,22 @@ interface VehicleRecord {
   repairs: VehicleRepair[];
 }
 
-// ─── Constants ────────────────────────────────────────────────────────────────
+// ─── Constants ───────────────────────────────────────────────────────────────
 
-const STATUS_META: Record<string, { label: string; dot: string; bg: string; text: string; border: string }> = {
-  'Ingresado':          { label: 'Ingresado',         dot: '#38bdf8', bg: 'rgba(56,189,248,0.08)',  text: '#38bdf8', border: 'rgba(56,189,248,0.25)' },
-  'En Diagnóstico':     { label: 'En Diagnóstico',    dot: '#fbbf24', bg: 'rgba(251,191,36,0.08)',  text: '#fbbf24', border: 'rgba(251,191,36,0.25)' },
-  'En Reparación':      { label: 'En Reparación',     dot: '#fb923c', bg: 'rgba(251,146,60,0.08)',  text: '#fb923c', border: 'rgba(251,146,60,0.25)' },
-  'Esperando Repuestos':{ label: 'Esp. Repuestos',    dot: '#a78bfa', bg: 'rgba(167,139,250,0.08)', text: '#a78bfa', border: 'rgba(167,139,250,0.25)' },
-  'Finalizado':         { label: 'Finalizado',         dot: '#34d399', bg: 'rgba(52,211,153,0.08)',  text: '#34d399', border: 'rgba(52,211,153,0.25)' },
-  'Entregado':          { label: 'Entregado',          dot: '#94a3b8', bg: 'rgba(148,163,184,0.08)', text: '#94a3b8', border: 'rgba(148,163,184,0.2)'  },
+const STATUS_COLORS: Record<string, string> = {
+  'Ingresado': 'bg-blue-500/20 text-blue-400 border border-blue-500/30',
+  'En Diagnóstico': 'bg-amber-500/20 text-amber-400 border border-amber-500/30',
+  'En Reparación': 'bg-orange-500/20 text-orange-400 border border-orange-500/30',
+  'Esperando Repuestos': 'bg-purple-500/20 text-purple-400 border border-purple-500/30',
+  'Finalizado': 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30',
+  'Entregado': 'bg-chrome-500/20 text-chrome-400 border border-chrome-500/20',
 };
 
 const FUEL_LEVELS: { value: FuelLevel; label: string; pct: number; color: string }[] = [
-  { value: 'Vacío',  label: 'Vacío', pct: 0,   color: '#ef4444' },
-  { value: '1/4',   label: '¼',     pct: 25,  color: '#f97316' },
-  { value: '1/2',   label: '½',     pct: 50,  color: '#eab308' },
-  { value: '3/4',   label: '¾',     pct: 75,  color: '#84cc16' },
+  { value: 'Vacío', label: 'Vacío', pct: 0, color: '#ef4444' },
+  { value: '1/4', label: '¼', pct: 25, color: '#f97316' },
+  { value: '1/2', label: '½', pct: 50, color: '#eab308' },
+  { value: '3/4', label: '¾', pct: 75, color: '#84cc16' },
   { value: 'Lleno', label: 'Lleno', pct: 100, color: '#22c55e' },
 ];
 
@@ -89,47 +55,33 @@ const DEFAULT_CHECKLIST: VehicleChecklist = {
   checklistNotes: '',
 };
 
-// ─── Sub-components ───────────────────────────────────────────────────────────
+// ─── Sub-components ──────────────────────────────────────────────────────────
 
-/** Status pill */
-const StatusPill: React.FC<{ status: string }> = ({ status }) => {
-  const m = STATUS_META[status] ?? { label: status, dot: '#94a3b8', bg: 'rgba(148,163,184,0.08)', text: '#94a3b8', border: 'rgba(148,163,184,0.2)' };
-  return (
-    <span
-      style={{ backgroundColor: m.bg, color: m.text, borderColor: m.border }}
-      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[10px] font-bold tracking-wider border leading-none"
-    >
-      <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: m.dot }} />
-      {m.label}
-    </span>
-  );
-};
-
-/** Light status toggle */
+/** Pill badge for light status */
 const LightStatusBadge: React.FC<{
   value: 'OK' | 'Falla' | 'Sin verificar';
   onChange: (v: 'OK' | 'Falla' | 'Sin verificar') => void;
 }> = ({ value, onChange }) => {
   const cfg = {
-    'OK':           { icon: CheckCircle2, active: 'bg-emerald-500/15 border-emerald-500/40 text-emerald-400' },
-    'Falla':        { icon: XCircle,      active: 'bg-red-500/15 border-red-500/40 text-red-400' },
-    'Sin verificar':{ icon: HelpCircle,   active: 'bg-white/8 border-white/15 text-chrome-400' },
+    'OK': { icon: CheckCircle2, cls: 'bg-emerald-500/20 border-emerald-500/40 text-emerald-400' },
+    'Falla': { icon: XCircle, cls: 'bg-red-500/20 border-red-500/40 text-red-400' },
+    'Sin verificar': { icon: HelpCircle, cls: 'bg-chrome-500/10 border-white/10 text-chrome-400' },
   };
+
   return (
-    <div className="flex gap-2">
+    <div className="flex gap-1.5">
       {LIGHT_STATUS_OPTIONS.map(opt => {
-        const { icon: Icon, active } = cfg[opt];
-        const isActive = value === opt;
+        const { icon: Icon, cls } = cfg[opt];
+        const active = value === opt;
         return (
           <button
             key={opt}
             type="button"
             onClick={() => onChange(opt)}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider border transition-all ${
-              isActive ? active : 'bg-white/3 border-white/8 text-chrome-500 hover:bg-white/8 hover:border-white/12'
-            }`}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider border transition-all ${active ? cls + ' scale-[1.03] shadow-lg' : 'bg-white/5 border-white/8 text-chrome-500 hover:bg-white/10'
+              }`}
           >
-            <Icon size={10} />
+            <Icon size={11} />
             {opt}
           </button>
         );
@@ -138,41 +90,42 @@ const LightStatusBadge: React.FC<{
   );
 };
 
-/** Read-only checklist badge */
+/** Read-only badge for checklist display */
 const ChecklistBadgeRO: React.FC<{ value: 'OK' | 'Falla' | 'Sin verificar' }> = ({ value }) => {
-  if (value === 'OK')
-    return <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-400 bg-emerald-500/8 border border-emerald-500/20 px-2 py-0.5 rounded"><CheckCircle2 size={9} />OK</span>;
-  if (value === 'Falla')
-    return <span className="inline-flex items-center gap-1 text-[10px] font-bold text-red-400 bg-red-500/8 border border-red-500/20 px-2 py-0.5 rounded"><XCircle size={9} />Falla</span>;
-  return <span className="inline-flex items-center gap-1 text-[10px] font-bold text-chrome-400 bg-white/5 border border-white/10 px-2 py-0.5 rounded"><HelpCircle size={9} />Sin verificar</span>;
+  if (value === 'OK') return <span className="inline-flex items-center gap-1 text-[10px] font-black text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-md"><CheckCircle2 size={9} />OK</span>;
+  if (value === 'Falla') return <span className="inline-flex items-center gap-1 text-[10px] font-black text-red-400 bg-red-500/10 border border-red-500/20 px-2 py-0.5 rounded-md"><XCircle size={9} />Falla</span>;
+  return <span className="inline-flex items-center gap-1 text-[10px] font-black text-chrome-400 bg-white/5 border border-white/10 px-2 py-0.5 rounded-md"><HelpCircle size={9} />Sin verificar</span>;
 };
 
-/** Fuel gauge */
+// ─── Fuel gauge visual ────────────────────────────────────────────────────────
+
 const FuelGauge: React.FC<{ level: FuelLevel; onChange: (v: FuelLevel) => void }> = ({ level, onChange }) => {
   const current = FUEL_LEVELS.find(f => f.value === level) ?? FUEL_LEVELS[2];
+
   return (
     <div className="space-y-3">
-      <div className="relative h-5 bg-white/5 border border-white/8 rounded-full overflow-hidden">
+      {/* Gauge bar */}
+      <div className="relative h-6 bg-white/5 border border-white/10 rounded-full overflow-hidden">
         <div
-          className="absolute inset-y-0 left-0 rounded-full transition-all duration-500"
-          style={{ width: `${current.pct}%`, background: `linear-gradient(90deg, ${current.color}80, ${current.color})` }}
+          className="absolute inset-y-0 left-0 rounded-full transition-all duration-300"
+          style={{ width: `${current.pct}%`, background: `linear-gradient(90deg, ${current.color}99, ${current.color})` }}
         />
         <div className="absolute inset-0 flex items-center justify-center">
-          <span className="text-[10px] font-bold text-white drop-shadow">{current.label.toUpperCase()}</span>
+          <span className="text-[11px] font-black text-white drop-shadow">{current.label === 'Lleno' ? 'LLENO' : current.label === 'Vacío' ? 'VACÍO' : current.label}</span>
         </div>
       </div>
-      <div className="flex gap-1.5">
+      {/* Selector pills */}
+      <div className="flex gap-2">
         {FUEL_LEVELS.map(fl => (
           <button
             key={fl.value}
             type="button"
             onClick={() => onChange(fl.value)}
-            className="flex-1 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider border transition-all"
-            style={
-              level === fl.value
-                ? { backgroundColor: fl.color + '20', borderColor: fl.color + '60', color: fl.color }
-                : { backgroundColor: 'rgba(255,255,255,0.03)', borderColor: 'rgba(255,255,255,0.08)', color: 'var(--chrome-500)' }
-            }
+            className={`flex-1 py-2 rounded-lg text-[10px] font-black uppercase tracking-wider border transition-all ${level === fl.value
+                ? 'text-white border-white/20 shadow-lg scale-[1.05]'
+                : 'bg-white/5 border-white/8 text-chrome-500 hover:bg-white/10'
+              }`}
+            style={level === fl.value ? { backgroundColor: fl.color + '33', borderColor: fl.color + '66', color: fl.color } : {}}
           >
             {fl.label}
           </button>
@@ -182,37 +135,11 @@ const FuelGauge: React.FC<{ level: FuelLevel; onChange: (v: FuelLevel) => void }
   );
 };
 
-// ─── Section label ────────────────────────────────────────────────────────────
-
-const SectionLabel: React.FC<{ icon: React.ReactNode; label: string; count?: number }> = ({ icon, label, count }) => (
-  <div className="flex items-center gap-2 mb-4">
-    <span className="text-chrome-500">{icon}</span>
-    <span className="text-xs font-bold text-chrome-300 uppercase tracking-widest">{label}</span>
-    {count !== undefined && (
-      <span className="ml-auto text-[10px] font-bold text-chrome-600 bg-white/5 border border-white/8 px-2 py-0.5 rounded-md">
-        {count}
-      </span>
-    )}
-  </div>
-);
-
-// ─── Field group ──────────────────────────────────────────────────────────────
-
-const FieldBlock: React.FC<{ label: string; children: React.ReactNode }> = ({ label, children }) => (
-  <div className="space-y-1.5">
-    <label className="block text-[10px] font-bold text-chrome-500 uppercase tracking-widest">{label}</label>
-    {children}
-  </div>
-);
-
-const inputCls = "w-full bg-white/4 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white font-medium placeholder:text-chrome-600 focus:outline-none focus:border-blue-500/60 focus:ring-2 focus:ring-blue-500/15 transition-all";
-const selectCls = "w-full bg-metal-base border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white font-medium focus:outline-none focus:border-blue-500/60 focus:ring-2 focus:ring-blue-500/15 transition-all appearance-none";
-
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 interface VehiclesModuleProps {
-  store?: any;
-  toast?: any;
+  store?: any;  // optional — falls back to zustand hook
+  toast?: any;  // optional — for success/error notifications
 }
 
 const VehiclesModule: React.FC<VehiclesModuleProps> = ({ store: storeProp, toast }) => {
@@ -238,25 +165,39 @@ const VehiclesModule: React.FC<VehiclesModuleProps> = ({ store: storeProp, toast
 
   const [checklist, setChecklist] = useState<VehicleChecklist>({ ...DEFAULT_CHECKLIST });
 
+  // Helper to patch checklist
   const patchChecklist = <K extends keyof VehicleChecklist>(key: K, value: VehicleChecklist[K]) =>
     setChecklist(prev => ({ ...prev, [key]: value }));
 
-  // ── Derived data ────────────────────────────────────────────────────────────
+  // ── Derived data ──────────────────────────────────────────────────────────
 
   const vehicleRecords = useMemo((): VehicleRecord[] => {
     const map = new Map<string, VehicleRecord>();
+
     (store.repairs as VehicleRepair[]).forEach(repair => {
       const plate = repair.plate?.toUpperCase();
       if (!plate) return;
+
       if (!map.has(plate)) {
-        map.set(plate, { plate, brand: repair.brand, model: repair.model, year: repair.year, ownerName: repair.ownerName, customerId: repair.customerId, mileage: repair.mileage, repairs: [] });
+        map.set(plate, {
+          plate,
+          brand: repair.brand,
+          model: repair.model,
+          year: repair.year,
+          ownerName: repair.ownerName,
+          customerId: repair.customerId,
+          mileage: repair.mileage,
+          repairs: [],
+        });
       }
       map.get(plate)!.repairs.push(repair);
     });
+
     map.forEach(v => {
       v.repairs.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
       if (v.repairs[0]?.mileage) v.mileage = v.repairs[0].mileage;
     });
+
     return Array.from(map.values()).sort((a, b) => a.plate.localeCompare(b.plate));
   }, [store.repairs]);
 
@@ -270,7 +211,7 @@ const VehiclesModule: React.FC<VehiclesModuleProps> = ({ store: storeProp, toast
     [vehicleRecords, selectedPlate]
   );
 
-  // ── Handlers ────────────────────────────────────────────────────────────────
+  // ── Handlers ──────────────────────────────────────────────────────────────
 
   const handleOpenModal = () => {
     setChecklist({ ...DEFAULT_CHECKLIST });
@@ -282,7 +223,12 @@ const VehiclesModule: React.FC<VehiclesModuleProps> = ({ store: storeProp, toast
     e.preventDefault();
     const customer = store.customers.find((c: Customer) => c.id === newVehicle.customerId);
     if (!newVehicle.plate || !newVehicle.brand || !newVehicle.model || !customer) return;
-    const finalChecklist: VehicleChecklist = { ...checklist, checkedAt: new Date().toISOString() };
+
+    const finalChecklist: VehicleChecklist = {
+      ...checklist,
+      checkedAt: new Date().toISOString(),
+    };
+
     const repair: VehicleRepair = {
       id: Math.random().toString(36).substr(2, 9),
       customerId: customer.id,
@@ -302,6 +248,7 @@ const VehiclesModule: React.FC<VehiclesModuleProps> = ({ store: storeProp, toast
       items: [],
       createdAt: new Date().toISOString(),
     };
+
     await store.addRepair(repair);
     setShowAddModal(false);
     setSelectedPlate(newVehicle.plate.toUpperCase().trim());
@@ -313,174 +260,122 @@ const VehiclesModule: React.FC<VehiclesModuleProps> = ({ store: storeProp, toast
     (acc, r) => acc + r.items.reduce((s, i) => s + i.price * i.quantity, 0), 0
   ) ?? 0;
 
-  const activeCount = vehicleRecords.filter(v => v.repairs.some(r => r.status !== 'Entregado' && r.status !== 'Finalizado')).length;
-
-  // ── Render ──────────────────────────────────────────────────────────────────
+  // ── Render ────────────────────────────────────────────────────────────────
 
   return (
-    <div className="module-page flex flex-col h-[calc(100vh-6rem)]" style={{ maxWidth: '100%' }}>
+    <div className="module-page max-w-7xl mx-auto flex flex-col h-[calc(100vh-6rem)]">
 
-      {/* ── Workbench header ──────────────────────────────────────────────── */}
-      <div className="flex-shrink-0 flex flex-col md:flex-row md:items-center gap-4 mb-5">
-        {/* Title block */}
-        <div className="flex items-center gap-3 flex-1 min-w-0">
-          <div
-            className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
-            style={{ background: 'linear-gradient(135deg, rgba(59,130,246,0.25), rgba(56,189,248,0.1))', border: '1px solid rgba(59,130,246,0.3)' }}
-          >
-            <Car size={18} className="text-blue-400" />
+      {/* ── Header ─────────────────────────────────────────────────────── */}
+      <div className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 bg-sky-600 rounded-2xl flex items-center justify-center shadow-lg shadow-sky-600/30 border border-sky-500/30">
+            <Car size={22} className="text-white" />
           </div>
           <div>
-            <h2
-              className="text-lg font-bold leading-none"
-              style={{ fontFamily: 'var(--font-heading)', color: 'var(--chrome-100)', letterSpacing: '-0.02em' }}
-            >
-              Directorio de Vehículos
-            </h2>
-            <p className="text-[11px] font-medium mt-0.5" style={{ color: 'var(--chrome-500)' }}>
-              {vehicleRecords.length} vehículo{vehicleRecords.length !== 1 ? 's' : ''} · {activeCount} en taller
+            <h2 className="text-2xl font-black uppercase tracking-tight text-gradient">Directorio de Vehículos</h2>
+            <p className="text-chrome-400 font-semibold text-xs tracking-widest uppercase mt-1">
+              {vehicleRecords.length} vehículo{vehicleRecords.length !== 1 ? 's' : ''} registrado{vehicleRecords.length !== 1 ? 's' : ''}
             </p>
           </div>
         </div>
-
-        {/* Stat chips */}
-        <div className="flex items-center gap-2">
-          <StatChip value={vehicleRecords.length} label="Total" />
-          <StatChip value={store.repairs?.length ?? 0} label="Servicios" />
-          <StatChip value={activeCount} label="Activos" accent />
-        </div>
-
-        {/* CTA */}
         <button
-          id="btn-registrar-vehiculo"
           onClick={handleOpenModal}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold text-white transition-all active:scale-95"
-          style={{
-            background: 'linear-gradient(135deg, #3b82f6, #2563eb)',
-            boxShadow: '0 0 0 1px rgba(59,130,246,0.4), 0 4px 16px rgba(59,130,246,0.25)',
-          }}
-          onMouseEnter={e => (e.currentTarget.style.boxShadow = '0 0 0 1px rgba(59,130,246,0.6), 0 6px 24px rgba(59,130,246,0.35)')}
-          onMouseLeave={e => (e.currentTarget.style.boxShadow = '0 0 0 1px rgba(59,130,246,0.4), 0 4px 16px rgba(59,130,246,0.25)')}
+          className="bg-sky-600 hover:bg-sky-500 text-white px-5 py-3 rounded-xl font-bold transition-all shadow-[0_0_20px_rgba(2,132,199,0.3)] hover:shadow-[0_0_30px_rgba(2,132,199,0.5)] active:scale-95 flex items-center justify-center gap-2"
         >
-          <Plus size={16} />
-          Registrar Vehículo
+          <Plus size={18} /> Registrar Vehículo
         </button>
       </div>
 
-      {/* ── Workbench layout: list + detail ──────────────────────────────── */}
-      <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 flex-1 min-h-0">
 
-        {/* ── Left rail: vehicle list ──────────────────────────────────── */}
-        <div className="flex flex-col gap-3 min-h-0">
-
+        {/* ── Left: Vehicle List ─────────────────────────────────────── */}
+        <div className="lg:col-span-1 flex flex-col gap-3 min-h-0">
           {/* Search */}
-          <div className="relative flex-shrink-0">
-            <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-chrome-500 pointer-events-none" />
+          <div className="relative">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-chrome-500" size={18} />
             <input
               type="text"
-              placeholder="Placa, marca, propietario…"
+              placeholder="Buscar placa, marca, modelo o propietario..."
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
-              className="w-full pl-9 pr-9 py-2.5 rounded-xl text-sm font-medium transition-all"
-              style={{
-                background: 'var(--metal-mid)',
-                border: '1px solid var(--metal-border)',
-                color: 'var(--chrome-100)',
-                outline: 'none',
-              }}
-              onFocus={e => { e.currentTarget.style.borderColor = 'rgba(59,130,246,0.5)'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(59,130,246,0.1)'; }}
-              onBlur={e => { e.currentTarget.style.borderColor = 'var(--metal-border)'; e.currentTarget.style.boxShadow = 'none'; }}
+              className="w-full bg-white/5 border border-white/10 rounded-xl pl-12 pr-4 py-3.5 text-white placeholder:text-chrome-500/50 outline-none focus:border-sky-500 focus:ring-4 focus:ring-sky-500/10 transition-all font-medium text-sm"
             />
             {searchTerm && (
-              <button
-                onClick={() => setSearchTerm('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-chrome-500 hover:text-chrome-200 transition-colors"
-              >
-                <X size={14} />
+              <button onClick={() => setSearchTerm('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-chrome-500 hover:text-white">
+                <X size={16} />
               </button>
             )}
           </div>
 
-          {/* List */}
-          <div
-            className="flex-1 min-h-0 overflow-y-auto custom-scrollbar rounded-xl"
-            style={{ background: 'var(--metal-base)', border: '1px solid var(--metal-border)' }}
-          >
+          {/* Stats pills */}
+          <div className="flex gap-2">
+            <div className="flex-1 bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-center">
+              <p className="text-2xl font-black text-white">{vehicleRecords.length}</p>
+              <p className="text-[9px] font-black text-chrome-500 uppercase tracking-wider">Vehículos</p>
+            </div>
+            <div className="flex-1 bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-center">
+              <p className="text-2xl font-black text-white">{store.repairs?.length ?? 0}</p>
+              <p className="text-[9px] font-black text-chrome-500 uppercase tracking-wider">Servicios</p>
+            </div>
+            <div className="flex-1 bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-center">
+              <p className="text-2xl font-black text-amber-400">
+                {vehicleRecords.filter(v => v.repairs.some(r => r.status !== 'Entregado' && r.status !== 'Finalizado')).length}
+              </p>
+              <p className="text-[9px] font-black text-chrome-500 uppercase tracking-wider">Activos</p>
+            </div>
+          </div>
+
+          {/* Vehicle list */}
+          <div className="glass-panel rounded-2xl flex-1 overflow-y-auto custom-scrollbar p-2">
             {filteredVehicles.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-48 gap-3 px-6 text-center">
-                <div
-                  className="w-10 h-10 rounded-xl flex items-center justify-center"
-                  style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}
-                >
-                  <Car size={20} className="text-chrome-600" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium" style={{ color: 'var(--chrome-400)' }}>
-                    {vehicleRecords.length === 0 ? 'Sin vehículos registrados' : 'Sin resultados'}
+              <div className="flex flex-col items-center justify-center h-48 text-chrome-500">
+                <Car size={32} className="mb-3 opacity-20" />
+                <p className="text-sm font-medium">
+                  {vehicleRecords.length === 0 ? 'No hay vehículos registrados aún' : 'No hay resultados para tu búsqueda'}
+                </p>
+                {vehicleRecords.length === 0 && (
+                  <p className="text-xs mt-1 text-chrome-600 text-center px-4">
+                    Los vehículos se crean automáticamente al registrar una reparación en Taller
                   </p>
-                  {vehicleRecords.length === 0 && (
-                    <p className="text-xs mt-1" style={{ color: 'var(--chrome-600)' }}>
-                      Se crean al registrar una reparación en Taller
-                    </p>
-                  )}
-                </div>
+                )}
               </div>
             ) : (
-              <div className="p-2 space-y-1">
+              <div className="space-y-2">
                 {filteredVehicles.map(vehicle => {
                   const isSelected = selectedPlate === vehicle.plate;
                   const activeRepair = vehicle.repairs.find(r => r.status !== 'Entregado' && r.serviceType !== 'Registro');
                   const totalServices = vehicle.repairs.filter(r => r.serviceType !== 'Registro').length;
+
                   return (
                     <button
                       key={vehicle.plate}
-                      id={`vehicle-${vehicle.plate}`}
                       onClick={() => setSelectedPlate(vehicle.plate)}
-                      className="w-full text-left px-3 py-3 rounded-xl transition-all group"
-                      style={{
-                        background: isSelected ? 'rgba(59,130,246,0.1)' : 'transparent',
-                        border: isSelected ? '1px solid rgba(59,130,246,0.25)' : '1px solid transparent',
-                      }}
-                      onMouseEnter={e => { if (!isSelected) e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; }}
-                      onMouseLeave={e => { if (!isSelected) e.currentTarget.style.background = 'transparent'; }}
+                      className={`w-full text-left p-4 rounded-xl transition-all border ${isSelected
+                          ? 'bg-sky-500/10 border-sky-500/30 shadow-[inset_0_0_20px_rgba(2,132,199,0.1)]'
+                          : 'bg-white/5 border-transparent hover:bg-white/10'
+                        }`}
                     >
-                      {/* Row top */}
-                      <div className="flex items-center justify-between mb-1.5">
-                        <span
-                          className="text-[11px] font-black font-mono tracking-[0.12em] px-2 py-0.5 rounded-md"
-                          style={
-                            isSelected
-                              ? { background: 'rgba(59,130,246,0.25)', color: '#60a5fa', border: '1px solid rgba(59,130,246,0.35)' }
-                              : { background: 'rgba(255,255,255,0.06)', color: 'var(--chrome-200)', border: '1px solid rgba(255,255,255,0.08)' }
-                          }
-                        >
+                      <div className="flex justify-between items-start mb-2">
+                        <span className={`text-xs font-black px-2.5 py-1 rounded-lg tracking-wider font-mono ${isSelected ? 'bg-sky-500 text-white' : 'bg-white/10 text-chrome-200'
+                          }`}>
                           {vehicle.plate}
                         </span>
                         {activeRepair && (
-                          <span
-                            className="inline-flex items-center gap-1 text-[9px] font-bold px-2 py-0.5 rounded"
-                            style={{ background: 'rgba(251,191,36,0.1)', color: '#fbbf24', border: '1px solid rgba(251,191,36,0.25)' }}
-                          >
-                            <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
-                            EN TALLER
+                          <span className="text-[9px] font-black px-2 py-1 rounded-md bg-amber-500/20 text-amber-400 border border-amber-500/30 flex items-center gap-1">
+                            <Activity size={9} /> EN TALLER
                           </span>
                         )}
                       </div>
-
-                      {/* Vehicle name */}
-                      <p className="text-sm font-semibold leading-tight truncate" style={{ color: 'var(--chrome-100)' }}>
-                        {vehicle.brand} {vehicle.model}
-                        <span className="ml-1.5 text-xs font-medium" style={{ color: 'var(--chrome-500)' }}>{vehicle.year}</span>
-                      </p>
-
-                      {/* Owner + count */}
+                      <h3 className="font-bold text-white text-base tracking-tight truncate">
+                        {vehicle.brand} {vehicle.model} <span className="text-chrome-500 text-sm font-medium">{vehicle.year}</span>
+                      </h3>
                       <div className="flex items-center justify-between mt-1.5">
-                        <span className="text-[11px] flex items-center gap-1 truncate max-w-[160px]" style={{ color: 'var(--chrome-500)' }}>
-                          <User size={10} className="flex-shrink-0" />
-                          <span className="truncate">{vehicle.ownerName}</span>
-                        </span>
-                        <span className="text-[10px] font-medium flex-shrink-0" style={{ color: 'var(--chrome-600)' }}>
-                          {totalServices} serv.
+                        <div className="flex items-center gap-1 text-chrome-400 text-xs font-medium">
+                          <User size={11} className="opacity-70" />
+                          <span className="truncate max-w-[130px]">{vehicle.ownerName}</span>
+                        </div>
+                        <span className="text-[10px] text-chrome-600 font-bold">
+                          {totalServices} servicio{totalServices !== 1 ? 's' : ''}
                         </span>
                       </div>
                     </button>
@@ -491,69 +386,43 @@ const VehiclesModule: React.FC<VehiclesModuleProps> = ({ store: storeProp, toast
           </div>
         </div>
 
-        {/* ── Right: vehicle detail ─────────────────────────────────────── */}
-        <div
-          className="rounded-xl flex flex-col min-h-0 overflow-hidden"
-          style={{ background: 'var(--metal-base)', border: '1px solid var(--metal-border)' }}
-        >
+        {/* ── Right: Detail Panel ─────────────────────────────────────── */}
+        <div className="lg:col-span-2 glass-panel rounded-2xl flex flex-col min-h-0 overflow-hidden">
           {selectedVehicle ? (
-            <div className="flex flex-col h-full min-h-0">
-
-              {/* ── Vehicle header ─────────────────────────────────────── */}
-              <div className="flex-shrink-0 px-6 pt-6 pb-5 border-b" style={{ borderColor: 'var(--metal-border)' }}>
-                {/* Top row */}
-                <div className="flex flex-col md:flex-row md:items-start gap-4 justify-between">
-                  <div className="min-w-0">
-                    {/* Tag */}
-                    <div className="flex items-center gap-2 mb-3">
-                      <span
-                        className="text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-lg flex items-center gap-1.5"
-                        style={{ background: 'rgba(59,130,246,0.1)', color: '#60a5fa', border: '1px solid rgba(59,130,246,0.2)' }}
-                      >
-                        <Car size={10} /> Ficha Técnica
-                      </span>
-                    </div>
-
-                    {/* Vehicle name */}
-                    <h2
-                      className="text-2xl font-bold leading-tight"
-                      style={{ fontFamily: 'var(--font-heading)', color: 'var(--chrome-100)', letterSpacing: '-0.025em' }}
-                    >
-                      {selectedVehicle.brand}{' '}
-                      <span style={{ color: '#60a5fa' }}>{selectedVehicle.model}</span>
+            <div className="flex flex-col h-full">
+              {/* Vehicle Header */}
+              <div className="p-6 lg:p-8 border-b border-white/10 flex-shrink-0">
+                <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
+                  <div>
+                    <span className="text-[10px] font-black text-sky-400 uppercase tracking-widest bg-sky-400/10 border border-sky-500/20 px-3 py-1 rounded-lg inline-flex items-center gap-2 mb-3">
+                      <Car size={12} /> Ficha Técnica
+                    </span>
+                    <h2 className="text-3xl lg:text-4xl font-black text-white tracking-tight uppercase">
+                      {selectedVehicle.brand} <span className="text-sky-400">{selectedVehicle.model}</span>
                     </h2>
-
-                    {/* Plate + metadata chips */}
                     <div className="flex flex-wrap items-center gap-2 mt-3">
-                      <span
-                        className="text-base font-black font-mono tracking-[0.18em] px-3 py-1.5 rounded-lg"
-                        style={{ background: 'var(--metal-mid)', color: 'var(--chrome-100)', border: '1px solid var(--metal-border-light)' }}
-                      >
+                      <span className="px-4 py-1.5 bg-chrome-800/80 text-white rounded-xl text-lg font-black tracking-[0.15em] border border-white/10 font-mono">
                         {selectedVehicle.plate}
                       </span>
-                      <MetaChip>{selectedVehicle.year}</MetaChip>
-                      {selectedVehicle.mileage && (
-                        <MetaChip icon={<Gauge size={11} className="text-chrome-500" />}>
-                          {selectedVehicle.mileage.toLocaleString()} km
-                        </MetaChip>
-                      )}
+                      <span className="px-3 py-1.5 bg-white/5 rounded-lg text-sm font-bold text-chrome-300 border border-white/5">
+                        {selectedVehicle.year}
+                      </span>
+                      {selectedVehicle.mileage ? (
+                        <span className="px-3 py-1.5 bg-white/5 rounded-lg text-sm font-bold text-chrome-300 border border-white/5 flex items-center gap-1.5">
+                          <Gauge size={14} className="text-chrome-500" /> {selectedVehicle.mileage.toLocaleString()} km
+                        </span>
+                      ) : null}
                     </div>
                   </div>
 
-                  {/* Owner card */}
-                  <div
-                    className="rounded-xl p-4 flex-shrink-0 min-w-[200px]"
-                    style={{ background: 'var(--metal-mid)', border: '1px solid var(--metal-border)' }}
-                  >
-                    <p className="text-[9px] font-bold uppercase tracking-widest mb-2" style={{ color: 'var(--chrome-500)' }}>Propietario</p>
-                    <p className="text-sm font-semibold" style={{ color: 'var(--chrome-100)' }}>{selectedVehicle.ownerName}</p>
+                  {/* Owner info */}
+                  <div className="bg-white/5 border border-white/10 rounded-2xl p-4 min-w-[220px]">
+                    <p className="text-[9px] font-black text-chrome-500 uppercase tracking-widest mb-2">Propietario</p>
+                    <p className="font-bold text-white text-base">{selectedVehicle.ownerName}</p>
                     {(() => {
                       const c = store.customers.find((c: Customer) => c.id === selectedVehicle.customerId);
                       return c?.address ? (
-                        <p className="text-xs mt-1.5 flex items-start gap-1.5" style={{ color: 'var(--chrome-500)' }}>
-                          <MapPin size={10} className="mt-0.5 flex-shrink-0" />
-                          {c.address}
-                        </p>
+                        <p className="text-xs text-chrome-400 mt-1 flex items-start gap-1.5"><MapPin size={11} className="mt-0.5 shrink-0" /> {c.address}</p>
                       ) : null;
                     })()}
                   </div>
@@ -561,127 +430,150 @@ const VehiclesModule: React.FC<VehiclesModuleProps> = ({ store: storeProp, toast
 
                 {/* KPI bar */}
                 <div className="grid grid-cols-3 gap-3 mt-5">
-                  <KpiCell
-                    value={selectedVehicle.repairs.filter(r => r.serviceType !== 'Registro').length}
-                    label="Servicios"
-                  />
-                  <KpiCell
-                    value={latestRepair ? new Date(latestRepair.createdAt).toLocaleDateString('es-VE', { day: '2-digit', month: 'short' }) : '—'}
-                    label="Último Servicio"
-                  />
-                  <KpiCell
-                    label="Total Invertido"
-                    custom={<CurrencyBadge amountUsd={totalSpent} />}
-                  />
+                  <div className="bg-white/5 border border-white/10 rounded-xl p-3 text-center">
+                    <p className="text-xl font-black text-white">{selectedVehicle.repairs.filter(r => r.serviceType !== 'Registro').length}</p>
+                    <p className="text-[9px] font-black text-chrome-500 uppercase tracking-wider mt-0.5">Servicios</p>
+                  </div>
+                  <div className="bg-white/5 border border-white/10 rounded-xl p-3 text-center">
+                    {latestRepair ? (
+                      <>
+                        <p className="text-xs font-black text-white">{new Date(latestRepair.createdAt).toLocaleDateString()}</p>
+                        <p className="text-[9px] font-black text-chrome-500 uppercase tracking-wider mt-0.5">Últ. Servicio</p>
+                      </>
+                    ) : (
+                      <p className="text-[9px] font-black text-chrome-500 uppercase tracking-wider mt-0.5">Sin servicios</p>
+                    )}
+                  </div>
+                  <div className="bg-white/5 border border-white/10 rounded-xl p-3 text-center">
+                    <CurrencyBadge amount={totalSpent} />
+                    <p className="text-[9px] font-black text-chrome-500 uppercase tracking-wider mt-0.5">Total Invertido</p>
+                  </div>
                 </div>
               </div>
 
-              {/* ── Scrollable body ─────────────────────────────────────── */}
-              <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar p-6 space-y-6">
+              {/* Scrollable content */}
+              <div className="flex-1 overflow-y-auto custom-scrollbar p-6 lg:p-8 space-y-6">
 
-                {/* Checklist de Ingreso */}
+                {/* ── Checklist de Ingreso ───────────────────────────── */}
                 {latestChecklist && (
-                  <section>
-                    <SectionLabel
-                      icon={<ClipboardList size={14} />}
-                      label="Checklist de Ingreso"
-                      count={latestChecklist.checkedAt ? undefined : undefined}
-                    />
+                  <div>
+                    <h3 className="text-base font-black text-white uppercase tracking-tight flex items-center gap-2 mb-4">
+                      <ClipboardList size={16} className="text-sky-400" />
+                      Checklist de Ingreso
+                      <span className="text-[10px] font-bold text-chrome-500 bg-white/5 px-2 py-0.5 rounded-lg ml-1">
+                        {latestChecklist.checkedAt ? new Date(latestChecklist.checkedAt).toLocaleDateString() : 'Registrado'}
+                      </span>
+                    </h3>
+
                     <div className="grid grid-cols-2 gap-3">
                       {/* Combustible */}
-                      <ChecklistCard label="Combustible" icon={<Fuel size={11} className="text-amber-400" />}>
+                      <div className="bg-white/5 border border-white/10 rounded-xl p-4">
+                        <p className="text-[9px] font-black text-chrome-500 uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                          <Fuel size={10} /> Nivel de Combustible
+                        </p>
                         {(() => {
                           const fl = FUEL_LEVELS.find(f => f.value === latestChecklist.fuelLevel);
                           return (
-                            <div className="space-y-1.5 mt-2">
-                              <div className="h-2 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.06)' }}>
-                                <div className="h-full rounded-full" style={{ width: `${fl?.pct ?? 50}%`, backgroundColor: fl?.color ?? '#eab308' }} />
+                            <div className="space-y-1.5">
+                              <div className="h-3 bg-white/5 rounded-full overflow-hidden border border-white/8">
+                                <div
+                                  className="h-full rounded-full transition-all"
+                                  style={{ width: `${fl?.pct ?? 50}%`, backgroundColor: fl?.color ?? '#eab308' }}
+                                />
                               </div>
-                              <p className="text-sm font-bold" style={{ color: fl?.color }}>{latestChecklist.fuelLevel}</p>
+                              <p className="font-black text-white text-sm" style={{ color: fl?.color }}>{latestChecklist.fuelLevel}</p>
                             </div>
                           );
                         })()}
-                      </ChecklistCard>
+                      </div>
 
                       {/* Grúa */}
-                      <ChecklistCard label="Llegó en Grúa" icon={<Truck size={11} className="text-orange-400" />}>
-                        <div className="mt-2">
-                          {latestChecklist.arrivedByTow ? (
-                            <span className="inline-flex items-center gap-1.5 text-xs font-bold text-amber-400 bg-amber-500/8 border border-amber-500/20 px-3 py-1.5 rounded-lg">
-                              <Truck size={12} /> Sí, en grúa
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-400 bg-emerald-500/8 border border-emerald-500/20 px-3 py-1.5 rounded-lg">
-                              <Car size={12} /> Por sus medios
-                            </span>
-                          )}
-                        </div>
-                      </ChecklistCard>
+                      <div className="bg-white/5 border border-white/10 rounded-xl p-4">
+                        <p className="text-[9px] font-black text-chrome-500 uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                          <Truck size={10} /> Llegó en Grúa
+                        </p>
+                        {latestChecklist.arrivedByTow ? (
+                          <span className="inline-flex items-center gap-1.5 text-sm font-black text-amber-400 bg-amber-500/10 border border-amber-500/20 px-3 py-1.5 rounded-lg">
+                            <Truck size={14} /> Sí, en grúa
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1.5 text-sm font-black text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1.5 rounded-lg">
+                            <Car size={14} /> Por sus propios medios
+                          </span>
+                        )}
+                      </div>
 
                       {/* Serial */}
-                      <ChecklistCard label="Serial / VIN" icon={<Hash size={11} className="text-purple-400" />}>
-                        <div className="mt-2 space-y-1">
-                          {latestChecklist.serialVerified ? (
-                            <>
-                              <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-400 bg-emerald-500/8 border border-emerald-500/20 px-2 py-0.5 rounded">
-                                <CheckCircle2 size={9} /> Verificado
-                              </span>
-                              {latestChecklist.serialNumber && (
-                                <p className="text-xs font-mono mt-1" style={{ color: 'var(--chrome-300)' }}>{latestChecklist.serialNumber}</p>
-                              )}
-                              {latestChecklist.serialMismatch && (
-                                <p className="text-[10px] font-bold text-red-400 flex items-center gap-1 mt-1">
-                                  <AlertCircle size={9} /> No coincide con docs.
-                                </p>
-                              )}
-                            </>
-                          ) : (
-                            <span className="inline-flex items-center gap-1 text-[10px] font-bold text-chrome-400 bg-white/4 border border-white/10 px-2 py-0.5 rounded">
-                              <HelpCircle size={9} /> No verificado
+                      <div className="bg-white/5 border border-white/10 rounded-xl p-4">
+                        <p className="text-[9px] font-black text-chrome-500 uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                          <Hash size={10} /> Verificación de Serial
+                        </p>
+                        {latestChecklist.serialVerified ? (
+                          <div className="space-y-1">
+                            <span className="inline-flex items-center gap-1 text-[10px] font-black text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-md">
+                              <CheckCircle2 size={9} /> Verificado
                             </span>
-                          )}
-                        </div>
-                      </ChecklistCard>
+                            {latestChecklist.serialNumber && (
+                              <p className="text-xs font-mono text-chrome-300 mt-1">{latestChecklist.serialNumber}</p>
+                            )}
+                            {latestChecklist.serialMismatch && (
+                              <p className="text-[9px] font-black text-red-400 flex items-center gap-1 mt-1">
+                                <AlertCircle size={9} /> No coincide con documentación
+                              </p>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 text-[10px] font-black text-chrome-400 bg-white/5 border border-white/10 px-2 py-0.5 rounded-md">
+                            <HelpCircle size={9} /> No verificado
+                          </span>
+                        )}
+                      </div>
 
                       {/* Luces */}
-                      <ChecklistCard label="Estado de Luces" icon={<Lightbulb size={11} className="text-yellow-400" />}>
-                        <div className="mt-2 space-y-2">
+                      <div className="bg-white/5 border border-white/10 rounded-xl p-4">
+                        <p className="text-[9px] font-black text-chrome-500 uppercase tracking-widest mb-3 flex items-center gap-1.5">
+                          <Lightbulb size={10} /> Estado de Luces
+                        </p>
+                        <div className="space-y-2">
                           <div className="flex items-center justify-between">
-                            <span className="text-[10px]" style={{ color: 'var(--chrome-400)' }}>Delantera</span>
+                            <span className="text-[10px] text-chrome-400 font-bold">Delantera</span>
                             <ChecklistBadgeRO value={latestChecklist.lightsFront} />
                           </div>
                           <div className="flex items-center justify-between">
-                            <span className="text-[10px]" style={{ color: 'var(--chrome-400)' }}>Trasera</span>
+                            <span className="text-[10px] text-chrome-400 font-bold">Trasera</span>
                             <ChecklistBadgeRO value={latestChecklist.lightsRear} />
                           </div>
                         </div>
-                      </ChecklistCard>
+                      </div>
                     </div>
 
                     {latestChecklist.checklistNotes && (
-                      <div className="mt-3 rounded-xl p-3" style={{ background: 'var(--metal-mid)', border: '1px solid var(--metal-border)' }}>
-                        <p className="text-[9px] font-bold uppercase tracking-widest mb-1.5 flex items-center gap-1.5" style={{ color: 'var(--chrome-500)' }}>
-                          <FileText size={9} /> Observaciones
+                      <div className="mt-3 bg-white/5 border border-white/10 rounded-xl p-3">
+                        <p className="text-[9px] font-black text-chrome-500 uppercase tracking-widest mb-1 flex items-center gap-1.5">
+                          <FileText size={9} /> Observaciones del Checklist
                         </p>
-                        <p className="text-xs" style={{ color: 'var(--chrome-300)' }}>{latestChecklist.checklistNotes}</p>
+                        <p className="text-xs text-chrome-300">{latestChecklist.checklistNotes}</p>
                       </div>
                     )}
-                  </section>
+                  </div>
                 )}
 
-                {/* Historial de Servicios */}
-                <section>
-                  <SectionLabel
-                    icon={<Activity size={14} />}
-                    label="Historial de Servicios"
-                    count={selectedVehicle.repairs.filter(r => r.serviceType !== 'Registro').length}
-                  />
+                {/* ── Service History ───────────────────────────────── */}
+                <div>
+                  <h3 className="text-base font-black text-white uppercase tracking-tight flex items-center gap-2 mb-4">
+                    <Activity size={16} className="text-sky-400" />
+                    Historial de Servicios
+                    <span className="text-[10px] font-bold text-chrome-500 bg-white/5 px-2 py-0.5 rounded-lg ml-1">
+                      {selectedVehicle.repairs.filter(r => r.serviceType !== 'Registro').length}
+                    </span>
+                  </h3>
 
-                  <div className="space-y-2">
+                  <div className="space-y-3">
                     {selectedVehicle.repairs.filter(r => r.serviceType !== 'Registro').length === 0 ? (
-                      <div className="flex flex-col items-center py-10 gap-3" style={{ border: '1px dashed rgba(255,255,255,0.08)', borderRadius: '0.75rem' }}>
-                        <Wrench size={24} style={{ color: 'var(--chrome-600)' }} />
-                        <p className="text-sm font-medium" style={{ color: 'var(--chrome-400)' }}>Sin historial de servicios</p>
+                      <div className="p-8 text-center border border-dashed border-white/10 rounded-2xl bg-white/5">
+                        <Wrench size={28} className="mx-auto text-chrome-600 mb-3" />
+                        <p className="text-chrome-400 text-sm font-bold">Sin historial de servicios</p>
+                        <p className="text-chrome-600 text-xs mt-1">El vehículo fue registrado pero aún no tiene reparaciones.</p>
                       </div>
                     ) : (
                       selectedVehicle.repairs
@@ -689,72 +581,48 @@ const VehiclesModule: React.FC<VehiclesModuleProps> = ({ store: storeProp, toast
                         .map(repair => {
                           const repairTotal = repair.items.reduce((acc, i) => acc + i.price * i.quantity, 0);
                           return (
-                            <div
-                              key={repair.id}
-                              className="rounded-xl p-4 transition-colors"
-                              style={{ background: 'var(--metal-mid)', border: '1px solid var(--metal-border)' }}
-                              onMouseEnter={e => (e.currentTarget.style.borderColor = 'var(--metal-border-light)')}
-                              onMouseLeave={e => (e.currentTarget.style.borderColor = 'var(--metal-border)')}
-                            >
+                            <div key={repair.id} className="bg-white/5 border border-white/10 rounded-2xl p-4 hover:bg-white/8 transition-colors">
                               <div className="flex items-start justify-between gap-3">
                                 <div className="flex items-start gap-3 flex-1 min-w-0">
-                                  {/* Icon */}
-                                  <div
-                                    className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5"
-                                    style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}
-                                  >
-                                    <Wrench size={14} style={{ color: 'var(--chrome-400)' }} />
+                                  <div className="w-10 h-10 rounded-xl bg-chrome-800/80 flex items-center justify-center flex-shrink-0 border border-white/10 mt-0.5">
+                                    <Wrench size={16} className="text-chrome-400" />
                                   </div>
-
-                                  {/* Content */}
                                   <div className="flex-1 min-w-0">
-                                    <p className="text-sm font-semibold leading-snug truncate" style={{ color: 'var(--chrome-100)' }}>
-                                      {repair.diagnosis}
-                                    </p>
-                                    <div className="flex flex-wrap items-center gap-2 mt-1.5">
-                                      <span className="text-[10px] flex items-center gap-1" style={{ color: 'var(--chrome-500)' }}>
-                                        <Calendar size={9} />
-                                        {new Date(repair.createdAt).toLocaleDateString()}
+                                    <p className="font-bold text-white text-sm leading-tight truncate">{repair.diagnosis}</p>
+                                    <div className="flex flex-wrap items-center gap-2 mt-2">
+                                      <span className="text-[10px] font-bold text-chrome-500 flex items-center gap-1">
+                                        <Calendar size={10} /> {new Date(repair.createdAt).toLocaleDateString()}
                                       </span>
-                                      <StatusPill status={repair.status} />
+                                      <span className={`text-[9px] font-black px-2 py-0.5 rounded-md ${STATUS_COLORS[repair.status] ?? 'bg-white/10 text-chrome-400'}`}>
+                                        {repair.status}
+                                      </span>
                                       {repair.serviceType && repair.serviceType !== 'Registro' && (
-                                        <span className="text-[9px] font-bold uppercase" style={{ color: 'var(--chrome-600)' }}>
-                                          {repair.serviceType}
-                                        </span>
+                                        <span className="text-[9px] font-bold text-chrome-600 uppercase">{repair.serviceType}</span>
                                       )}
                                       {repair.mileage ? (
-                                        <span className="text-[10px] flex items-center gap-1" style={{ color: 'var(--chrome-500)' }}>
-                                          <Gauge size={9} />{repair.mileage.toLocaleString()} km
+                                        <span className="text-[10px] font-bold text-chrome-500 flex items-center gap-1">
+                                          <Gauge size={9} /> {repair.mileage.toLocaleString()} km
                                         </span>
                                       ) : null}
                                     </div>
-
                                     {repair.items.length > 0 && (
-                                      <div className="mt-2 flex flex-wrap gap-1.5">
+                                      <div className="mt-2 flex flex-wrap gap-1">
                                         {repair.items.slice(0, 3).map(item => (
-                                          <span
-                                            key={item.id}
-                                            className="text-[9px] px-2 py-0.5 rounded"
-                                            style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)', color: 'var(--chrome-400)' }}
-                                          >
+                                          <span key={item.id} className="text-[9px] bg-white/5 border border-white/8 text-chrome-400 px-2 py-0.5 rounded-md">
                                             {item.description}
                                           </span>
                                         ))}
                                         {repair.items.length > 3 && (
-                                          <span className="text-[9px]" style={{ color: 'var(--chrome-600)' }}>+{repair.items.length - 3}</span>
+                                          <span className="text-[9px] text-chrome-600 px-1">+{repair.items.length - 3} más</span>
                                         )}
                                       </div>
                                     )}
                                   </div>
                                 </div>
-
-                                {/* Amount */}
                                 <div className="flex-shrink-0 text-right">
-                                  <CurrencyBadge amountUsd={repairTotal} />
+                                  <CurrencyBadge amount={repairTotal} />
                                   {repair.items.length > 0 && (
-                                    <p className="text-[9px] mt-1" style={{ color: 'var(--chrome-600)' }}>
-                                      {repair.items.length} ítem{repair.items.length !== 1 ? 's' : ''}
-                                    </p>
+                                    <p className="text-[9px] text-chrome-600 mt-1 font-medium">{repair.items.length} ítem{repair.items.length !== 1 ? 's' : ''}</p>
                                   )}
                                 </div>
                               </div>
@@ -763,35 +631,21 @@ const VehiclesModule: React.FC<VehiclesModuleProps> = ({ store: storeProp, toast
                         })
                     )}
                   </div>
-                </section>
+                </div>
               </div>
             </div>
-
           ) : (
-            /* Empty state */
-            <div className="flex-1 flex flex-col items-center justify-center gap-4 p-8">
-              <div
-                className="w-16 h-16 rounded-2xl flex items-center justify-center"
-                style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}
-              >
-                <Car size={28} style={{ color: 'var(--chrome-600)' }} />
-              </div>
-              <div className="text-center">
-                <p className="text-base font-semibold" style={{ color: 'var(--chrome-400)' }}>Selecciona un vehículo</p>
-                <p className="text-sm mt-1" style={{ color: 'var(--chrome-600)' }}>
-                  Haz clic en cualquier vehículo para ver su ficha técnica
-                </p>
-              </div>
+            <div className="flex-1 flex flex-col items-center justify-center text-chrome-500 p-8">
+              <Car size={56} className="mb-4 opacity-10" />
+              <p className="text-xl font-bold text-chrome-400">Selecciona un vehículo</p>
+              <p className="text-sm text-chrome-600 mt-1 text-center">
+                Haz clic en cualquier vehículo de la lista para ver su ficha técnica e historial completo de servicios
+              </p>
               {vehicleRecords.length === 0 && (
-                <div
-                  className="mt-2 rounded-xl p-4 max-w-sm text-center"
-                  style={{ background: 'rgba(59,130,246,0.06)', border: '1px solid rgba(59,130,246,0.15)' }}
-                >
-                  <AlertCircle className="mx-auto mb-2 text-blue-400" size={18} />
-                  <p className="text-sm font-semibold text-blue-400">Los vehículos aparecen aquí automáticamente</p>
-                  <p className="text-xs mt-1" style={{ color: 'rgba(96,165,250,0.6)' }}>
-                    al registrar una reparación en Taller, o añade uno con el botón de arriba.
-                  </p>
+                <div className="mt-6 bg-sky-500/10 border border-sky-500/20 rounded-xl p-4 max-w-sm text-center">
+                  <AlertCircle className="mx-auto mb-2 text-sky-400" size={20} />
+                  <p className="text-sky-300 text-sm font-bold">Los vehículos aparecen aquí automáticamente</p>
+                  <p className="text-sky-400/60 text-xs mt-1">cuando se registra una reparación en el módulo de Taller, o puedes añadir uno manualmente con el botón de arriba.</p>
                 </div>
               )}
             </div>
@@ -799,329 +653,364 @@ const VehiclesModule: React.FC<VehiclesModuleProps> = ({ store: storeProp, toast
         </div>
       </div>
 
-      {/* ══════════════════════════════════════════════════════════════════════
+      {/* ══════════════════════════════════════════════════════════════════
           MODAL: Registrar Vehículo + Checklist de Inspección
-      ══════════════════════════════════════════════════════════════════════ */}
+      ══════════════════════════════════════════════════════════════════ */}
       {showAddModal && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto"
-          style={{ background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(8px)' }}
-        >
-          <div
-            className="w-full max-w-5xl rounded-2xl overflow-hidden shadow-2xl my-4 animate-scale-in"
-            style={{ background: 'var(--metal-dark)', border: '1px solid var(--metal-border)' }}
-          >
-            {/* Modal header */}
-            <div
-              className="flex items-center justify-between px-6 py-4"
-              style={{ borderBottom: '1px solid var(--metal-border)', background: 'rgba(255,255,255,0.02)' }}
-            >
-              <div className="flex items-center gap-3">
-                <div
-                  className="w-8 h-8 rounded-lg flex items-center justify-center"
-                  style={{ background: 'rgba(59,130,246,0.15)', border: '1px solid rgba(59,130,246,0.25)' }}
-                >
-                  <Car size={15} className="text-blue-400" />
-                </div>
-                <h3 className="text-base font-bold" style={{ fontFamily: 'var(--font-heading)', color: 'var(--chrome-100)', letterSpacing: '-0.01em' }}>
-                  Registrar Vehículo
-                </h3>
-              </div>
-              <button
-                onClick={() => setShowAddModal(false)}
-                className="p-2 rounded-lg transition-colors"
-                style={{ color: 'var(--chrome-500)' }}
-                onMouseEnter={e => { e.currentTarget.style.color = 'var(--chrome-100)'; e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; }}
-                onMouseLeave={e => { e.currentTarget.style.color = 'var(--chrome-500)'; e.currentTarget.style.background = 'transparent'; }}
-              >
-                <X size={18} />
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-metal-base border border-white/10 rounded-2xl w-full max-w-5xl overflow-hidden shadow-2xl animate-scale-in my-4">
+
+            {/* Modal Header */}
+            <div className="flex justify-between items-center p-6 border-b border-white/10 bg-white/3">
+              <h3 className="text-xl font-black text-white uppercase tracking-tight flex items-center gap-2">
+                <Car className="text-sky-400" size={20} /> Registrar Vehículo
+              </h3>
+              <button onClick={() => setShowAddModal(false)} className="text-chrome-400 hover:text-white transition-colors p-2 hover:bg-white/5 rounded-lg">
+                <X size={20} />
               </button>
             </div>
 
             <form onSubmit={handleAddVehicle}>
-              <div
-                className="grid grid-cols-1 lg:grid-cols-2"
-                style={{ borderBottom: '1px solid var(--metal-border)' }}
-              >
+              {/* ── TWO-COLUMN LAYOUT ──────────────────────────────────── */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 divide-y lg:divide-y-0 lg:divide-x divide-white/8">
 
-                {/* ═ LEFT: Vehicle data ══════════════════════════════════ */}
-                <div
-                  className="flex flex-col divide-y overflow-y-auto max-h-[68vh]"
-                  style={{ divideColor: 'var(--metal-border)', borderRight: '1px solid var(--metal-border)' }}
-                >
+                {/* ═ LEFT COLUMN (Scrollable container) ═════════════ */}
+                <div className="flex flex-col divide-y divide-white/8 overflow-y-auto max-h-[70vh]">
 
-                  {/* Datos del vehículo */}
-                  <div className="p-5 space-y-4">
-                    <SectionLabel icon={<Car size={12} />} label="Datos del Vehículo" />
-                    <div className="grid grid-cols-2 gap-3">
-                      <FieldBlock label="Placa *">
+                  {/* ── Sección 1: Datos del Vehículo ──────────────── */}
+                  <div className="p-6 space-y-4 flex flex-col">
+                    <p className="text-[10px] font-black text-sky-400 uppercase tracking-widest flex items-center gap-2">
+                      <Car size={11} /> Datos del Vehículo
+                    </p>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-black text-chrome-500 uppercase tracking-widest ml-1">Placa *</label>
                         <input
                           required type="text" value={newVehicle.plate}
                           onChange={e => setNewVehicle({ ...newVehicle, plate: e.target.value.toUpperCase() })}
-                          className={inputCls + ' uppercase font-mono font-bold tracking-widest'}
+                          className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white uppercase font-mono font-black focus:border-sky-500 focus:ring-4 focus:ring-sky-500/10 outline-none transition-all"
                           placeholder="ABC-123"
                         />
-                      </FieldBlock>
-                      <FieldBlock label="Propietario *">
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-black text-chrome-500 uppercase tracking-widest ml-1">Propietario *</label>
                         <select
                           required value={newVehicle.customerId}
                           onChange={e => setNewVehicle({ ...newVehicle, customerId: e.target.value })}
-                          className={selectCls}
+                          className="w-full bg-chrome-900 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-sky-500 outline-none transition-all font-medium"
                         >
-                          <option value="">Seleccione…</option>
+                          <option value="">Seleccione...</option>
                           {store.customers.map((c: Customer) => (
                             <option key={c.id} value={c.id}>{c.name}</option>
                           ))}
                         </select>
-                      </FieldBlock>
-                      <FieldBlock label="Marca *">
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-black text-chrome-500 uppercase tracking-widest ml-1">Marca *</label>
                         <input
                           required type="text" value={newVehicle.brand}
                           onChange={e => setNewVehicle({ ...newVehicle, brand: e.target.value })}
-                          className={inputCls}
-                          placeholder="Toyota, Ford…"
+                          className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-sky-500 outline-none transition-all font-medium"
+                          placeholder="Toyota, Ford, Chevrolet..."
                         />
-                      </FieldBlock>
-                      <FieldBlock label="Modelo *">
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-black text-chrome-500 uppercase tracking-widest ml-1">Modelo *</label>
                         <input
                           required type="text" value={newVehicle.model}
                           onChange={e => setNewVehicle({ ...newVehicle, model: e.target.value })}
-                          className={inputCls}
-                          placeholder="Corolla, Ranger…"
+                          className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-sky-500 outline-none transition-all font-medium"
+                          placeholder="Corolla, Ranger..."
                         />
-                      </FieldBlock>
-                      <FieldBlock label="Año">
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-black text-chrome-500 uppercase tracking-widest ml-1">Año</label>
                         <input
                           type="number" min="1950" max={new Date().getFullYear() + 1} value={newVehicle.year}
                           onChange={e => setNewVehicle({ ...newVehicle, year: Number(e.target.value) })}
-                          className={inputCls}
+                          className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-sky-500 outline-none transition-all font-medium"
                         />
-                      </FieldBlock>
-                      <FieldBlock label="Kilometraje">
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-black text-chrome-500 uppercase tracking-widest ml-1">Kilometraje</label>
                         <input
                           type="number" min="0" value={newVehicle.mileage}
                           onChange={e => setNewVehicle({ ...newVehicle, mileage: e.target.value })}
-                          className={inputCls}
-                          placeholder="85 000"
+                          className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-sky-500 outline-none transition-all font-medium"
+                          placeholder="Ej: 85000"
                         />
-                      </FieldBlock>
+                      </div>
                     </div>
                   </div>
 
-                  {/* Servicio y estado */}
-                  <div className="p-5 space-y-4">
-                    <SectionLabel icon={<Wrench size={12} />} label="Servicio y Estado" />
-                    <div className="grid grid-cols-2 gap-3">
-                      <FieldBlock label="Tipo de Servicio *">
+                  {/* ── Sección 1.1: Servicio y Estado ──────────────── */}
+                  <div className="p-6 space-y-4 flex flex-col">
+                    <p className="text-[10px] font-black text-sky-400 uppercase tracking-widest flex items-center gap-2">
+                      <Wrench size={11} /> Servicio y Estado
+                    </p>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-black text-chrome-500 uppercase tracking-widest ml-1">Tipo de Servicio *</label>
                         <select
                           required value={newVehicle.serviceType}
                           onChange={e => setNewVehicle({ ...newVehicle, serviceType: e.target.value })}
-                          className={selectCls}
+                          className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-sky-500 outline-none transition-all font-medium"
                         >
-                          <option>Mecánica General</option>
-                          <option>Mantenimiento Preventivo</option>
-                          <option>Electricidad</option>
-                          <option>Latonería y Pintura</option>
-                          <option>Revisión General</option>
+                          <option value="Mecánica General">Mecánica General</option>
+                          <option value="Mantenimiento Preventivo">Mantenimiento Preventivo</option>
+                          <option value="Electricidad">Electricidad</option>
+                          <option value="Latonería y Pintura">Latonería y Pintura</option>
+                          <option value="Revisión General">Revisión General</option>
                         </select>
-                      </FieldBlock>
-                      <FieldBlock label="Estado de Entrada *">
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-black text-chrome-500 uppercase tracking-widest ml-1">Estado de Entrada *</label>
                         <select
                           required value={newVehicle.status}
                           onChange={e => setNewVehicle({ ...newVehicle, status: e.target.value as ServiceStatus })}
-                          className={selectCls}
+                          className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-sky-500 outline-none transition-all font-medium"
                         >
-                          <option>Ingresado</option>
-                          <option>En Diagnóstico</option>
-                          <option>En Reparación</option>
-                          <option>Esperando Repuestos</option>
+                          <option value="Ingresado">Ingresado</option>
+                          <option value="En Diagnóstico">En Diagnóstico</option>
+                          <option value="Esperando Repuestos">Esperando Repuestos</option>
                         </select>
-                      </FieldBlock>
+                        {/* Badge representation */}
+                        <div className="mt-2 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-sky-500/10 border border-sky-500/20 text-sky-400 text-xs font-bold">
+                          <span className="w-1.5 h-1.5 rounded-full bg-sky-400 animate-pulse" />
+                          {newVehicle.status}
+                        </div>
+                      </div>
                     </div>
                   </div>
 
-                  {/* Diagnóstico inicial */}
-                  <div className="p-5 space-y-3">
-                    <SectionLabel icon={<FileText size={12} />} label="Diagnóstico Inicial" />
-                    <textarea
-                      rows={3}
-                      value={newVehicle.diagnosis}
-                      onChange={e => setNewVehicle({ ...newVehicle, diagnosis: e.target.value })}
-                      className={inputCls + ' resize-none'}
-                      placeholder="Descripción del problema o motivo de ingreso…"
-                    />
+                  {/* ── Sección 1.2: Diagnóstico Inicial ────────────── */}
+                  <div className="p-6 space-y-4 flex flex-col">
+                    <p className="text-[10px] font-black text-fuchsia-400 uppercase tracking-widest flex items-center gap-2">
+                      <Activity size={11} /> Diagnóstico Inicial
+                    </p>
+                    <div className="space-y-2">
+                      <div className="flex justify-between items-center">
+                        <label className="text-xs font-bold text-chrome-400 ml-1">Describe los síntomas o la falla reportada.</label>
+                        <button type="button" className="text-[10px] font-black bg-purple-500/10 text-purple-400 border border-purple-500/20 px-3 py-1 rounded-full flex items-center gap-1.5 hover:bg-purple-500/20 transition-colors">
+                          <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2l3 6 6 3-6 3-3 6-3-6-6-3 6-3z" /><path d="M19 19l2 1 1 2-1-2-2-1z" /><path d="M5 19l2 1 1 2-1-2-2-1z" /></svg>
+                          MEJORAR CON IA
+                        </button>
+                      </div>
+                      <textarea
+                        rows={3}
+                        value={newVehicle.diagnosis}
+                        onChange={e => setNewVehicle({ ...newVehicle, diagnosis: e.target.value })}
+                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white text-sm resize-none focus:border-sky-500 focus:ring-4 focus:ring-sky-500/10 outline-none transition-all placeholder:text-chrome-600"
+                        placeholder="Ej: El vehículo presenta ruido extraño en el motor al acelerar, vibración en el volante a altas velocidades..."
+                      />
+                    </div>
                   </div>
 
-                </div>
+                  {/* ── Sección 1.3: Evidencias Fotográficas ────────── */}
+                  <div className="p-6 space-y-4 flex flex-col">
+                    <p className="text-[10px] font-black text-cyan-400 uppercase tracking-widest flex items-center gap-2">
+                      <Search size={11} /> Evidencias Fotográficas
+                    </p>
+                    <div className="grid grid-cols-4 gap-3">
+                      {[1, 2, 3, 4].map((i) => (
+                        <div key={i} className="aspect-square rounded-xl border-2 border-dashed border-white/10 flex flex-col items-center justify-center gap-2 text-chrome-500 hover:text-white hover:border-white/30 hover:bg-white/5 cursor-pointer transition-all">
+                          <Plus size={20} />
+                          <span className="text-[10px] font-black uppercase tracking-widest">Foto {i}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
 
-                {/* ═ RIGHT: Checklist ════════════════════════════════════ */}
-                <div className="p-5 space-y-5 overflow-y-auto max-h-[68vh]">
-                  {/* Collapsible header */}
+                </div> {/* <-- Cierra el LEFT COLUMN */}
+
+                {/* ── Sección 2: Checklist de Inspección ─────────────── */}
+                <div className="p-6 space-y-5 overflow-y-auto max-h-[70vh]">
+                  {/* Section Header (collapsible) */}
                   <button
                     type="button"
                     onClick={() => setChecklistOpen(v => !v)}
                     className="w-full flex items-center justify-between group"
                   >
-                    <div className="flex items-center gap-2">
-                      <ClipboardList size={12} className="text-emerald-400" />
-                      <span className="text-xs font-bold text-chrome-300 uppercase tracking-widest">Checklist de Inspección</span>
-                    </div>
+                    <p className="text-[10px] font-black text-emerald-400 uppercase tracking-widest flex items-center gap-2">
+                      <ClipboardList size={11} />
+                      Checklist de Inspección de Ingreso
+                    </p>
                     <ChevronDown
-                      size={14}
-                      className={`transition-transform duration-200 ${checklistOpen ? 'rotate-180' : ''}`}
-                      style={{ color: 'var(--chrome-500)' }}
+                      size={16}
+                      className={`text-chrome-500 transition-transform duration-200 ${checklistOpen ? 'rotate-180' : ''}`}
                     />
                   </button>
 
                   {checklistOpen && (
-                    <div className="space-y-4">
+                    <div className="space-y-5">
 
-                      {/* ① Combustible */}
-                      <ChecklistFormCard label="Nivel de Combustible" icon={<Fuel size={11} className="text-amber-400" />}>
-                        <FuelGauge level={checklist.fuelLevel} onChange={v => patchChecklist('fuelLevel', v)} />
-                      </ChecklistFormCard>
+                      {/* ① Nivel de combustible */}
+                      <div className="bg-white/3 border border-white/8 rounded-xl p-4 space-y-3">
+                        <p className="text-[10px] font-black text-chrome-400 uppercase tracking-widest flex items-center gap-2">
+                          <Fuel size={11} className="text-amber-400" />
+                          Nivel de Combustible
+                        </p>
+                        <FuelGauge
+                          level={checklist.fuelLevel}
+                          onChange={v => patchChecklist('fuelLevel', v)}
+                        />
+                      </div>
 
-                      {/* ② Serial */}
-                      <ChecklistFormCard label="Serial / VIN / Chasis" icon={<Hash size={11} className="text-purple-400" />}>
-                        <div className="flex items-center gap-3 mt-1">
+                      {/* ② Verificación de serial */}
+                      <div className="bg-white/3 border border-white/8 rounded-xl p-4 space-y-3">
+                        <p className="text-[10px] font-black text-chrome-400 uppercase tracking-widest flex items-center gap-2">
+                          <Hash size={11} className="text-purple-400" />
+                          Verificación de Serial (VIN / Chasis)
+                        </p>
+                        {/* Toggle verificado */}
+                        <div className="flex items-center gap-3">
                           <button
                             type="button"
                             onClick={() => patchChecklist('serialVerified', !checklist.serialVerified)}
-                            className="relative w-11 h-6 rounded-full transition-all flex-shrink-0"
-                            style={{
-                              background: checklist.serialVerified ? '#10b981' : 'rgba(255,255,255,0.08)',
-                              border: checklist.serialVerified ? '1px solid rgba(16,185,129,0.6)' : '1px solid rgba(255,255,255,0.12)',
-                              boxShadow: checklist.serialVerified ? '0 0 10px rgba(16,185,129,0.3)' : 'none',
-                            }}
+                            className={`relative w-12 h-6 rounded-full transition-all duration-200 border ${checklist.serialVerified
+                                ? 'bg-emerald-500 border-emerald-400 shadow-[0_0_12px_rgba(34,197,94,0.4)]'
+                                : 'bg-white/10 border-white/15'
+                              }`}
                           >
-                            <span
-                              className="absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-all duration-200"
-                              style={{ left: checklist.serialVerified ? '22px' : '2px' }}
-                            />
+                            <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-all duration-200 ${checklist.serialVerified ? 'left-[26px]' : 'left-0.5'
+                              }`} />
                           </button>
-                          <span className="text-sm font-medium transition-colors" style={{ color: checklist.serialVerified ? '#34d399' : 'var(--chrome-500)' }}>
-                            {checklist.serialVerified ? 'Verificado' : 'No verificado'}
+                          <span className={`text-sm font-bold transition-colors ${checklist.serialVerified ? 'text-emerald-400' : 'text-chrome-500'}`}>
+                            {checklist.serialVerified ? 'Serial verificado' : 'No verificado'}
                           </span>
                         </div>
 
                         {checklist.serialVerified && (
-                          <div className="mt-3 space-y-3 animate-fade-in">
+                          <div className="space-y-3 animate-fade-in">
                             <input
                               type="text"
-                              placeholder="Número de serial / VIN…"
+                              placeholder="Ingrese el número de serial / VIN..."
                               value={checklist.serialNumber ?? ''}
                               onChange={e => patchChecklist('serialNumber', e.target.value.toUpperCase())}
-                              className={inputCls + ' font-mono text-xs tracking-wider'}
+                              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white font-mono text-sm focus:border-purple-500 focus:ring-4 focus:ring-purple-500/10 outline-none transition-all placeholder:text-chrome-600"
                             />
+                            {/* ¿Coincide? */}
                             <label className="flex items-center gap-2 cursor-pointer select-none">
                               <input
                                 type="checkbox"
                                 checked={checklist.serialMismatch ?? false}
                                 onChange={e => patchChecklist('serialMismatch', e.target.checked)}
-                                className="w-4 h-4 rounded border accent-red-500"
-                                style={{ borderColor: 'rgba(255,255,255,0.15)' }}
+                                className="w-4 h-4 rounded border border-white/20 bg-white/5 checked:bg-red-500 accent-red-500"
                               />
-                              <span className="text-xs font-medium text-red-400 flex items-center gap-1.5">
-                                <AlertCircle size={11} /> Serial NO coincide con la documentación
+                              <span className="text-xs font-bold text-red-400 flex items-center gap-1.5">
+                                <AlertCircle size={12} /> El serial NO coincide con la documentación
                               </span>
                             </label>
                           </div>
                         )}
-                      </ChecklistFormCard>
+                      </div>
 
-                      {/* ③ Grúa */}
-                      <ChecklistFormCard label="¿Llegó en Grúa?" icon={<Truck size={11} className="text-orange-400" />}>
-                        <div className="grid grid-cols-2 gap-2 mt-1">
-                          {[
-                            { val: true,  icon: <Truck size={14} />,  text: 'Sí, en grúa',   activeColor: '#f97316', activeBg: 'rgba(249,115,22,0.12)', activeBorder: 'rgba(249,115,22,0.35)' },
-                            { val: false, icon: <Car size={14} />,   text: 'Por sus medios', activeColor: '#34d399', activeBg: 'rgba(52,211,153,0.12)', activeBorder: 'rgba(52,211,153,0.35)' },
-                          ].map(opt => (
-                            <button
-                              key={String(opt.val)}
-                              type="button"
-                              onClick={() => patchChecklist('arrivedByTow', opt.val)}
-                              className="flex items-center justify-center gap-2 py-2.5 rounded-xl border text-sm font-bold transition-all"
-                              style={
-                                checklist.arrivedByTow === opt.val
-                                  ? { color: opt.activeColor, background: opt.activeBg, borderColor: opt.activeBorder }
-                                  : { color: 'var(--chrome-500)', background: 'rgba(255,255,255,0.03)', borderColor: 'rgba(255,255,255,0.08)' }
-                              }
-                            >
-                              {opt.icon} {opt.text}
-                            </button>
-                          ))}
+                      {/* ③ Vehículo llegó en grúa */}
+                      <div className="bg-white/3 border border-white/8 rounded-xl p-4">
+                        <p className="text-[10px] font-black text-chrome-400 uppercase tracking-widest flex items-center gap-2 mb-3">
+                          <Truck size={11} className="text-orange-400" />
+                          ¿Vehículo llegó en Grúa?
+                        </p>
+                        <div className="grid grid-cols-2 gap-3">
+                          <button
+                            type="button"
+                            onClick={() => patchChecklist('arrivedByTow', true)}
+                            className={`flex items-center justify-center gap-2 py-3 rounded-xl border text-sm font-black transition-all ${checklist.arrivedByTow
+                                ? 'bg-amber-500/20 border-amber-500/40 text-amber-400 shadow-[0_0_16px_rgba(245,158,11,0.2)]'
+                                : 'bg-white/5 border-white/10 text-chrome-400 hover:bg-white/10'
+                              }`}
+                          >
+                            <Truck size={16} /> Sí, en grúa
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => patchChecklist('arrivedByTow', false)}
+                            className={`flex items-center justify-center gap-2 py-3 rounded-xl border text-sm font-black transition-all ${!checklist.arrivedByTow
+                                ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-400 shadow-[0_0_16px_rgba(34,197,94,0.2)]'
+                                : 'bg-white/5 border-white/10 text-chrome-400 hover:bg-white/10'
+                              }`}
+                          >
+                            <Car size={16} /> No, por sus medios
+                          </button>
                         </div>
-                      </ChecklistFormCard>
+                      </div>
 
-                      {/* ④ Luces */}
-                      <ChecklistFormCard label="Estado de las Luces" icon={<Lightbulb size={11} className="text-yellow-400" />}>
-                        <div className="space-y-3 mt-1">
+                      {/* ④ Estado de luces */}
+                      <div className="bg-white/3 border border-white/8 rounded-xl p-4 space-y-4">
+                        <p className="text-[10px] font-black text-chrome-400 uppercase tracking-widest flex items-center gap-2">
+                          <Lightbulb size={11} className="text-yellow-400" />
+                          Estado de las Luces
+                        </p>
+
+                        <div className="space-y-3">
+                          {/* Luces delanteras */}
                           <div className="space-y-1.5">
-                            <p className="text-[10px] flex items-center gap-1.5" style={{ color: 'var(--chrome-400)' }}>
-                              <span className="w-2 h-2 rounded-full bg-sky-400" /> Delanteras
+                            <p className="text-xs font-bold text-chrome-400 flex items-center gap-1.5">
+                              <span className="w-2 h-2 rounded-full bg-sky-400 inline-block" />
+                              Luces Delanteras
                             </p>
-                            <LightStatusBadge value={checklist.lightsFront} onChange={v => patchChecklist('lightsFront', v)} />
+                            <LightStatusBadge
+                              value={checklist.lightsFront}
+                              onChange={v => patchChecklist('lightsFront', v)}
+                            />
                           </div>
+
+                          {/* Luces traseras */}
                           <div className="space-y-1.5">
-                            <p className="text-[10px] flex items-center gap-1.5" style={{ color: 'var(--chrome-400)' }}>
-                              <span className="w-2 h-2 rounded-full bg-red-400" /> Traseras
+                            <p className="text-xs font-bold text-chrome-400 flex items-center gap-1.5">
+                              <span className="w-2 h-2 rounded-full bg-red-400 inline-block" />
+                              Luces Traseras
                             </p>
-                            <LightStatusBadge value={checklist.lightsRear} onChange={v => patchChecklist('lightsRear', v)} />
+                            <LightStatusBadge
+                              value={checklist.lightsRear}
+                              onChange={v => patchChecklist('lightsRear', v)}
+                            />
                           </div>
                         </div>
-                      </ChecklistFormCard>
+                      </div>
 
                       {/* ⑤ Observaciones */}
-                      <div className="space-y-2">
-                        <p className="text-[10px] font-bold uppercase tracking-widest flex items-center gap-1.5" style={{ color: 'var(--chrome-500)' }}>
-                          <FileText size={10} /> Observaciones
-                        </p>
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] font-black text-chrome-500 uppercase tracking-widest ml-1 flex items-center gap-1.5">
+                          <FileText size={10} /> Observaciones del Checklist
+                        </label>
                         <textarea
                           rows={2}
-                          placeholder="Daños visibles, elementos faltantes, novedades al ingreso…"
+                          placeholder="Daños visibles, elementos faltantes, novedades al ingreso..."
                           value={checklist.checklistNotes ?? ''}
                           onChange={e => patchChecklist('checklistNotes', e.target.value)}
-                          className={inputCls + ' resize-none'}
+                          className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white text-sm resize-none focus:border-sky-500 focus:ring-4 focus:ring-sky-500/10 outline-none transition-all placeholder:text-chrome-600"
                         />
                       </div>
+
                     </div>
                   )}
                 </div>
+              </div>{/* end grid-cols-2 */}
+
+              {/* ── Actions (full width footer) ──────────────────────── */}
+              <div className="px-6 py-4 bg-sky-500/5 border-t border-sky-500/15">
+                <p className="text-xs text-sky-300/70 font-medium flex items-start gap-2">
+                  <AlertCircle size={14} className="text-sky-400 mt-0.5 shrink-0" />
+                  El vehículo quedará registrado con su checklist de inspección. Podrás ver el estado del checklist en la ficha técnica del vehículo.
+                </p>
               </div>
 
-              {/* Modal footer */}
-              <div
-                className="flex items-center justify-between px-6 py-4 gap-4"
-                style={{ background: 'rgba(255,255,255,0.015)' }}
-              >
-                <p className="text-xs flex items-start gap-1.5" style={{ color: 'var(--chrome-500)' }}>
-                  <AlertCircle size={13} className="text-blue-400/60 flex-shrink-0 mt-0.5" />
-                  El vehículo quedará registrado con su checklist de inspección.
-                </p>
-                <div className="flex items-center gap-3 flex-shrink-0">
-                  <button
-                    type="button"
-                    onClick={() => setShowAddModal(false)}
-                    className="px-4 py-2.5 text-sm font-medium rounded-xl transition-colors"
-                    style={{ color: 'var(--chrome-400)' }}
-                    onMouseEnter={e => (e.currentTarget.style.color = 'var(--chrome-100)')}
-                    onMouseLeave={e => (e.currentTarget.style.color = 'var(--chrome-400)')}
-                  >
-                    Cancelar
-                  </button>
-                  <button
-                    id="btn-submit-vehiculo"
-                    type="submit"
-                    className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold text-white transition-all active:scale-95"
-                    style={{
-                      background: 'linear-gradient(135deg, #3b82f6, #2563eb)',
-                      boxShadow: '0 0 0 1px rgba(59,130,246,0.4), 0 4px 12px rgba(59,130,246,0.2)',
-                    }}
-                  >
-                    <Plus size={15} />
-                    Registrar Vehículo
-                  </button>
-                </div>
+              {/* ── Actions ─────────────────────────────────────────── */}
+              <div className="flex gap-3 justify-end p-6">
+                <button
+                  type="button"
+                  onClick={() => setShowAddModal(false)}
+                  className="px-5 py-3 text-chrome-300 font-bold hover:text-white transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="bg-sky-600 hover:bg-sky-500 text-white px-6 py-3 rounded-xl font-bold transition-all flex items-center gap-2 active:scale-95 shadow-[0_0_20px_rgba(2,132,199,0.3)]"
+                >
+                  <Plus size={18} /> Registrar Vehículo
+                </button>
               </div>
             </form>
           </div>
@@ -1130,63 +1019,5 @@ const VehiclesModule: React.FC<VehiclesModuleProps> = ({ store: storeProp, toast
     </div>
   );
 };
-
-// ─── Micro-components ─────────────────────────────────────────────────────────
-
-const StatChip: React.FC<{ value: number; label: string; accent?: boolean }> = ({ value, label, accent }) => (
-  <div
-    className="flex flex-col items-center px-3 py-1.5 rounded-lg min-w-[52px]"
-    style={{
-      background: accent ? 'rgba(59,130,246,0.08)' : 'rgba(255,255,255,0.04)',
-      border: accent ? '1px solid rgba(59,130,246,0.2)' : '1px solid rgba(255,255,255,0.07)',
-    }}
-  >
-    <span
-      className="text-base font-bold leading-none"
-      style={{ color: accent ? '#60a5fa' : 'var(--chrome-100)' }}
-    >
-      {value}
-    </span>
-    <span className="text-[9px] font-medium mt-0.5" style={{ color: 'var(--chrome-500)' }}>{label}</span>
-  </div>
-);
-
-const MetaChip: React.FC<{ icon?: React.ReactNode; children: React.ReactNode }> = ({ icon, children }) => (
-  <span
-    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium"
-    style={{ background: 'rgba(255,255,255,0.05)', color: 'var(--chrome-300)', border: '1px solid rgba(255,255,255,0.07)' }}
-  >
-    {icon}
-    {children}
-  </span>
-);
-
-const KpiCell: React.FC<{ value?: string | number; label: string; custom?: React.ReactNode }> = ({ value, label, custom }) => (
-  <div
-    className="rounded-xl p-3 text-center"
-    style={{ background: 'var(--metal-mid)', border: '1px solid var(--metal-border)' }}
-  >
-    {custom ?? <p className="text-base font-bold leading-none" style={{ color: 'var(--chrome-100)' }}>{value}</p>}
-    <p className="text-[9px] font-bold uppercase tracking-wider mt-1.5" style={{ color: 'var(--chrome-500)' }}>{label}</p>
-  </div>
-);
-
-const ChecklistCard: React.FC<{ label: string; icon: React.ReactNode; children: React.ReactNode }> = ({ label, icon, children }) => (
-  <div className="rounded-xl p-4" style={{ background: 'var(--metal-mid)', border: '1px solid var(--metal-border)' }}>
-    <p className="text-[9px] font-bold uppercase tracking-widest flex items-center gap-1.5" style={{ color: 'var(--chrome-500)' }}>
-      {icon} {label}
-    </p>
-    {children}
-  </div>
-);
-
-const ChecklistFormCard: React.FC<{ label: string; icon: React.ReactNode; children: React.ReactNode }> = ({ label, icon, children }) => (
-  <div className="rounded-xl p-4 space-y-3" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}>
-    <p className="text-[10px] font-bold uppercase tracking-widest flex items-center gap-2" style={{ color: 'var(--chrome-400)' }}>
-      {icon} {label}
-    </p>
-    {children}
-  </div>
-);
 
 export default VehiclesModule;
