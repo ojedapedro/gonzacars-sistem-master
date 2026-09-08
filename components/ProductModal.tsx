@@ -60,6 +60,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({
       setCustomCategory(isKnown ? '' : cat);
 
       setFormData({
+        id: initialData?.id,
         name: initialData?.name || '',
         category: isKnown ? cat : 'Otro',
         brand: initialData?.brand || '',
