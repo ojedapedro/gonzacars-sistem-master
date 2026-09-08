@@ -4,8 +4,10 @@ import {
   CheckCircle2, ShoppingBag, Edit3, Trash2, X, Check,
   Calendar, CalendarClock, Banknote, LayoutList, FileText,
   Plus, Printer, Building2, CreditCard, Phone, Mail,
-  ChevronDown, AlertCircle
+  ChevronDown, AlertCircle, Download, PieChart, Layers
 } from 'lucide-react';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import { Employee, VehicleRepair, RepairItem, PayrollRecord, Sale, PayrollPeriod, Expense, PayrollBonus, PayrollDeduction } from '../types';
 import CurrencyInput from '../components/CurrencyInput';
 import { formatCurrency } from '../lib/utils/finance';
@@ -605,7 +607,7 @@ const PayrollModule: React.FC<{ store: any }> = ({ store }) => {
   const [receiptRecord, setReceiptRecord] = useState<{ record: PayrollRecord; emp: Employee } | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [period, setPeriod] = useState<PayrollPeriod>('Mensual');
-  const [activeTab, setActiveTab] = useState<'nomina' | 'consolidado'>('nomina');
+  const [activeTab, setActiveTab] = useState<'personal' | 'detallado' | 'consolidado' | 'historial'>('personal');
 
   const isAdm = store.currentUser?.role === 'administrador';
   const exchangeRate: number = store.exchangeRate || 1;
@@ -627,12 +629,352 @@ const PayrollModule: React.FC<{ store: any }> = ({ store }) => {
   const totals = useMemo(() =>
     (store.employees || []).reduce((acc: any, emp: Employee) => {
       const e = calcEarnings(emp, factor, store.repairs || [], store.sales || [], sharedSalesCommission.perSeller);
+      acc.base += e.base;
+      acc.commission += e.commission;
+      acc.bonuses += e.bonusesTotal;
       acc.gross += e.grossTotal;
       acc.deductions += e.deductionsTotal;
       acc.net += e.netTotal;
       return acc;
-    }, { gross: 0, deductions: 0, net: 0 }),
+    }, { base: 0, commission: 0, bonuses: 0, gross: 0, deductions: 0, net: 0 }),
     [store.employees, store.repairs, store.sales, sharedSalesCommission, factor]);
+
+  const consolidatedByRole = useMemo(() => {
+    const groups: Record<string, { role: string; count: number; base: number; commission: number; bonuses: number; gross: number; deductions: number; net: number }> = {};
+    (store.employees || []).forEach((emp: Employee) => {
+      const e = calcEarnings(emp, factor, store.repairs || [], store.sales || [], sharedSalesCommission.perSeller);
+      if (!groups[emp.role]) {
+        groups[emp.role] = { role: emp.role, count: 0, base: 0, commission: 0, bonuses: 0, gross: 0, deductions: 0, net: 0 };
+      }
+      groups[emp.role].count += 1;
+      groups[emp.role].base += e.base;
+      groups[emp.role].commission += e.commission;
+      groups[emp.role].bonuses += e.bonusesTotal;
+      groups[emp.role].gross += e.grossTotal;
+      groups[emp.role].deductions += e.deductionsTotal;
+      groups[emp.role].net += e.netTotal;
+    });
+    return Object.values(groups);
+  }, [store.employees, store.repairs, store.sales, sharedSalesCommission, factor]);
+
+  const bankTransfers = useMemo(() => {
+    return (store.employees || []).map((emp: Employee) => {
+      const e = calcEarnings(emp, factor, store.repairs || [], store.sales || [], sharedSalesCommission.perSeller);
+      return {
+        id: emp.id,
+        name: emp.name,
+        role: emp.role,
+        cedula: emp.cedula || '—',
+        bankName: emp.bankName || 'No especificado',
+        bankAccount: emp.bankAccount || 'No especificada',
+        netUSD: e.netTotal,
+        netBS: e.netTotal * exchangeRate
+      };
+    });
+  }, [store.employees, store.repairs, store.sales, sharedSalesCommission, factor, exchangeRate]);
+
+  /* ─── PDF: DETALLADO DE NÓMINA ─── */
+  const handleDownloadDetalladoPDF = () => {
+    const doc = new jsPDF({ orientation: 'landscape' });
+    const todayStr = new Date().toLocaleDateString('es-VE', { year: 'numeric', month: 'long', day: 'numeric' });
+    
+    // Encabezado institucional
+    doc.setFontSize(16);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(15, 23, 42);
+    doc.text('GONZACARS C.A. — SISTEMA ADMINISTRATIVO', 14, 15);
+    
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(71, 85, 105);
+    doc.text('TALLER MECÁNICO Y REPUESTOS  |  RIF: J-XXXXXXXXX-X', 14, 21);
+    
+    doc.setFontSize(13);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(37, 99, 235);
+    doc.text(`REPORTE DETALLADO DE NÓMINA — PERÍODO ${period.toUpperCase()}`, 14, 29);
+    
+    doc.setFontSize(8.5);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(100, 116, 139);
+    doc.text(`Fecha de emisión: ${todayStr}   |   Tasa Referencial: Bs. ${exchangeRate.toFixed(2)} / USD   |   Total Personal: ${filteredEmployees.length}`, 14, 35);
+    
+    // Tabla Resumen de Totales
+    autoTable(doc, {
+      startY: 39,
+      head: [['Personal Activo', 'Sueldos Base', 'Comisiones Totales', 'Bonos / Asig.', 'Total Bruto', 'Total Deducciones', 'Neto a Desembolsar ($)', 'Neto en Bolívares (Bs.)']],
+      body: [[
+        filteredEmployees.length.toString(),
+        formatCurrency(totals.base),
+        formatCurrency(totals.commission),
+        formatCurrency(totals.bonuses),
+        formatCurrency(totals.gross),
+        `-${formatCurrency(totals.deductions)}`,
+        formatCurrency(totals.net),
+        `Bs. ${(totals.net * exchangeRate).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+      ]],
+      theme: 'grid',
+      headStyles: { fillColor: [30, 41, 59], textColor: 255, fontSize: 8, fontStyle: 'bold', halign: 'center' },
+      bodyStyles: { fontSize: 8, halign: 'center', fontStyle: 'bold' }
+    });
+
+    const startDetailY = (doc as any).lastAutoTable.finalY + 6;
+
+    // Filas detalladas por trabajador
+    const tableData = filteredEmployees.map((emp: Employee, index: number) => {
+      const e = calcEarnings(emp, factor, store.repairs || [], store.sales || [], sharedSalesCommission.perSeller);
+      const bonusDesc = (emp.bonuses || []).length > 0
+        ? (emp.bonuses || []).map(b => `${b.name}: $${(b.type === 'Fijo' ? b.amount * factor : (emp.baseSalary * (b.amount / 100)) * factor).toFixed(2)}`).join(', ')
+        : '—';
+      const dedDesc = (emp.deductions || []).length > 0
+        ? (emp.deductions || []).map(d => `${d.name}: -$${(d.type === 'Fijo' ? d.amount * factor : e.grossTotal * (d.amount / 100)).toFixed(2)}`).join(', ')
+        : '—';
+
+      return [
+        (index + 1).toString(),
+        emp.cedula || '—',
+        emp.name.toUpperCase(),
+        emp.role,
+        formatCurrency(e.base),
+        formatCurrency(e.commission),
+        `${formatCurrency(e.bonusesTotal)}\n${bonusDesc !== '—' ? bonusDesc : ''}`.trim(),
+        formatCurrency(e.grossTotal),
+        `-${formatCurrency(e.deductionsTotal)}\n${dedDesc !== '—' ? dedDesc : ''}`.trim(),
+        formatCurrency(e.netTotal),
+        `Bs. ${(e.netTotal * exchangeRate).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+      ];
+    });
+
+    // Fila final de totales
+    tableData.push([
+      '',
+      '',
+      'TOTAL GENERAL',
+      '',
+      formatCurrency(totals.base),
+      formatCurrency(totals.commission),
+      formatCurrency(totals.bonuses),
+      formatCurrency(totals.gross),
+      `-${formatCurrency(totals.deductions)}`,
+      formatCurrency(totals.net),
+      `Bs. ${(totals.net * exchangeRate).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+    ]);
+
+    autoTable(doc, {
+      startY: startDetailY,
+      head: [['#', 'C.I.', 'Colaborador', 'Cargo', 'Base ($)', 'Comis. ($)', 'Bonos / Asignaciones', 'Bruto ($)', 'Deducciones de Ley', 'Neto ($)', 'Neto (Bs.)']],
+      body: tableData,
+      theme: 'striped',
+      headStyles: { fillColor: [15, 23, 42], textColor: 255, fontSize: 8, fontStyle: 'bold' },
+      bodyStyles: { fontSize: 7.5, textColor: [30, 30, 30] },
+      columnStyles: {
+        0: { halign: 'center', cellWidth: 7 },
+        1: { cellWidth: 20 },
+        2: { fontStyle: 'bold', cellWidth: 38 },
+        3: { cellWidth: 28 },
+        4: { halign: 'right', cellWidth: 20 },
+        5: { halign: 'right', cellWidth: 20 },
+        6: { halign: 'right', cellWidth: 36 },
+        7: { halign: 'right', fontStyle: 'bold', cellWidth: 22 },
+        8: { halign: 'right', cellWidth: 36 },
+        9: { halign: 'right', fontStyle: 'bold', textColor: [5, 150, 105], cellWidth: 24 },
+        10: { halign: 'right', fontStyle: 'bold', cellWidth: 28 },
+      },
+      didParseCell: (data) => {
+        if (data.row.index === tableData.length - 1) {
+          data.cell.styles.fontStyle = 'bold';
+          data.cell.styles.fillColor = [226, 232, 240];
+        }
+      }
+    });
+
+    const finalY = (doc as any).lastAutoTable.finalY + 16;
+    const pageHeight = doc.internal.pageSize.height;
+    const signY = finalY > pageHeight - 30 ? pageHeight - 25 : finalY;
+    
+    // Firmas
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(100, 100, 100);
+    
+    doc.line(30, signY, 90, signY);
+    doc.text('Elaborado por (RRHH / Nómina)', 35, signY + 5);
+    
+    doc.line(115, signY, 175, signY);
+    doc.text('Revisado por (Administración)', 120, signY + 5);
+    
+    doc.line(200, signY, 260, signY);
+    doc.text('Aprobado por (Gerencia General)', 205, signY + 5);
+
+    doc.save(`nomina-detallado-${period.toLowerCase()}-${new Date().toISOString().split('T')[0]}.pdf`);
+  };
+
+  /* ─── PDF: CONSOLIDADO DE NÓMINA ─── */
+  const handleDownloadConsolidadoPDF = () => {
+    const doc = new jsPDF({ orientation: 'portrait' });
+    const todayStr = new Date().toLocaleDateString('es-VE', { year: 'numeric', month: 'long', day: 'numeric' });
+    
+    // Encabezado
+    doc.setFontSize(16);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(15, 23, 42);
+    doc.text('GONZACARS C.A.', 14, 16);
+    
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(71, 85, 105);
+    doc.text('TALLER MECÁNICO Y VENTA DE REPUESTOS  |  RIF: J-XXXXXXXXX-X', 14, 22);
+    
+    doc.setFontSize(13);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(37, 99, 235);
+    doc.text(`CONSOLIDADO EJECUTIVO DE NÓMINA — ${period.toUpperCase()}`, 14, 30);
+    
+    doc.setFontSize(8.5);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(100, 116, 139);
+    doc.text(`Fecha de Corte: ${todayStr}  |  Tasa Oficial: Bs. ${exchangeRate.toFixed(2)} / USD  |  Personal: ${store.employees?.length || 0}`, 14, 36);
+
+    // 1. Resumen por Cargo
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(15, 23, 42);
+    doc.text('1. Consolidado por Cargos / Departamentos', 14, 45);
+
+    const roleRows = consolidatedByRole.map(r => [
+      r.role,
+      r.count.toString(),
+      formatCurrency(r.base),
+      formatCurrency(r.commission),
+      formatCurrency(r.bonuses),
+      formatCurrency(r.gross),
+      `-${formatCurrency(r.deductions)}`,
+      formatCurrency(r.net),
+      `Bs. ${(r.net * exchangeRate).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+    ]);
+
+    roleRows.push([
+      'TOTAL GENERAL',
+      store.employees?.length?.toString() || '0',
+      formatCurrency(totals.base),
+      formatCurrency(totals.commission),
+      formatCurrency(totals.bonuses),
+      formatCurrency(totals.gross),
+      `-${formatCurrency(totals.deductions)}`,
+      formatCurrency(totals.net),
+      `Bs. ${(totals.net * exchangeRate).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+    ]);
+
+    autoTable(doc, {
+      startY: 48,
+      head: [['Cargo', 'Pers.', 'Base ($)', 'Comis. ($)', 'Bonos ($)', 'Bruto ($)', 'Deduc. ($)', 'Neto ($)', 'Neto (Bs.)']],
+      body: roleRows,
+      theme: 'grid',
+      headStyles: { fillColor: [30, 41, 59], textColor: 255, fontSize: 8, fontStyle: 'bold' },
+      bodyStyles: { fontSize: 8 },
+      columnStyles: {
+        0: { fontStyle: 'bold' },
+        1: { halign: 'center' },
+        2: { halign: 'right' },
+        3: { halign: 'right' },
+        4: { halign: 'right' },
+        5: { halign: 'right' },
+        6: { halign: 'right' },
+        7: { halign: 'right', fontStyle: 'bold', textColor: [5, 150, 105] },
+        8: { halign: 'right', fontStyle: 'bold' },
+      },
+      didParseCell: (data) => {
+        if (data.row.index === roleRows.length - 1) {
+          data.cell.styles.fontStyle = 'bold';
+          data.cell.styles.fillColor = [226, 232, 240];
+        }
+      }
+    });
+
+    // 2. Resumen Global de Obligaciones
+    const t2Y = (doc as any).lastAutoTable.finalY + 8;
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(15, 23, 42);
+    doc.text('2. Resumen Contable y Flujo de Desembolso', 14, t2Y);
+
+    autoTable(doc, {
+      startY: t2Y + 3,
+      head: [['Concepto Contable', 'Total Divisas (USD)', 'Total Moneda Nacional (Bs.)', '% Nómina']],
+      body: [
+        ['Sueldos Base Directos', formatCurrency(totals.base), `Bs. ${(totals.base * exchangeRate).toLocaleString('es-VE', { minimumFractionDigits: 2 })}`, `${totals.gross > 0 ? ((totals.base / totals.gross) * 100).toFixed(1) : 0}%`],
+        ['Comisiones de Mano de Obra y Ventas', formatCurrency(totals.commission), `Bs. ${(totals.commission * exchangeRate).toLocaleString('es-VE', { minimumFractionDigits: 2 })}`, `${totals.gross > 0 ? ((totals.commission / totals.gross) * 100).toFixed(1) : 0}%`],
+        ['Bonos, Beneficios y Asignaciones', formatCurrency(totals.bonuses), `Bs. ${(totals.bonuses * exchangeRate).toLocaleString('es-VE', { minimumFractionDigits: 2 })}`, `${totals.gross > 0 ? ((totals.bonuses / totals.gross) * 100).toFixed(1) : 0}%`],
+        ['Total Nómina Bruta Causada', formatCurrency(totals.gross), `Bs. ${(totals.gross * exchangeRate).toLocaleString('es-VE', { minimumFractionDigits: 2 })}`, '100%'],
+        ['Menos: Retenciones Legales y Deducciones', `-${formatCurrency(totals.deductions)}`, `-Bs. ${(totals.deductions * exchangeRate).toLocaleString('es-VE', { minimumFractionDigits: 2 })}`, '—'],
+        ['MONTO NETO A DESEMBOLSAR', formatCurrency(totals.net), `Bs. ${(totals.net * exchangeRate).toLocaleString('es-VE', { minimumFractionDigits: 2 })}`, 'LÍQUIDO']
+      ],
+      theme: 'striped',
+      headStyles: { fillColor: [51, 65, 85], textColor: 255, fontSize: 8, fontStyle: 'bold' },
+      bodyStyles: { fontSize: 8 },
+      columnStyles: {
+        0: { fontStyle: 'bold' },
+        1: { halign: 'right', fontStyle: 'bold' },
+        2: { halign: 'right', fontStyle: 'bold' },
+        3: { halign: 'center' }
+      },
+      didParseCell: (data) => {
+        if (data.row.index === 5) {
+          data.cell.styles.fillColor = [220, 252, 231];
+          data.cell.styles.textColor = [22, 101, 52];
+          data.cell.styles.fontStyle = 'bold';
+        }
+      }
+    });
+
+    // 3. Relación de Transferencias Bancarias
+    const t3Y = (doc as any).lastAutoTable.finalY + 8;
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(15, 23, 42);
+    doc.text('3. Relación Bancaria para Dispersión de Fondos', 14, t3Y);
+
+    const bankRows = bankTransfers.map(b => [
+      b.name.toUpperCase(),
+      b.cedula,
+      b.bankName,
+      b.bankAccount,
+      formatCurrency(b.netUSD),
+      `Bs. ${b.netBS.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+    ]);
+
+    autoTable(doc, {
+      startY: t3Y + 3,
+      head: [['Colaborador', 'C.I.', 'Banco', 'Cuenta Bancaria', 'Neto ($)', 'Neto (Bs.)']],
+      body: bankRows,
+      theme: 'grid',
+      headStyles: { fillColor: [30, 41, 59], textColor: 255, fontSize: 8, fontStyle: 'bold' },
+      bodyStyles: { fontSize: 7.5 },
+      columnStyles: {
+        0: { fontStyle: 'bold' },
+        1: { halign: 'center' },
+        4: { halign: 'right', fontStyle: 'bold', textColor: [5, 150, 105] },
+        5: { halign: 'right', fontStyle: 'bold' },
+      }
+    });
+
+    const finalY = (doc as any).lastAutoTable.finalY + 15;
+    const pageHeight = doc.internal.pageSize.height;
+    const signY = finalY > pageHeight - 30 ? pageHeight - 25 : finalY;
+
+    // Firmas
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(100, 100, 100);
+    
+    doc.line(25, signY, 85, signY);
+    doc.text('Aprobado: Dirección / Administración', 27, signY + 5);
+    
+    doc.line(125, signY, 185, signY);
+    doc.text('Ejecutado: Tesorería / Pagos', 133, signY + 5);
+
+    doc.save(`nomina-consolidado-${period.toLowerCase()}-${new Date().toISOString().split('T')[0]}.pdf`);
+  };
 
   const handleSaveEmployee = (data: Partial<Employee>) => {
     if (editingEmployee) {
@@ -743,6 +1085,23 @@ const PayrollModule: React.FC<{ store: any }> = ({ store }) => {
             <input type="text" placeholder="Buscar personal..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
               className="pl-12 pr-6 py-3 bg-metal-800 border border-metal-700 rounded-xl text-chrome-100 placeholder-chrome-500 outline-none focus:border-blue-500 transition-all text-sm" />
           </div>
+
+          {/* Quick PDF Export Buttons */}
+          <button
+            onClick={handleDownloadDetalladoPDF}
+            title="Descargar Reporte Detallado de Nómina en PDF"
+            className="flex items-center gap-2 px-4 py-3 bg-blue-600/15 hover:bg-blue-600/25 text-blue-400 border border-blue-500/30 font-black uppercase text-xs tracking-widest rounded-xl transition-all shadow-md"
+          >
+            <Download size={16} /> PDF Detallado
+          </button>
+          <button
+            onClick={handleDownloadConsolidadoPDF}
+            title="Descargar Reporte Consolidado de Nómina en PDF"
+            className="flex items-center gap-2 px-4 py-3 bg-emerald-600/15 hover:bg-emerald-600/25 text-emerald-400 border border-emerald-500/30 font-black uppercase text-xs tracking-widest rounded-xl transition-all shadow-md"
+          >
+            <Download size={16} /> PDF Consolidado
+          </button>
+
           {isAdm && (
             <>
               <button onClick={() => { setEditingEmployee(null); setShowModal(true); }}
@@ -796,21 +1155,31 @@ const PayrollModule: React.FC<{ store: any }> = ({ store }) => {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 mb-6 bg-metal-800 p-1 rounded-xl border border-metal-700 w-fit">
-        <button onClick={() => setActiveTab('nomina')}
-          className={`px-6 py-2.5 rounded-lg font-black text-xs uppercase tracking-widest flex items-center gap-2 transition-all
-            ${activeTab === 'nomina' ? 'bg-blue-600 text-white shadow-lg' : 'text-chrome-500 hover:text-chrome-300'}`}>
+      <div className="flex gap-1.5 mb-6 bg-metal-800 p-1.5 rounded-xl border border-metal-700 w-fit flex-wrap">
+        <button onClick={() => setActiveTab('personal')}
+          className={`px-5 py-2.5 rounded-lg font-black text-xs uppercase tracking-widest flex items-center gap-2 transition-all
+            ${activeTab === 'personal' ? 'bg-blue-600 text-white shadow-lg' : 'text-chrome-500 hover:text-chrome-300'}`}>
           <Users size={14}/> Personal
         </button>
+        <button onClick={() => setActiveTab('detallado')}
+          className={`px-5 py-2.5 rounded-lg font-black text-xs uppercase tracking-widest flex items-center gap-2 transition-all
+            ${activeTab === 'detallado' ? 'bg-blue-600 text-white shadow-lg' : 'text-chrome-500 hover:text-chrome-300'}`}>
+          <FileText size={14}/> Detallado de Nómina
+        </button>
         <button onClick={() => setActiveTab('consolidado')}
-          className={`px-6 py-2.5 rounded-lg font-black text-xs uppercase tracking-widest flex items-center gap-2 transition-all
+          className={`px-5 py-2.5 rounded-lg font-black text-xs uppercase tracking-widest flex items-center gap-2 transition-all
             ${activeTab === 'consolidado' ? 'bg-blue-600 text-white shadow-lg' : 'text-chrome-500 hover:text-chrome-300'}`}>
-          <LayoutList size={14}/> Historial
+          <Layers size={14}/> Consolidado
+        </button>
+        <button onClick={() => setActiveTab('historial')}
+          className={`px-5 py-2.5 rounded-lg font-black text-xs uppercase tracking-widest flex items-center gap-2 transition-all
+            ${activeTab === 'historial' ? 'bg-blue-600 text-white shadow-lg' : 'text-chrome-500 hover:text-chrome-300'}`}>
+          <LayoutList size={14}/> Historial de Pagos
         </button>
       </div>
 
       {/* TAB: PERSONAL */}
-      {activeTab === 'nomina' && (
+      {activeTab === 'personal' && (
         <div className="bg-metal-900 border border-metal-800 rounded-2xl overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
@@ -912,8 +1281,286 @@ const PayrollModule: React.FC<{ store: any }> = ({ store }) => {
         </div>
       )}
 
-      {/* TAB: HISTORIAL */}
+      {/* TAB: DETALLADO DE NÓMINA */}
+      {activeTab === 'detallado' && (
+        <div className="space-y-6">
+          <div className="bg-metal-900 border border-metal-800 rounded-2xl overflow-hidden">
+            <div className="p-6 border-b border-metal-800 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+              <div>
+                <h3 className="text-lg font-black text-chrome-100 uppercase tracking-tight flex items-center gap-2">
+                  <FileText className="text-blue-500" size={20} />
+                  Detallado Analítico de Nómina ({period})
+                </h3>
+                <p className="text-chrome-400 text-xs mt-1">
+                  Desglose individualizado de sueldo base, comisiones ganadas, bonificaciones fijas/porcentuales y deducciones de ley.
+                </p>
+              </div>
+              <button
+                onClick={handleDownloadDetalladoPDF}
+                className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl text-xs uppercase tracking-wider transition-colors shadow-lg shadow-blue-900/20"
+              >
+                <Download size={15} /> Descargar PDF Detallado
+              </button>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-metal-800/50 border-b border-metal-800">
+                    <th className="px-5 py-4 text-[10px] font-black text-chrome-400 uppercase tracking-widest">Colaborador</th>
+                    <th className="px-5 py-4 text-[10px] font-black text-chrome-400 uppercase tracking-widest text-right">Sueldo Base</th>
+                    <th className="px-5 py-4 text-[10px] font-black text-chrome-400 uppercase tracking-widest text-right">Comisiones</th>
+                    <th className="px-5 py-4 text-[10px] font-black text-chrome-400 uppercase tracking-widest">Bonos / Asignaciones</th>
+                    <th className="px-5 py-4 text-[10px] font-black text-chrome-400 uppercase tracking-widest text-right">Total Bruto</th>
+                    <th className="px-5 py-4 text-[10px] font-black text-chrome-400 uppercase tracking-widest">Deducciones de Ley</th>
+                    <th className="px-5 py-4 text-[10px] font-black text-chrome-400 uppercase tracking-widest text-right">Total Deducciones</th>
+                    <th className="px-5 py-4 text-[10px] font-black text-chrome-400 uppercase tracking-widest text-right">Neto ($)</th>
+                    <th className="px-5 py-4 text-[10px] font-black text-chrome-400 uppercase tracking-widest text-right">Neto (Bs.)</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-metal-800/50">
+                  {filteredEmployees.map((emp: Employee) => {
+                    const e = calcEarnings(emp, factor, store.repairs || [], store.sales || [], sharedSalesCommission.perSeller);
+                    return (
+                      <tr key={emp.id} className="hover:bg-metal-800/20 transition-colors">
+                        <td className="px-5 py-4">
+                          <div className="flex items-center gap-3">
+                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-black text-white text-xs ${ROLE_COLORS[emp.role] || 'bg-slate-700'}`}>
+                              {emp.name.charAt(0)}
+                            </div>
+                            <div>
+                              <p className="font-bold text-chrome-100 text-sm uppercase">{emp.name}</p>
+                              <p className="text-[10px] text-chrome-500 uppercase">{emp.role}</p>
+                              <p className="text-[9px] text-chrome-600">{emp.cedula ? `C.I. ${emp.cedula}` : 'Sin C.I.'}</p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-5 py-4 text-right font-bold text-chrome-200 text-sm">
+                          {formatCurrency(e.base)}
+                        </td>
+                        <td className="px-5 py-4 text-right">
+                          <span className={`font-bold text-sm ${e.commission > 0 ? 'text-blue-400' : 'text-chrome-600'}`}>
+                            {formatCurrency(e.commission)}
+                          </span>
+                        </td>
+                        <td className="px-5 py-4">
+                          {(emp.bonuses || []).length > 0 ? (
+                            <div className="flex flex-wrap gap-1 max-w-xs">
+                              {(emp.bonuses || []).map(b => {
+                                const val = b.type === 'Fijo' ? b.amount * factor : (emp.baseSalary * (b.amount / 100)) * factor;
+                                return (
+                                  <span key={b.id} className="px-2 py-0.5 rounded text-[10px] bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-semibold">
+                                    {b.name}: ${val.toFixed(2)}
+                                  </span>
+                                );
+                              })}
+                            </div>
+                          ) : (
+                            <span className="text-xs text-chrome-600 italic">Sin bonos</span>
+                          )}
+                        </td>
+                        <td className="px-5 py-4 text-right font-bold text-chrome-100 text-sm">
+                          {formatCurrency(e.grossTotal)}
+                        </td>
+                        <td className="px-5 py-4">
+                          {(emp.deductions || []).length > 0 ? (
+                            <div className="flex flex-wrap gap-1 max-w-xs">
+                              {(emp.deductions || []).map(d => {
+                                const val = d.type === 'Fijo' ? d.amount * factor : e.grossTotal * (d.amount / 100);
+                                return (
+                                  <span key={d.id} className="px-2 py-0.5 rounded text-[10px] bg-red-500/10 border border-red-500/20 text-red-400 font-semibold">
+                                    {d.name}: -${val.toFixed(2)}
+                                  </span>
+                                );
+                              })}
+                            </div>
+                          ) : (
+                            <span className="text-xs text-chrome-600 italic">Sin deducciones</span>
+                          )}
+                        </td>
+                        <td className="px-5 py-4 text-right font-bold text-red-400 text-sm">
+                          -{formatCurrency(e.deductionsTotal)}
+                        </td>
+                        <td className="px-5 py-4 text-right font-black text-emerald-400 text-sm">
+                          {formatCurrency(e.netTotal)}
+                        </td>
+                        <td className="px-5 py-4 text-right font-bold text-chrome-300 text-xs">
+                          Bs. {(e.netTotal * exchangeRate).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                  {/* Fila de Totales Generales */}
+                  <tr className="bg-metal-800/80 font-black border-t-2 border-metal-700">
+                    <td className="px-5 py-4 text-chrome-100 uppercase text-xs">
+                      TOTAL GENERAL ({filteredEmployees.length} Empleados)
+                    </td>
+                    <td className="px-5 py-4 text-right text-chrome-100 text-sm">
+                      {formatCurrency(totals.base)}
+                    </td>
+                    <td className="px-5 py-4 text-right text-blue-400 text-sm">
+                      {formatCurrency(totals.commission)}
+                    </td>
+                    <td className="px-5 py-4 text-emerald-400 text-sm font-bold">
+                      {formatCurrency(totals.bonuses)}
+                    </td>
+                    <td className="px-5 py-4 text-right text-chrome-100 text-sm font-black">
+                      {formatCurrency(totals.gross)}
+                    </td>
+                    <td className="px-5 py-4 text-xs text-chrome-500">
+                      Retenciones Totales
+                    </td>
+                    <td className="px-5 py-4 text-right text-red-400 text-sm font-bold">
+                      -{formatCurrency(totals.deductions)}
+                    </td>
+                    <td className="px-5 py-4 text-right text-emerald-400 text-base font-black">
+                      {formatCurrency(totals.net)}
+                    </td>
+                    <td className="px-5 py-4 text-right text-chrome-100 text-xs font-black">
+                      Bs. {(totals.net * exchangeRate).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TAB: CONSOLIDADO DE NÓMINA */}
       {activeTab === 'consolidado' && (
+        <div className="space-y-6">
+          {/* Tarjeta superior con botón de descarga */}
+          <div className="bg-metal-900 border border-metal-800 rounded-2xl p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div>
+              <h3 className="text-lg font-black text-chrome-100 uppercase tracking-tight flex items-center gap-2">
+                <Layers className="text-emerald-500" size={20} />
+                Consolidado Ejecutivo de Nómina ({period})
+              </h3>
+              <p className="text-chrome-400 text-xs mt-1">
+                Resumen gerencial de compromisos salariales agrupado por departamento/cargo y relación bancaria de transferencias.
+              </p>
+            </div>
+            <button
+              onClick={handleDownloadConsolidadoPDF}
+              className="flex items-center gap-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs uppercase tracking-wider transition-colors shadow-lg shadow-emerald-900/20"
+            >
+              <Download size={15} /> Descargar PDF Consolidado
+            </button>
+          </div>
+
+          {/* 1. Tabla por Cargo / Departamento */}
+          <div className="bg-metal-900 border border-metal-800 rounded-2xl overflow-hidden">
+            <div className="px-6 py-4 border-b border-metal-800 flex justify-between items-center bg-metal-800/30">
+              <h4 className="text-sm font-black text-chrome-100 uppercase tracking-wider flex items-center gap-2">
+                <Building2 size={16} className="text-blue-400" />
+                1. Consolidado por Cargos y Departamentos
+              </h4>
+              <span className="text-xs text-chrome-400 font-bold">{consolidatedByRole.length} Departamentos</span>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-metal-800/50 border-b border-metal-800">
+                    <th className="px-6 py-4 text-[10px] font-black text-chrome-400 uppercase tracking-widest">Cargo / Departamento</th>
+                    <th className="px-6 py-4 text-[10px] font-black text-chrome-400 uppercase tracking-widest text-center">Colaboradores</th>
+                    <th className="px-6 py-4 text-[10px] font-black text-chrome-400 uppercase tracking-widest text-right">Base Total</th>
+                    <th className="px-6 py-4 text-[10px] font-black text-chrome-400 uppercase tracking-widest text-right">Comisiones</th>
+                    <th className="px-6 py-4 text-[10px] font-black text-chrome-400 uppercase tracking-widest text-right">Bonos</th>
+                    <th className="px-6 py-4 text-[10px] font-black text-chrome-400 uppercase tracking-widest text-right">Total Bruto</th>
+                    <th className="px-6 py-4 text-[10px] font-black text-chrome-400 uppercase tracking-widest text-right">Deducciones</th>
+                    <th className="px-6 py-4 text-[10px] font-black text-chrome-400 uppercase tracking-widest text-right">Neto ($)</th>
+                    <th className="px-6 py-4 text-[10px] font-black text-chrome-400 uppercase tracking-widest text-right">Neto (Bs.)</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-metal-800/50">
+                  {consolidatedByRole.map(r => (
+                    <tr key={r.role} className="hover:bg-metal-800/20 transition-colors">
+                      <td className="px-6 py-4 font-bold text-chrome-100 text-sm">
+                        <span className={`inline-block w-2.5 h-2.5 rounded-full mr-2.5 ${ROLE_COLORS[r.role] || 'bg-slate-500'}`} />
+                        {r.role}
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        <span className="px-2.5 py-1 rounded-full text-xs font-black bg-metal-800 text-chrome-300 border border-metal-700">
+                          {r.count}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-right font-semibold text-chrome-200 text-sm">{formatCurrency(r.base)}</td>
+                      <td className="px-6 py-4 text-right font-semibold text-blue-400 text-sm">{formatCurrency(r.commission)}</td>
+                      <td className="px-6 py-4 text-right font-semibold text-emerald-400 text-sm">{formatCurrency(r.bonuses)}</td>
+                      <td className="px-6 py-4 text-right font-bold text-chrome-100 text-sm">{formatCurrency(r.gross)}</td>
+                      <td className="px-6 py-4 text-right font-bold text-red-400 text-sm">-{formatCurrency(r.deductions)}</td>
+                      <td className="px-6 py-4 text-right font-black text-emerald-400 text-sm">{formatCurrency(r.net)}</td>
+                      <td className="px-6 py-4 text-right font-bold text-chrome-300 text-xs">
+                        Bs. {(r.net * exchangeRate).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </td>
+                    </tr>
+                  ))}
+                  {/* Fila total general */}
+                  <tr className="bg-metal-800/80 font-black border-t-2 border-metal-700">
+                    <td className="px-6 py-4 text-chrome-100 uppercase text-xs">TOTAL GENERAL</td>
+                    <td className="px-6 py-4 text-center text-chrome-100 font-black">{store.employees?.length || 0}</td>
+                    <td className="px-6 py-4 text-right text-chrome-100 text-sm">{formatCurrency(totals.base)}</td>
+                    <td className="px-6 py-4 text-right text-blue-400 text-sm">{formatCurrency(totals.commission)}</td>
+                    <td className="px-6 py-4 text-right text-emerald-400 text-sm">{formatCurrency(totals.bonuses)}</td>
+                    <td className="px-6 py-4 text-right text-chrome-100 text-sm">{formatCurrency(totals.gross)}</td>
+                    <td className="px-6 py-4 text-right text-red-400 text-sm">-{formatCurrency(totals.deductions)}</td>
+                    <td className="px-6 py-4 text-right text-emerald-400 text-base font-black">{formatCurrency(totals.net)}</td>
+                    <td className="px-6 py-4 text-right text-chrome-100 text-xs font-black">
+                      Bs. {(totals.net * exchangeRate).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* 2. Relación de Transferencias Bancarias */}
+          <div className="bg-metal-900 border border-metal-800 rounded-2xl overflow-hidden">
+            <div className="px-6 py-4 border-b border-metal-800 flex justify-between items-center bg-metal-800/30">
+              <h4 className="text-sm font-black text-chrome-100 uppercase tracking-wider flex items-center gap-2">
+                <CreditCard size={16} className="text-emerald-400" />
+                2. Relación Bancaria para Dispersión de Fondos
+              </h4>
+              <span className="text-xs text-chrome-400 font-bold">{bankTransfers.length} Colaboradores</span>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-metal-800/50 border-b border-metal-800">
+                    <th className="px-6 py-4 text-[10px] font-black text-chrome-400 uppercase tracking-widest">Colaborador</th>
+                    <th className="px-6 py-4 text-[10px] font-black text-chrome-400 uppercase tracking-widest">Cédula</th>
+                    <th className="px-6 py-4 text-[10px] font-black text-chrome-400 uppercase tracking-widest">Banco</th>
+                    <th className="px-6 py-4 text-[10px] font-black text-chrome-400 uppercase tracking-widest">Cuenta Bancaria</th>
+                    <th className="px-6 py-4 text-[10px] font-black text-chrome-400 uppercase tracking-widest text-right">Monto a Pagar ($)</th>
+                    <th className="px-6 py-4 text-[10px] font-black text-chrome-400 uppercase tracking-widest text-right">Monto a Transferir (Bs.)</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-metal-800/50">
+                  {bankTransfers.map(b => (
+                    <tr key={b.id} className="hover:bg-metal-800/20 transition-colors">
+                      <td className="px-6 py-4 font-bold text-chrome-100 text-sm uppercase">
+                        {b.name}
+                        <span className="block text-[10px] text-chrome-500 font-normal">{b.role}</span>
+                      </td>
+                      <td className="px-6 py-4 text-chrome-300 text-sm font-mono">{b.cedula}</td>
+                      <td className="px-6 py-4 text-chrome-200 text-sm font-semibold">{b.bankName}</td>
+                      <td className="px-6 py-4 text-chrome-300 text-sm font-mono">{b.bankAccount}</td>
+                      <td className="px-6 py-4 text-right font-black text-emerald-400 text-sm">{formatCurrency(b.netUSD)}</td>
+                      <td className="px-6 py-4 text-right font-bold text-chrome-100 text-sm">
+                        Bs. {b.netBS.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TAB: HISTORIAL */}
+      {activeTab === 'historial' && (
         <div className="bg-metal-900 border border-metal-800 rounded-2xl overflow-hidden">
           <div className="px-6 py-4 border-b border-metal-800 flex justify-between items-center">
             <h4 className="text-sm font-black text-chrome-100 uppercase tracking-widest flex items-center gap-2">
