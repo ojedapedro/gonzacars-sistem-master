@@ -78,7 +78,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({
     if (isServicio) return;
     const cost = Number(formData.cost) || 0;
     const margin = Number(formData.profitMargin) || 0;
-    const calculatedPrice = cost * (1 + margin / 100);
+    const calculatedPrice = cost / (1 - (margin / 100));
 
     if (calculatedPrice !== formData.price) {
       setFormData((prev) => ({
@@ -212,11 +212,10 @@ export const ProductModal: React.FC<ProductModalProps> = ({
                       <select
                         value={selectValue}
                         onChange={(e) => handleCategoryChange(e.target.value)}
-                        className={`flex-1 border rounded-lg px-4 py-2.5 text-white outline-none transition-all appearance-none ${
-                          isServicio
+                        className={`flex-1 border rounded-lg px-4 py-2.5 text-white outline-none transition-all appearance-none ${isServicio
                             ? 'bg-amber-900/20 border-amber-500/40 focus:ring-2 focus:ring-amber-500'
                             : 'bg-slate-800 border-slate-600 focus:ring-2 focus:ring-blue-500 focus:border-transparent'
-                        }`}
+                          }`}
                       >
                         <option value="">— Seleccionar categoría —</option>
                         {PREDEFINED_CATEGORIES.map(cat => (
@@ -286,12 +285,10 @@ export const ProductModal: React.FC<ProductModalProps> = ({
               )}
 
               {/* Rentabilidad */}
-              <div className={`space-y-4 md:col-span-2 p-6 rounded-xl border ${
-                isServicio ? 'bg-amber-900/10 border-amber-500/20' : 'bg-emerald-900/10 border-emerald-500/30'
-              }`}>
-                <h3 className={`text-sm font-semibold uppercase tracking-wider mb-2 flex items-center gap-2 ${
-                  isServicio ? 'text-amber-400' : 'text-emerald-400'
+              <div className={`space-y-4 md:col-span-2 p-6 rounded-xl border ${isServicio ? 'bg-amber-900/10 border-amber-500/20' : 'bg-emerald-900/10 border-emerald-500/30'
                 }`}>
+                <h3 className={`text-sm font-semibold uppercase tracking-wider mb-2 flex items-center gap-2 ${isServicio ? 'text-amber-400' : 'text-emerald-400'
+                  }`}>
                   <DollarSign size={16} /> Estructura de Precios
                   {isServicio && <span className="text-xs font-normal text-amber-500/70 ml-1">(Precio del servicio)</span>}
                 </h3>
@@ -337,9 +334,8 @@ export const ProductModal: React.FC<ProductModalProps> = ({
                       {isServicio ? 'Precio del Servicio ($)' : 'Precio Final Auto-Calculado ($)'}
                     </label>
                     <div className="relative">
-                      <span className={`absolute left-3 top-1/2 -translate-y-1/2 font-bold ${
-                        isServicio ? 'text-amber-400' : 'text-emerald-400'
-                      }`}>$</span>
+                      <span className={`absolute left-3 top-1/2 -translate-y-1/2 font-bold ${isServicio ? 'text-amber-400' : 'text-emerald-400'
+                        }`}>$</span>
                       <input
                         type="number"
                         required
@@ -350,11 +346,10 @@ export const ProductModal: React.FC<ProductModalProps> = ({
                           const val = parseFloat(e.target.value);
                           setFormData(prev => ({ ...prev, price: isNaN(val) ? 0 : val }));
                         }}
-                        className={`w-full rounded-lg pl-8 pr-4 py-2.5 font-bold outline-none transition-all focus:ring-2 ${
-                          isServicio
+                        className={`w-full rounded-lg pl-8 pr-4 py-2.5 font-bold outline-none transition-all focus:ring-2 ${isServicio
                             ? 'bg-amber-900/30 border border-amber-500/50 text-amber-300 focus:ring-amber-500'
                             : 'bg-emerald-900/30 border border-emerald-500/50 text-emerald-300 focus:ring-emerald-500'
-                        }`}
+                          }`}
                       />
                     </div>
                   </div>
@@ -411,11 +406,10 @@ export const ProductModal: React.FC<ProductModalProps> = ({
             type="submit"
             form="productForm"
             disabled={isSubmitting}
-            className={`px-6 py-2.5 rounded-lg font-medium text-white transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed ${
-              isServicio
+            className={`px-6 py-2.5 rounded-lg font-medium text-white transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed ${isServicio
                 ? 'bg-amber-600 hover:bg-amber-500'
                 : 'bg-blue-600 hover:bg-blue-500'
-            }`}
+              }`}
           >
             {isSubmitting ? (
               <span className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
