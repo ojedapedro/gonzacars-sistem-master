@@ -2,11 +2,15 @@ import React, { useState, useMemo } from 'react';
 import { useGonzacarsStore } from '../store';
 import { formatCurrency, formatDate } from '../lib/utils/finance';
 import { AreaChart, Area, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, Legend } from 'recharts';
-import { BarChart3, TrendingUp, DollarSign, Wallet, Users, Truck, Package, Wrench } from 'lucide-react';
+import { BarChart3, TrendingUp, DollarSign, Wallet, Users, Truck, Package, Wrench, Download } from 'lucide-react';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 const FinancialReportsModule: React.FC = () => {
   const store = useGonzacarsStore();
-  const [dateFilter, setDateFilter] = useState<'esteMes' | 'mesPasado' | 'esteAno' | 'historico'>('esteMes');
+  const [dateFilter, setDateFilter] = useState<'esteMes' | 'mesPasado' | 'esteAno' | 'historico' | 'personalizado'>('esteMes');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
 
   // Filter function for generic objects with date/createdAt
   const filterByDate = (item: any) => {
@@ -26,6 +30,13 @@ const FinancialReportsModule: React.FC = () => {
     }
     if (dateFilter === 'esteAno') {
       return d.getFullYear() === now.getFullYear();
+    }
+    if (dateFilter === 'personalizado') {
+      if (!startDate && !endDate) return true;
+      const dTime = d.getTime();
+      const start = startDate ? new Date(`${startDate}T00:00:00`).getTime() : 0;
+      const end = endDate ? new Date(`${endDate}T23:59:59`).getTime() : Infinity;
+      return dTime >= start && dTime <= end;
     }
     return true;
   };
@@ -137,6 +148,62 @@ const FinancialReportsModule: React.FC = () => {
     { name: 'Costo Mercancía (COGS)', value: cogsVentas + cogsTaller, color: '#f59e0b' }
   ].filter(d => d.value > 0);
 
+  const handleDownloadPDF = () => {
+    const doc = new jsPDF();
+    doc.setFontSize(18);
+    doc.text('Reporte Financiero', 14, 22);
+    
+    doc.setFontSize(12);
+    doc.text(`Fecha de generacion: ${new Date().toLocaleDateString('es-VE')}`, 14, 30);
+    
+    if (dateFilter === 'personalizado' && (startDate || endDate)) {
+      doc.text(`Filtrado: ${startDate || 'Inicio'} hasta ${endDate || 'Fin'}`, 14, 36);
+    }
+    
+    const kpis = [
+      ['Ingresos Totales', formatCurrency(totalIngresos)],
+      ['Egresos (Flujo)', formatCurrency(totalEgresosFlujo)],
+      ['Utilidad Neta', formatCurrency(utilidadNeta)],
+      ['Margen Neto', `${margenNeto.toFixed(1)}%`]
+    ];
+
+    autoTable(doc, {
+      startY: 45,
+      head: [['Métrica', 'Valor']],
+      body: kpis,
+      theme: 'grid',
+    });
+
+    const lastTable1 = (doc as any).lastAutoTable;
+
+    autoTable(doc, {
+      startY: lastTable1.finalY + 10,
+      head: [['Desglose de Ingresos', 'Valor']],
+      body: [
+        ['Repuestos (Taller)', formatCurrency(ingresosTaller.repuestos)],
+        ['Servicios (Taller)', formatCurrency(ingresosTaller.servicios)],
+        ['Consumibles (Taller)', formatCurrency(ingresosTaller.consumibles)],
+        ['Punto de Venta', formatCurrency(ingresosPOS)]
+      ],
+      theme: 'grid',
+    });
+    
+    const lastTable2 = (doc as any).lastAutoTable;
+
+    autoTable(doc, {
+      startY: lastTable2.finalY + 10,
+      head: [['Desglose de Egresos', 'Valor']],
+      body: [
+        ['Gastos Operativos', formatCurrency(gastos)],
+        ['Nómina', formatCurrency(nomina)],
+        ['Costo Mercancía (COGS)', formatCurrency(cogsVentas + cogsTaller)]
+      ],
+      theme: 'grid',
+    });
+
+    doc.save('reporte-financiero.pdf');
+  };
+
   return (
     <div className="p-6 md:p-8 space-y-6 max-w-7xl mx-auto pb-24">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -148,22 +215,39 @@ const FinancialReportsModule: React.FC = () => {
           <p className="text-chrome-400 mt-1">Estado de resultados, flujo de caja y rentabilidad.</p>
         </div>
         
-        <div className="flex items-center gap-3 bg-metal-800/50 p-1.5 rounded-xl border border-metal-700/50">
-          {(['esteMes', 'mesPasado', 'esteAno', 'historico'] as const).map(filter => (
-            <button
-              key={filter}
-              onClick={() => setDateFilter(filter)}
-              className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${
-                dateFilter === filter 
-                  ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-900/20' 
-                  : 'text-chrome-400 hover:text-chrome-200 hover:bg-metal-700/50'
-              }`}
-            >
-              {filter === 'esteMes' ? 'Este Mes' : 
-               filter === 'mesPasado' ? 'Mes Pasado' : 
-               filter === 'esteAno' ? 'Este Año' : 'Histórico'}
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex items-center gap-2 bg-metal-800/50 p-1.5 rounded-xl border border-metal-700/50">
+            <button onClick={handleDownloadPDF} className="px-4 py-2 rounded-lg text-xs font-bold transition-all bg-blue-600 text-white shadow-lg shadow-blue-900/20 flex items-center gap-2 hover:bg-blue-500">
+              <Download size={16} /> Exportar PDF
             </button>
-          ))}
+          </div>
+          
+          {dateFilter === 'personalizado' && (
+            <div className="flex items-center gap-2 bg-metal-800/50 p-1.5 rounded-xl border border-metal-700/50">
+              <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="bg-metal-900 border border-metal-700 rounded-lg px-3 py-1.5 text-sm text-chrome-100" />
+              <span className="text-chrome-400">-</span>
+              <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="bg-metal-900 border border-metal-700 rounded-lg px-3 py-1.5 text-sm text-chrome-100" />
+            </div>
+          )}
+
+          <div className="flex items-center gap-3 bg-metal-800/50 p-1.5 rounded-xl border border-metal-700/50">
+            {(['esteMes', 'mesPasado', 'esteAno', 'historico', 'personalizado'] as const).map(filter => (
+              <button
+                key={filter}
+                onClick={() => setDateFilter(filter)}
+                className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${
+                  dateFilter === filter 
+                    ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-900/20' 
+                    : 'text-chrome-400 hover:text-chrome-200 hover:bg-metal-700/50'
+                }`}
+              >
+                {filter === 'esteMes' ? 'Este Mes' : 
+                 filter === 'mesPasado' ? 'Mes Pasado' : 
+                 filter === 'esteAno' ? 'Este Año' : 
+                 filter === 'personalizado' ? 'Personalizado' : 'Histórico'}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 

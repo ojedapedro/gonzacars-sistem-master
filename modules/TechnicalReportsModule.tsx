@@ -1,7 +1,9 @@
 import React, { useState, useMemo } from 'react';
 import { useGonzacarsStore } from '../store';
 import { VehicleRepair } from '../types';
-import { Calendar, Car, Clock, CheckCircle2, Wrench, Search, Filter, TrendingUp, LogIn, LogOut } from 'lucide-react';
+import { Calendar, Car, Clock, CheckCircle2, Wrench, Search, Filter, TrendingUp, LogIn, LogOut, Download } from 'lucide-react';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, Legend, LineChart, Line } from 'recharts';
 import { formatDate } from '../lib/utils/finance';
 
@@ -9,7 +11,9 @@ const TechnicalReportsModule: React.FC = () => {
   const store = useGonzacarsStore();
   const repairs = store.repairs || [];
   
-  const [dateFilter, setDateFilter] = useState<'esteMes' | 'mesPasado' | 'esteAno' | 'historico'>('esteMes');
+  const [dateFilter, setDateFilter] = useState<'esteMes' | 'mesPasado' | 'esteAno' | 'historico' | 'personalizado'>('esteMes');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
 
   // Helper to filter dates
@@ -28,6 +32,13 @@ const TechnicalReportsModule: React.FC = () => {
     }
     if (dateFilter === 'esteAno') {
       return repairDate.getFullYear() === now.getFullYear();
+    }
+    if (dateFilter === 'personalizado') {
+      if (!startDate && !endDate) return true;
+      const dTime = repairDate.getTime();
+      const start = startDate ? new Date(`${startDate}T00:00:00`).getTime() : 0;
+      const end = endDate ? new Date(`${endDate}T23:59:59`).getTime() : Infinity;
+      return dTime >= start && dTime <= end;
     }
     return true;
   };
@@ -119,6 +130,61 @@ const TechnicalReportsModule: React.FC = () => {
     return Object.values(dataMap).sort((a, b) => a.date.localeCompare(b.date));
   }, [filteredRepairs, dateFilter]);
 
+  const handleDownloadPDF = () => {
+    const doc = new jsPDF();
+    doc.setFontSize(18);
+    doc.text('Reporte Técnico', 14, 22);
+    
+    doc.setFontSize(12);
+    doc.text(`Fecha de generacion: ${new Date().toLocaleDateString('es-VE')}`, 14, 30);
+    
+    if (dateFilter === 'personalizado' && (startDate || endDate)) {
+      doc.text(`Filtrado: ${startDate || 'Inicio'} hasta ${endDate || 'Fin'}`, 14, 36);
+    }
+    
+    const kpisData = [
+      ['Vehículos Ingresados', kpis.entradas.toString()],
+      ['Vehículos Entregados', kpis.salidas.toString()],
+      ['En Taller (Retenidos)', kpis.enTaller.toString()],
+      ['Permanencia Promedio', `${kpis.permanenciaPromedio} días`]
+    ];
+
+    autoTable(doc, {
+      startY: 45,
+      head: [['Métrica', 'Valor']],
+      body: kpisData,
+      theme: 'grid',
+    });
+
+    const bodyTable = filteredRepairs.map(r => {
+      const entryDate = new Date(r.createdAt);
+      const exitDate = r.finishedAt ? new Date(r.finishedAt) : new Date();
+      const diffTime = Math.abs(exitDate.getTime() - entryDate.getTime());
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) || 1;
+
+      return [
+        formatDate(r.createdAt),
+        `${r.plate} - ${r.brand} ${r.model}`,
+        r.ownerName,
+        r.status,
+        r.finishedAt ? formatDate(r.finishedAt) : '-',
+        diffDays.toString()
+      ];
+    });
+
+    const lastTable = (doc as any).lastAutoTable;
+
+    autoTable(doc, {
+      startY: lastTable.finalY + 10,
+      head: [['Fecha Ingreso', 'Vehículo', 'Cliente', 'Estado', 'Fecha Salida', 'Días']],
+      body: bodyTable,
+      theme: 'grid',
+      styles: { fontSize: 8 }
+    });
+
+    doc.save('reporte-tecnico.pdf');
+  };
+
   return (
     <div className="p-6 md:p-8 space-y-6 max-w-7xl mx-auto pb-24">
       {/* Header */}
@@ -131,22 +197,39 @@ const TechnicalReportsModule: React.FC = () => {
           <p className="text-chrome-400 mt-1">Análisis de flujo, permanencia e histórico del taller.</p>
         </div>
         
-        <div className="flex items-center gap-3 bg-metal-800/50 p-1.5 rounded-xl border border-metal-700/50">
-          {(['esteMes', 'mesPasado', 'esteAno', 'historico'] as const).map(filter => (
-            <button
-              key={filter}
-              onClick={() => setDateFilter(filter)}
-              className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${
-                dateFilter === filter 
-                  ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/20' 
-                  : 'text-chrome-400 hover:text-chrome-200 hover:bg-metal-700/50'
-              }`}
-            >
-              {filter === 'esteMes' ? 'Este Mes' : 
-               filter === 'mesPasado' ? 'Mes Pasado' : 
-               filter === 'esteAno' ? 'Este Año' : 'Histórico'}
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex items-center gap-2 bg-metal-800/50 p-1.5 rounded-xl border border-metal-700/50">
+            <button onClick={handleDownloadPDF} className="px-4 py-2 rounded-lg text-xs font-bold transition-all bg-blue-600 text-white shadow-lg shadow-blue-900/20 flex items-center gap-2 hover:bg-blue-500">
+              <Download size={16} /> Exportar PDF
             </button>
-          ))}
+          </div>
+
+          {dateFilter === 'personalizado' && (
+            <div className="flex items-center gap-2 bg-metal-800/50 p-1.5 rounded-xl border border-metal-700/50">
+              <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="bg-metal-900 border border-metal-700 rounded-lg px-3 py-1.5 text-sm text-chrome-100" />
+              <span className="text-chrome-400">-</span>
+              <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="bg-metal-900 border border-metal-700 rounded-lg px-3 py-1.5 text-sm text-chrome-100" />
+            </div>
+          )}
+
+          <div className="flex items-center gap-3 bg-metal-800/50 p-1.5 rounded-xl border border-metal-700/50">
+            {(['esteMes', 'mesPasado', 'esteAno', 'historico', 'personalizado'] as const).map(filter => (
+              <button
+                key={filter}
+                onClick={() => setDateFilter(filter)}
+                className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${
+                  dateFilter === filter 
+                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/20' 
+                    : 'text-chrome-400 hover:text-chrome-200 hover:bg-metal-700/50'
+                }`}
+              >
+                {filter === 'esteMes' ? 'Este Mes' : 
+                 filter === 'mesPasado' ? 'Mes Pasado' : 
+                 filter === 'esteAno' ? 'Este Año' : 
+                 filter === 'personalizado' ? 'Personalizado' : 'Histórico'}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
