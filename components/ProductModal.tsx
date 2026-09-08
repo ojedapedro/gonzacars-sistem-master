@@ -93,8 +93,9 @@ export const ProductModal: React.FC<ProductModalProps> = ({
     const cost = Number(formData.cost) || 0;
 
     let newMargin = formData.profitMargin;
-    if (cost > 0) {
-      newMargin = ((newPrice / cost) - 1) * 100;
+    if (cost > 0 && newPrice > cost) {
+      // Inverse of: price = cost / (1 - margin/100)  =>  margin = (1 - cost/price) * 100
+      newMargin = (1 - (cost / newPrice)) * 100;
     }
 
     setFormData({
@@ -132,7 +133,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({
       if (dataToSave.category !== 'Servicio') {
         const cost = Number(dataToSave.cost) || 0;
         const margin = Number(dataToSave.profitMargin) || 0;
-        dataToSave.price = cost * (1 + margin / 100);
+        dataToSave.price = Math.ceil(cost / (1 - (margin / 100)));
       } else {
         dataToSave.price = Number(dataToSave.price) || 0;
         dataToSave.quantity = 9999;

@@ -302,7 +302,7 @@ export const registerPurchaseBatchService = async (
           category: p.category,
           quantity: p.quantity,
           cost: roundTo(p.price, 4),
-          price: roundTo(p.price * 1.3, 4), // Suggested 30% margin
+          price: Math.ceil(roundTo(p.price, 4) / (1 - 0.30)), // Suggested 30% margin (cost / complement)
           barcode: Math.floor(100000000000 + Math.random() * 900000000000).toString(),
           warehouseStock: wStock,
           lastEntry: new Date().toISOString().split('T')[0]
