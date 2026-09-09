@@ -751,12 +751,14 @@ const RepairReport: React.FC<{ store: any }> = ({ store }) => {
                   )}
                 </div>
                 <div className="flex gap-2">
-                  <button
-                    onClick={() => setShowAbonoModal(true)}
-                    className="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5 transition-all active:scale-95"
-                  >
-                    <DollarSign size={13} /> Abono
-                  </button>
+                  {currentRepair.status !== 'Entregado' && (
+                    <button
+                      onClick={() => setShowAbonoModal(true)}
+                      className="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5 transition-all active:scale-95"
+                    >
+                      <DollarSign size={13} /> Abono
+                    </button>
+                  )}
                   <button
                     onClick={() => handlePrint('report')}
                     className="bg-metal-mid/10 hover:bg-metal-mid/20 border border-white/10 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5 transition-all"
@@ -768,19 +770,30 @@ const RepairReport: React.FC<{ store: any }> = ({ store }) => {
             </div>
 
             <div className="p-8 space-y-10 overflow-y-auto custom-scrollbar flex-1 bg-metal-dark/20">
+              {currentRepair.status === 'Entregado' && (
+                <div className="bg-red-500/10 border border-red-500/30 text-red-400 px-6 py-4 rounded-2xl flex items-center gap-3">
+                  <AlertCircle size={24} />
+                  <div>
+                    <h4 className="font-black uppercase tracking-widest text-sm">Informe Cerrado Definitivamente</h4>
+                    <p className="text-xs font-medium mt-1 text-red-400/80">El vehículo ha sido entregado. No se pueden agregar más servicios, repuestos ni abonos.</p>
+                  </div>
+                </div>
+              )}
               <div className="space-y-6">
                 <div className="flex justify-between items-center px-2">
                   <h3 className="text-xl font-black text-chrome-100 uppercase tracking-tighter flex items-center gap-3">
                     <Layers size={24} className="text-blue-600" /> Cargos a la Orden
                   </h3>
-                  <div className="flex gap-2">
-                    <button onClick={() => setShowInventorySearch(true)} className="px-4 py-2 btn-chrome rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-700">
-                      + Repuesto
-                    </button>
-                    <button onClick={() => setShowServiceModal(true)} className="px-4 py-2 btn-chrome rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-black">
-                      + Servicio Manual
-                    </button>
-                  </div>
+                  {currentRepair.status !== 'Entregado' && (
+                    <div className="flex gap-2">
+                      <button onClick={() => setShowInventorySearch(true)} className="px-4 py-2 btn-chrome rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-700">
+                        + Repuesto
+                      </button>
+                      <button onClick={() => setShowServiceModal(true)} className="px-4 py-2 btn-chrome rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-black">
+                        + Servicio Manual
+                      </button>
+                    </div>
+                  )}
                 </div>
 
                 <div className="bg-metal-mid rounded-3xl border-2 border-metal-border shadow-sm overflow-hidden">
@@ -801,34 +814,40 @@ const RepairReport: React.FC<{ store: any }> = ({ store }) => {
                             <div className="relative">
                               <input
                                 type="text"
-                                className="w-full bg-transparent font-bold text-chrome-200 uppercase outline-none border-b border-transparent focus:border-blue-500 focus:text-blue-600 transition-all placeholder:text-chrome-500"
+                                className="w-full bg-transparent font-bold text-chrome-200 uppercase outline-none border-b border-transparent focus:border-blue-500 focus:text-blue-600 transition-all placeholder:text-chrome-500 disabled:opacity-80"
                                 value={item.description}
                                 onChange={(e) => updateItem(item.id, 'description', e.target.value)}
                                 placeholder="Descripción del servicio o repuesto"
+                                disabled={currentRepair.status === 'Entregado'}
                               />
                               <span className="text-[9px] font-black text-chrome-500 uppercase tracking-widest block mt-1">{item.type}</span>
                             </div>
                           </td>
                           <td className="px-6 py-4">
-                            <div className="flex items-center justify-center bg-metal-mid border border-metal-border rounded-xl p-1 shadow-sm w-fit mx-auto">
-                              <button onClick={() => updateItem(item.id, 'quantity', Math.max(1, item.quantity - 1))} className="w-8 h-8 flex items-center justify-center text-chrome-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"><Minus size={14} /></button>
-                              <input
-                                type="number"
-                                className="w-10 text-center font-black text-chrome-200 bg-transparent outline-none text-sm"
-                                value={item.quantity}
-                                onChange={(e) => updateItem(item.id, 'quantity', Number(e.target.value))}
-                              />
-                              <button onClick={() => updateItem(item.id, 'quantity', item.quantity + 1)} className="w-8 h-8 flex items-center justify-center text-chrome-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"><Plus size={14} /></button>
-                            </div>
+                            {currentRepair.status === 'Entregado' ? (
+                              <div className="text-center font-black text-chrome-200">{item.quantity}</div>
+                            ) : (
+                              <div className="flex items-center justify-center bg-metal-mid border border-metal-border rounded-xl p-1 shadow-sm w-fit mx-auto">
+                                <button onClick={() => updateItem(item.id, 'quantity', Math.max(1, item.quantity - 1))} className="w-8 h-8 flex items-center justify-center text-chrome-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"><Minus size={14} /></button>
+                                <input
+                                  type="number"
+                                  className="w-10 text-center font-black text-chrome-200 bg-transparent outline-none text-sm"
+                                  value={item.quantity}
+                                  onChange={(e) => updateItem(item.id, 'quantity', Number(e.target.value))}
+                                />
+                                <button onClick={() => updateItem(item.id, 'quantity', item.quantity + 1)} className="w-8 h-8 flex items-center justify-center text-chrome-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"><Plus size={14} /></button>
+                              </div>
+                            )}
                           </td>
                           <td className="px-6 py-4 text-right">
                             <div className="relative">
                               <span className="absolute left-0 top-1/2 -translate-y-1/2 text-chrome-500 text-xs">$</span>
                               <input
                                 type="number"
-                                className="w-full text-right bg-transparent font-bold text-chrome-200 outline-none border-b border-transparent focus:border-blue-500 transition-all"
+                                className="w-full text-right bg-transparent font-bold text-chrome-200 outline-none border-b border-transparent focus:border-blue-500 transition-all disabled:opacity-80"
                                 value={item.price}
                                 onChange={(e) => updateItem(item.id, 'price', Number(e.target.value))}
+                                disabled={currentRepair.status === 'Entregado'}
                               />
                             </div>
                           </td>
@@ -838,9 +857,11 @@ const RepairReport: React.FC<{ store: any }> = ({ store }) => {
                             </span>
                           </td>
                           <td className="px-6 py-4 text-center">
-                            <button onClick={() => removeItem(item.id)} className="w-8 h-8 flex items-center justify-center text-chrome-500 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all opacity-0 group-hover:opacity-100">
-                              <Trash2 size={16} />
-                            </button>
+                            {currentRepair.status !== 'Entregado' && (
+                              <button onClick={() => removeItem(item.id)} className="w-8 h-8 flex items-center justify-center text-chrome-500 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all opacity-0 group-hover:opacity-100">
+                                <Trash2 size={16} />
+                              </button>
+                            )}
                           </td>
                         </tr>
                       ))}
@@ -863,7 +884,7 @@ const RepairReport: React.FC<{ store: any }> = ({ store }) => {
                     }`}>
                       {currentRepair.evidencePhotos?.length || 0} / 5
                     </span>
-                    {(currentRepair.evidencePhotos?.length || 0) < 5 && (
+                    {(currentRepair.evidencePhotos?.length || 0) < 5 && currentRepair.status !== 'Entregado' && (
                       <label className="cursor-pointer flex items-center gap-2 bg-cyan-600 hover:bg-cyan-500 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all active:scale-95">
                         {isCompressingPhoto
                           ? <><Loader2 size={13} className="animate-spin" /> Procesando…</>
@@ -900,13 +921,15 @@ const RepairReport: React.FC<{ store: any }> = ({ store }) => {
                           >
                             <ZoomIn size={14} />
                           </button>
-                          <button
-                            onClick={() => removePhoto(idx)}
-                            className="p-1.5 bg-red-500/80 hover:bg-red-500 rounded-lg text-white transition-all"
-                            title="Eliminar foto"
-                          >
-                            <Trash2 size={14} />
-                          </button>
+                          {currentRepair.status !== 'Entregado' && (
+                            <button
+                              onClick={() => removePhoto(idx)}
+                              className="p-1.5 bg-red-500/80 hover:bg-red-500 rounded-lg text-white transition-all"
+                              title="Eliminar foto"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          )}
                         </div>
                         <div className="absolute bottom-1 left-1 bg-black/60 text-white text-[8px] font-black px-1.5 py-0.5 rounded">
                           {idx + 1}
@@ -923,12 +946,14 @@ const RepairReport: React.FC<{ store: any }> = ({ store }) => {
                   </div>
                 ) : (
                   <div
-                    className="border-2 border-dashed border-metal-border rounded-2xl bg-metal-dark/30 flex flex-col items-center justify-center py-10 cursor-pointer hover:border-cyan-400/50 hover:bg-cyan-500/5 transition-all"
-                    onClick={() => photoInputRef.current?.click()}
+                    className={`border-2 border-dashed border-metal-border rounded-2xl bg-metal-dark/30 flex flex-col items-center justify-center py-10 transition-all ${currentRepair.status !== 'Entregado' ? 'cursor-pointer hover:border-cyan-400/50 hover:bg-cyan-500/5' : ''}`}
+                    onClick={() => currentRepair.status !== 'Entregado' && photoInputRef.current?.click()}
                   >
                     <Camera size={36} className="text-chrome-500 mb-3" />
                     <p className="text-sm font-black text-chrome-500 uppercase tracking-wide">Sin fotografías</p>
-                    <p className="text-xs text-chrome-500 font-medium mt-1">Haz clic para agregar la primera evidencia</p>
+                    {currentRepair.status !== 'Entregado' && (
+                      <p className="text-xs text-chrome-500 font-medium mt-1">Haz clic para agregar la primera evidencia</p>
+                    )}
                   </div>
                 )}
               </div>
@@ -941,12 +966,14 @@ const RepairReport: React.FC<{ store: any }> = ({ store }) => {
                 >
                   <Printer size={18} /> Informe Preliminar
                 </button>
-                <button
-                  onClick={() => setShowPayModal(true)}
-                  className="flex-1 bg-blue-600 hover:bg-blue-500 text-white py-4 rounded-2xl font-black uppercase text-xs tracking-widest flex items-center justify-center gap-2 transition-all shadow-lg shadow-blue-600/25 active:scale-[0.98]"
-                >
-                  <CheckCircle size={18} /> Cerrar y Entregar Vehículo
-                </button>
+                {currentRepair.status !== 'Entregado' && (
+                  <button
+                    onClick={() => setShowPayModal(true)}
+                    className="flex-1 bg-blue-600 hover:bg-blue-500 text-white py-4 rounded-2xl font-black uppercase text-xs tracking-widest flex items-center justify-center gap-2 transition-all shadow-lg shadow-blue-600/25 active:scale-[0.98]"
+                  >
+                    <CheckCircle size={18} /> Cerrar y Entregar Vehículo
+                  </button>
+                )}
               </div>
             </div>
           </div>
