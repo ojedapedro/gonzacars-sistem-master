@@ -607,7 +607,14 @@ const PayrollModule: React.FC<{ store: any }> = ({ store }) => {
   const [receiptRecord, setReceiptRecord] = useState<{ record: PayrollRecord; emp: Employee } | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [period, setPeriod] = useState<PayrollPeriod>('Mensual');
-  const [activeTab, setActiveTab] = useState<'personal' | 'detallado' | 'consolidado' | 'historial'>('personal');
+  const [activeTab, setActiveTab] = useState<'personal' | 'detallado' | 'consolidado' | 'historial' | 'comisiones'>('personal');
+
+  // ── Filtros de fechas para el reporte de comisiones ──
+  const today = new Date().toISOString().split('T')[0];
+  const firstDayOfMonth = today.slice(0, 8) + '01';
+  const [commFromDate, setCommFromDate] = useState(firstDayOfMonth);
+  const [commToDate, setCommToDate] = useState(today);
+  const [commRoleFilter, setCommRoleFilter] = useState<'Todos' | 'Mecánico' | 'Vendedor'>('Todos');
 
   const isAdm = store.currentUser?.role === 'administrador';
   const exchangeRate: number = store.exchangeRate || 1;
@@ -672,6 +679,189 @@ const PayrollModule: React.FC<{ store: any }> = ({ store }) => {
       };
     });
   }, [store.employees, store.repairs, store.sales, sharedSalesCommission, factor, exchangeRate]);
+
+  /* ─── REPORTE DE COMISIONES FILTRADO POR FECHA ─── */
+  const commissionReport = useMemo(() => {
+    const from = commFromDate ? new Date(commFromDate + 'T00:00:00') : null;
+    const to   = commToDate   ? new Date(commToDate   + 'T23:59:59') : null;
+
+    const employees: Employee[] = store.employees || [];
+
+    // ── MECÁNICOS: comisiones por servicios en órdenes entregadas ──
+    const mechanics = employees.filter(e => e.role === 'Mecánico' || e.role === 'Ayudante de Mecánica');
+    const mechanicRows = mechanics.map(emp => {
+      const repairsInRange: VehicleRepair[] = (store.repairs || []).filter((r: VehicleRepair) => {
+        if (r.mechanicId !== emp.id) return false;
+        if (r.status !== 'Entregado') return false;
+        const repairDate = new Date(r.finishedAt || r.createdAt);
+        if (from && repairDate < from) return false;
+        if (to   && repairDate > to)   return false;
+        return true;
+      });
+
+      const serviceLines: { repairId: string; plate: string; ownerName: string; finishedAt: string; description: string; qty: number; unitPrice: number; subtotal: number; commission: number }[] = [];
+
+      repairsInRange.forEach((r: VehicleRepair) => {
+        const servicios = (r.items || []).filter(i => i.type === 'Servicio');
+        servicios.forEach(item => {
+          const sub = item.price * item.quantity;
+          serviceLines.push({
+            repairId: r.id,
+            plate: r.plate,
+            ownerName: r.ownerName,
+            finishedAt: r.finishedAt || r.createdAt,
+            description: item.description,
+            qty: item.quantity,
+            unitPrice: item.price,
+            subtotal: sub,
+            commission: sub * (emp.commissionRate || 0),
+          });
+        });
+      });
+
+      const totalServices = serviceLines.reduce((s, l) => s + l.subtotal, 0);
+      const totalCommission = serviceLines.reduce((s, l) => s + l.commission, 0);
+
+      return {
+        employeeId: emp.id,
+        name: emp.name,
+        role: emp.role,
+        commissionRate: emp.commissionRate || 0,
+        cedula: emp.cedula,
+        repairCount: repairsInRange.length,
+        totalServices,
+        totalCommission,
+        lines: serviceLines,
+      };
+    }).filter(r => r.lines.length > 0 || commRoleFilter !== 'Vendedor');
+
+    // ── VENDEDORES: comisiones por ventas en el período ──
+    const sellers = employees.filter(e => e.role === 'Vendedor');
+    const sellerRows = sellers.map(emp => {
+      const salesInRange: Sale[] = (store.sales || []).filter((s: Sale) => {
+        const sDate = new Date(s.date);
+        if (from && sDate < from) return false;
+        if (to   && sDate > to)   return false;
+        return true;
+      });
+
+      const saleLines: { saleId: string; date: string; customerName: string; productName: string; qty: number; unitPrice: number; subtotal: number; commission: number }[] = [];
+
+      salesInRange.forEach((s: Sale) => {
+        (s.items || []).forEach(item => {
+          const sub = item.price * item.quantity;
+          // pool compartido: cada venta aporta 2.5% / # vendedores
+          const sellerCount = sellers.length > 0 ? sellers.length : 1;
+          const commPerItem = (sub * 0.025) / sellerCount;
+          saleLines.push({
+            saleId: s.id,
+            date: s.date,
+            customerName: s.customerName,
+            productName: item.name,
+            qty: item.quantity,
+            unitPrice: item.price,
+            subtotal: sub,
+            commission: commPerItem,
+          });
+        });
+      });
+
+      const totalSales = saleLines.reduce((s, l) => s + l.subtotal, 0);
+      const totalCommission = saleLines.reduce((s, l) => s + l.commission, 0);
+
+      return {
+        employeeId: emp.id,
+        name: emp.name,
+        role: emp.role,
+        commissionRate: 0.025 / (sellers.length || 1),
+        cedula: emp.cedula,
+        saleCount: salesInRange.length,
+        totalSales,
+        totalCommission,
+        lines: saleLines,
+      };
+    }).filter(r => r.lines.length > 0 || commRoleFilter !== 'Mecánico');
+
+    return { mechanicRows, sellerRows };
+  }, [store.employees, store.repairs, store.sales, commFromDate, commToDate, commRoleFilter]);
+
+  /* ─── PDF: COMISIONES ─── */
+  const handleDownloadCommissionPDF = () => {
+    const doc = new jsPDF({ orientation: 'landscape' });
+    const fmtDate = (d: string) => new Date(d).toLocaleDateString('es-VE');
+    const fmtCur = (n: number) => `$${n.toFixed(2)}`;
+    const rangeLabel = `${commFromDate} al ${commToDate}`;
+    const now = new Date().toLocaleDateString('es-VE', { year: 'numeric', month: 'long', day: 'numeric' });
+
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(16); doc.setTextColor(15, 23, 42);
+    doc.text('GONZACARS C.A. — REPORTE DE COMISIONES', 14, 15);
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(71, 85, 105);
+    doc.text(`Período: ${rangeLabel}   |   Emitido: ${now}`, 14, 21);
+
+    let curY = 28;
+
+    // ── Mecánicos ──
+    if (commRoleFilter !== 'Vendedor' && commissionReport.mechanicRows.length > 0) {
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(11); doc.setTextColor(37, 99, 235);
+      doc.text('MECÁNICOS — Comisiones por Mano de Obra', 14, curY);
+      curY += 5;
+
+      commissionReport.mechanicRows.forEach(row => {
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(15, 23, 42);
+        doc.text(`${row.name.toUpperCase()}  (${row.role}) — Tasa: ${(row.commissionRate * 100).toFixed(0)}%  |  Órdenes: ${row.repairCount}  |  Total Servicios: ${fmtCur(row.totalServices)}  |  Comisión Total: ${fmtCur(row.totalCommission)}`, 14, curY + 4);
+
+        autoTable(doc, {
+          startY: curY + 7,
+          head: [['Fecha Entrega', 'Placa', 'Cliente', 'Servicio', 'Cant.', 'P. Unit.', 'Subtotal', 'Comisión']],
+          body: row.lines.map(l => [
+            fmtDate(l.finishedAt), l.plate.toUpperCase(), l.ownerName,
+            l.description, l.qty.toString(), fmtCur(l.unitPrice), fmtCur(l.subtotal), fmtCur(l.commission)
+          ]),
+          foot: [['', '', '', '', '', 'TOTALES →', fmtCur(row.totalServices), fmtCur(row.totalCommission)]],
+          theme: 'striped',
+          headStyles: { fillColor: [30, 58, 138], textColor: 255, fontSize: 7.5, fontStyle: 'bold' },
+          footStyles: { fillColor: [226, 232, 240], textColor: [15, 23, 42], fontStyle: 'bold', fontSize: 8 },
+          bodyStyles: { fontSize: 7 },
+          columnStyles: { 4: { halign: 'center' }, 5: { halign: 'right' }, 6: { halign: 'right', fontStyle: 'bold' }, 7: { halign: 'right', fontStyle: 'bold', textColor: [5, 150, 105] } },
+          margin: { left: 14, right: 14 },
+        });
+        curY = (doc as any).lastAutoTable.finalY + 8;
+        if (curY > 175) { doc.addPage(); curY = 15; }
+      });
+    }
+
+    // ── Vendedores ──
+    if (commRoleFilter !== 'Mecánico' && commissionReport.sellerRows.length > 0) {
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(11); doc.setTextColor(5, 150, 105);
+      doc.text('VENDEDORES — Comisiones por Ventas', 14, curY);
+      curY += 5;
+
+      commissionReport.sellerRows.forEach(row => {
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(15, 23, 42);
+        doc.text(`${row.name.toUpperCase()}  (${row.role}) — Ventas: ${row.saleCount}  |  Total Vendido: ${fmtCur(row.totalSales)}  |  Comisión Total: ${fmtCur(row.totalCommission)}`, 14, curY + 4);
+
+        autoTable(doc, {
+          startY: curY + 7,
+          head: [['Fecha', 'Cliente', 'Producto / Servicio', 'Cant.', 'P. Unit.', 'Subtotal', 'Comisión']],
+          body: row.lines.map(l => [
+            fmtDate(l.date), l.customerName, l.productName,
+            l.qty.toString(), fmtCur(l.unitPrice), fmtCur(l.subtotal), fmtCur(l.commission)
+          ]),
+          foot: [['', '', '', '', 'TOTALES →', fmtCur(row.totalSales), fmtCur(row.totalCommission)]],
+          theme: 'striped',
+          headStyles: { fillColor: [6, 95, 70], textColor: 255, fontSize: 7.5, fontStyle: 'bold' },
+          footStyles: { fillColor: [209, 250, 229], textColor: [6, 78, 59], fontStyle: 'bold', fontSize: 8 },
+          bodyStyles: { fontSize: 7 },
+          columnStyles: { 3: { halign: 'center' }, 4: { halign: 'right' }, 5: { halign: 'right', fontStyle: 'bold' }, 6: { halign: 'right', fontStyle: 'bold', textColor: [5, 150, 105] } },
+          margin: { left: 14, right: 14 },
+        });
+        curY = (doc as any).lastAutoTable.finalY + 8;
+        if (curY > 175) { doc.addPage(); curY = 15; }
+      });
+    }
+
+    doc.save(`comisiones_${commFromDate}_${commToDate}.pdf`);
+  };
 
   /* ─── PDF: DETALLADO DE NÓMINA ─── */
   const handleDownloadDetalladoPDF = () => {
@@ -1176,6 +1366,11 @@ const PayrollModule: React.FC<{ store: any }> = ({ store }) => {
             ${activeTab === 'historial' ? 'bg-blue-600 text-white shadow-lg' : 'text-chrome-500 hover:text-chrome-300'}`}>
           <LayoutList size={14}/> Historial de Pagos
         </button>
+        <button onClick={() => setActiveTab('comisiones')}
+          className={`px-5 py-2.5 rounded-lg font-black text-xs uppercase tracking-widest flex items-center gap-2 transition-all
+            ${activeTab === 'comisiones' ? 'bg-emerald-600 text-white shadow-lg' : 'text-chrome-500 hover:text-chrome-300'}`}>
+          <TrendingUp size={14}/> Comisiones
+        </button>
       </div>
 
       {/* TAB: PERSONAL */}
@@ -1634,6 +1829,201 @@ const PayrollModule: React.FC<{ store: any }> = ({ store }) => {
             <div className="flex flex-col items-center justify-center py-20 text-chrome-500">
               <LayoutList size={48} className="opacity-20 mb-4"/>
               <p className="text-xs font-black uppercase tracking-widest">No hay pagos de nómina registrados</p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ═══════════════════════════════════════════════════════
+          TAB: COMISIONES
+      ═══════════════════════════════════════════════════════ */}
+      {activeTab === 'comisiones' && (
+        <div className="space-y-6">
+
+          {/* ── Barra de filtros ── */}
+          <div className="bg-metal-900 border border-metal-800 rounded-2xl p-6 flex flex-col sm:flex-row gap-4 items-end flex-wrap">
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[10px] font-black text-chrome-500 uppercase tracking-widest flex items-center gap-1.5"><Calendar size={11}/> Desde</label>
+              <input type="date" value={commFromDate} onChange={e => setCommFromDate(e.target.value)}
+                className="bg-metal-800 border border-metal-700 rounded-xl px-4 py-2.5 text-chrome-100 text-sm outline-none focus:border-blue-500 transition-colors"/>
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[10px] font-black text-chrome-500 uppercase tracking-widest flex items-center gap-1.5"><Calendar size={11}/> Hasta</label>
+              <input type="date" value={commToDate} onChange={e => setCommToDate(e.target.value)}
+                className="bg-metal-800 border border-metal-700 rounded-xl px-4 py-2.5 text-chrome-100 text-sm outline-none focus:border-blue-500 transition-colors"/>
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[10px] font-black text-chrome-500 uppercase tracking-widest">Filtrar por Rol</label>
+              <div className="flex bg-metal-800 rounded-xl p-1 border border-metal-700">
+                {(['Todos', 'Mecánico', 'Vendedor'] as const).map(r => (
+                  <button key={r} onClick={() => setCommRoleFilter(r)}
+                    className={`px-4 py-2 rounded-lg font-black text-xs uppercase tracking-widest transition-all
+                      ${commRoleFilter === r ? 'bg-emerald-600 text-white shadow' : 'text-chrome-500 hover:text-chrome-300'}`}>
+                    {r}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="ml-auto">
+              <button onClick={handleDownloadCommissionPDF}
+                className="flex items-center gap-2 px-5 py-3 bg-emerald-600/15 hover:bg-emerald-600/25 text-emerald-400 border border-emerald-500/30 font-black uppercase text-xs tracking-widest rounded-xl transition-all shadow-md">
+                <Download size={16}/> Exportar PDF
+              </button>
+            </div>
+          </div>
+
+          {/* ── MECÁNICOS ── */}
+          {commRoleFilter !== 'Vendedor' && (
+            <div>
+              <h2 className="text-lg font-black text-blue-400 uppercase tracking-widest flex items-center gap-2 mb-4">
+                <Wrench size={20}/> Mecánicos — Comisiones por Mano de Obra
+              </h2>
+              {commissionReport.mechanicRows.length === 0 ? (
+                <div className="bg-metal-900 border border-metal-800 rounded-2xl flex flex-col items-center justify-center py-16 text-chrome-500">
+                  <Wrench size={40} className="opacity-20 mb-3"/>
+                  <p className="text-xs font-black uppercase tracking-widest">Sin órdenes entregadas en este período</p>
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  {commissionReport.mechanicRows.map(row => (
+                    <div key={row.employeeId} className="bg-metal-900 border border-metal-800 rounded-2xl overflow-hidden">
+                      <div className="bg-blue-950/40 border-b border-blue-500/20 px-6 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-xl bg-blue-600/20 border border-blue-500/30 flex items-center justify-center">
+                            <Wrench size={18} className="text-blue-400"/>
+                          </div>
+                          <div>
+                            <p className="font-black text-chrome-100 uppercase tracking-tight">{row.name}</p>
+                            <p className="text-xs text-chrome-500 font-bold">{row.role}{row.cedula ? ` · C.I. ${row.cedula}` : ''}</p>
+                          </div>
+                        </div>
+                        <div className="flex gap-6 text-right flex-wrap">
+                          <div><p className="text-[9px] font-black text-chrome-500 uppercase tracking-widest">Tasa</p><p className="text-xl font-black text-blue-400">{(row.commissionRate * 100).toFixed(0)}%</p></div>
+                          <div><p className="text-[9px] font-black text-chrome-500 uppercase tracking-widest">Órdenes</p><p className="text-xl font-black text-chrome-200">{row.repairCount}</p></div>
+                          <div><p className="text-[9px] font-black text-chrome-500 uppercase tracking-widest">Total Servicios</p><p className="text-xl font-black text-chrome-200">{formatCurrency(row.totalServices)}</p></div>
+                          <div className="bg-emerald-500/10 border border-emerald-500/20 px-4 py-2 rounded-xl">
+                            <p className="text-[9px] font-black text-emerald-400 uppercase tracking-widest">Comisión Total</p>
+                            <p className="text-2xl font-black text-emerald-400">{formatCurrency(row.totalCommission)}</p>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-left">
+                          <thead>
+                            <tr className="bg-metal-800/40 border-b border-metal-800">
+                              <th className="px-5 py-3 text-[9px] font-black text-chrome-500 uppercase tracking-widest">Fecha Entrega</th>
+                              <th className="px-5 py-3 text-[9px] font-black text-chrome-500 uppercase tracking-widest">Placa</th>
+                              <th className="px-5 py-3 text-[9px] font-black text-chrome-500 uppercase tracking-widest">Cliente</th>
+                              <th className="px-5 py-3 text-[9px] font-black text-chrome-500 uppercase tracking-widest">Servicio Realizado</th>
+                              <th className="px-5 py-3 text-[9px] font-black text-chrome-500 uppercase tracking-widest text-center">Cant.</th>
+                              <th className="px-5 py-3 text-[9px] font-black text-chrome-500 uppercase tracking-widest text-right">P. Unit.</th>
+                              <th className="px-5 py-3 text-[9px] font-black text-chrome-500 uppercase tracking-widest text-right">Subtotal</th>
+                              <th className="px-5 py-3 text-[9px] font-black text-emerald-500 uppercase tracking-widest text-right">Comisión</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-metal-800/50">
+                            {row.lines.map((line, i) => (
+                              <tr key={i} className="hover:bg-blue-500/5 transition-colors">
+                                <td className="px-5 py-3 text-xs text-chrome-400 font-medium">{new Date(line.finishedAt).toLocaleDateString('es-VE')}</td>
+                                <td className="px-5 py-3 font-mono font-black text-blue-400 text-xs tracking-widest">{line.plate.toUpperCase()}</td>
+                                <td className="px-5 py-3 text-xs text-chrome-300 font-semibold">{line.ownerName}</td>
+                                <td className="px-5 py-3 text-xs text-chrome-200 font-bold uppercase">{line.description}</td>
+                                <td className="px-5 py-3 text-xs text-chrome-300 text-center font-bold">{line.qty}</td>
+                                <td className="px-5 py-3 text-xs text-chrome-300 text-right font-bold">{formatCurrency(line.unitPrice)}</td>
+                                <td className="px-5 py-3 text-sm text-chrome-100 text-right font-black">{formatCurrency(line.subtotal)}</td>
+                                <td className="px-5 py-3 text-sm text-emerald-400 text-right font-black">{formatCurrency(line.commission)}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                          <tfoot>
+                            <tr className="bg-metal-800/60 border-t-2 border-metal-700">
+                              <td colSpan={6} className="px-5 py-3 text-xs font-black text-chrome-400 uppercase tracking-widest">Total del Período</td>
+                              <td className="px-5 py-3 text-sm font-black text-chrome-100 text-right">{formatCurrency(row.totalServices)}</td>
+                              <td className="px-5 py-3 text-base font-black text-emerald-400 text-right">{formatCurrency(row.totalCommission)}</td>
+                            </tr>
+                          </tfoot>
+                        </table>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ── VENDEDORES ── */}
+          {commRoleFilter !== 'Mecánico' && (
+            <div>
+              <h2 className="text-lg font-black text-emerald-400 uppercase tracking-widest flex items-center gap-2 mb-4">
+                <ShoppingBag size={20}/> Vendedores — Comisiones por Ventas
+              </h2>
+              {commissionReport.sellerRows.length === 0 ? (
+                <div className="bg-metal-900 border border-metal-800 rounded-2xl flex flex-col items-center justify-center py-16 text-chrome-500">
+                  <ShoppingBag size={40} className="opacity-20 mb-3"/>
+                  <p className="text-xs font-black uppercase tracking-widest">Sin ventas en este período</p>
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  {commissionReport.sellerRows.map(row => (
+                    <div key={row.employeeId} className="bg-metal-900 border border-metal-800 rounded-2xl overflow-hidden">
+                      <div className="bg-emerald-950/40 border-b border-emerald-500/20 px-6 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-xl bg-emerald-600/20 border border-emerald-500/30 flex items-center justify-center">
+                            <ShoppingBag size={18} className="text-emerald-400"/>
+                          </div>
+                          <div>
+                            <p className="font-black text-chrome-100 uppercase tracking-tight">{row.name}</p>
+                            <p className="text-xs text-chrome-500 font-bold">{row.role}{row.cedula ? ` · C.I. ${row.cedula}` : ''}</p>
+                          </div>
+                        </div>
+                        <div className="flex gap-6 text-right flex-wrap">
+                          <div><p className="text-[9px] font-black text-chrome-500 uppercase tracking-widest">Ventas</p><p className="text-xl font-black text-chrome-200">{row.saleCount}</p></div>
+                          <div><p className="text-[9px] font-black text-chrome-500 uppercase tracking-widest">Total Vendido</p><p className="text-xl font-black text-chrome-200">{formatCurrency(row.totalSales)}</p></div>
+                          <div className="bg-emerald-500/10 border border-emerald-500/20 px-4 py-2 rounded-xl">
+                            <p className="text-[9px] font-black text-emerald-400 uppercase tracking-widest">Comisión Total</p>
+                            <p className="text-2xl font-black text-emerald-400">{formatCurrency(row.totalCommission)}</p>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-left">
+                          <thead>
+                            <tr className="bg-metal-800/40 border-b border-metal-800">
+                              <th className="px-5 py-3 text-[9px] font-black text-chrome-500 uppercase tracking-widest">Fecha</th>
+                              <th className="px-5 py-3 text-[9px] font-black text-chrome-500 uppercase tracking-widest">Cliente</th>
+                              <th className="px-5 py-3 text-[9px] font-black text-chrome-500 uppercase tracking-widest">Producto / Servicio</th>
+                              <th className="px-5 py-3 text-[9px] font-black text-chrome-500 uppercase tracking-widest text-center">Cant.</th>
+                              <th className="px-5 py-3 text-[9px] font-black text-chrome-500 uppercase tracking-widest text-right">P. Unit.</th>
+                              <th className="px-5 py-3 text-[9px] font-black text-chrome-500 uppercase tracking-widest text-right">Subtotal</th>
+                              <th className="px-5 py-3 text-[9px] font-black text-emerald-500 uppercase tracking-widest text-right">Comisión</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-metal-800/50">
+                            {row.lines.map((line, i) => (
+                              <tr key={i} className="hover:bg-emerald-500/5 transition-colors">
+                                <td className="px-5 py-3 text-xs text-chrome-400 font-medium">{new Date(line.date).toLocaleDateString('es-VE')}</td>
+                                <td className="px-5 py-3 text-xs text-chrome-300 font-semibold">{line.customerName}</td>
+                                <td className="px-5 py-3 text-xs text-chrome-200 font-bold uppercase">{line.productName}</td>
+                                <td className="px-5 py-3 text-xs text-chrome-300 text-center font-bold">{line.qty}</td>
+                                <td className="px-5 py-3 text-xs text-chrome-300 text-right font-bold">{formatCurrency(line.unitPrice)}</td>
+                                <td className="px-5 py-3 text-sm text-chrome-100 text-right font-black">{formatCurrency(line.subtotal)}</td>
+                                <td className="px-5 py-3 text-sm text-emerald-400 text-right font-black">{formatCurrency(line.commission)}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                          <tfoot>
+                            <tr className="bg-metal-800/60 border-t-2 border-metal-700">
+                              <td colSpan={5} className="px-5 py-3 text-xs font-black text-chrome-400 uppercase tracking-widest">Total del Período</td>
+                              <td className="px-5 py-3 text-sm font-black text-chrome-100 text-right">{formatCurrency(row.totalSales)}</td>
+                              <td className="px-5 py-3 text-base font-black text-emerald-400 text-right">{formatCurrency(row.totalCommission)}</td>
+                            </tr>
+                          </tfoot>
+                        </table>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </div>
