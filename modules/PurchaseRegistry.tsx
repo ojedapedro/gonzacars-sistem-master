@@ -254,14 +254,15 @@ const PurchaseRegistry: React.FC<{ store: any }> = ({ store }) => {
               <h4 className="text-[10px] font-black text-chrome-500 uppercase tracking-[0.2em] mb-6 flex items-center gap-2">
                 <Package size={16} className="text-blue-500" /> Carga de Productos
               </h4>
-              <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end bg-metal-dark p-6 rounded-3xl border border-metal-border">
-                <div className="md:col-span-4 space-y-1.5">
-                  <label className="text-[9px] font-black text-chrome-500 uppercase tracking-widest ml-1">Nombre del Repuesto</label>
+              <div className="bg-metal-dark p-6 rounded-3xl border border-metal-border/50 shadow-inner flex flex-col gap-5">
+                {/* Primera Fila: Nombre ocupa todo el ancho */}
+                <div className="w-full space-y-1.5">
+                  <label className="text-[10px] font-medium text-chrome-400 uppercase tracking-widest ml-1">Nombre del Repuesto</label>
                   <input 
                     type="text" 
                     list="existingProducts" 
                     placeholder="Escriba para buscar..." 
-                    className="w-full px-4 py-2.5 bg-metal-mid border border-metal-border rounded-xl font-bold outline-none" 
+                    className="w-full px-4 py-3 bg-metal-mid border border-metal-border rounded-xl font-bold outline-none focus:ring-4 focus:ring-blue-500/15 transition-all" 
                     value={currentItem.productName} 
                     onChange={handleProductSelect} 
                     disabled={isSaving}
@@ -270,29 +271,36 @@ const PurchaseRegistry: React.FC<{ store: any }> = ({ store }) => {
                     {existingProducts.map(p => <option key={p.id} value={p.name} />)}
                   </datalist>
                 </div>
-                <div className="md:col-span-3 space-y-1.5">
-                  <label className="text-[9px] font-black text-chrome-500 uppercase tracking-widest ml-1">Categoría</label>
-                  <input type="text" list="categories" placeholder="Motor..." className="w-full px-4 py-2.5 bg-metal-mid border border-metal-border rounded-xl font-bold outline-none" value={currentItem.category} onChange={(e) => setCurrentItem({...currentItem, category: e.target.value})} disabled={isSaving} />
-                  <datalist id="categories">
-                    {categories.map(c => <option key={c} value={c} />)}
-                  </datalist>
-                </div>
-                <div className="md:col-span-2 space-y-1.5 flex flex-col justify-end">
-                  <CurrencyInput
-                    valueUsd={currentItem.price || 0}
-                    onChangeUsd={(val) => setCurrentItem({...currentItem, price: val})}
-                    label="Costo Unit."
-                    disabled={isSaving}
-                  />
-                </div>
-                <div className="md:col-span-2 space-y-1.5">
-                  <label className="text-[9px] font-black text-chrome-500 uppercase tracking-widest ml-1">Cant.</label>
-                  <input type="number" className="w-full px-2 py-2.5 bg-metal-mid border border-metal-border rounded-xl font-black outline-none text-center" value={currentItem.quantity || ''} onChange={(e) => setCurrentItem({...currentItem, quantity: Number(e.target.value)})} disabled={isSaving} />
-                </div>
-                <div className="md:col-span-1">
-                  <button onClick={addItemToInvoice} disabled={isSaving} className="w-full h-[46px] btn-chrome rounded-xl flex items-center justify-center hover:bg-blue-700 transition-all shadow-lg shadow-blue-100 disabled:opacity-50">
-                    <Plus size={20}/>
-                  </button>
+
+                {/* Segunda Fila: Resto de los campos bien distribuidos */}
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-5 items-end">
+                  <div className="md:col-span-4 space-y-1.5">
+                    <label className="text-[10px] font-medium text-chrome-400 uppercase tracking-widest ml-1">Categoría</label>
+                    <input type="text" list="categories" placeholder="Motor..." className="w-full px-4 py-3 bg-metal-mid border border-metal-border rounded-xl font-bold outline-none focus:ring-4 focus:ring-blue-500/15 transition-all" value={currentItem.category} onChange={(e) => setCurrentItem({...currentItem, category: e.target.value})} disabled={isSaving} />
+                    <datalist id="categories">
+                      {categories.map(c => <option key={c} value={c} />)}
+                    </datalist>
+                  </div>
+                  
+                  <div className="md:col-span-5 space-y-1.5">
+                    <CurrencyInput
+                      valueUsd={currentItem.price || 0}
+                      onChangeUsd={(val) => setCurrentItem({...currentItem, price: val})}
+                      label="Costo Unitario"
+                      disabled={isSaving}
+                    />
+                  </div>
+                  
+                  <div className="md:col-span-2 space-y-1.5">
+                    <label className="text-[10px] font-medium text-chrome-400 uppercase tracking-widest ml-1">Cant.</label>
+                    <input type="number" min="1" className="w-full px-2 py-3 bg-metal-mid border border-metal-border rounded-xl font-black outline-none text-center focus:ring-4 focus:ring-blue-500/15 transition-all" value={currentItem.quantity || ''} onChange={(e) => setCurrentItem({...currentItem, quantity: Number(e.target.value)})} disabled={isSaving} />
+                  </div>
+                  
+                  <div className="md:col-span-1">
+                    <button onClick={addItemToInvoice} disabled={isSaving} className="w-full h-[48px] btn-chrome rounded-xl flex items-center justify-center hover:bg-blue-700 transition-all shadow-lg shadow-blue-100 disabled:opacity-50">
+                      <Plus size={20}/>
+                    </button>
+                  </div>
                 </div>
               </div>
 
