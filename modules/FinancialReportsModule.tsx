@@ -366,8 +366,8 @@ const FinancialReportsModule: React.FC = () => {
     doc.setFontSize(18);
     doc.text('ESTADO DE RESULTADOS (FLUJO)', 14, 20);
 
-    const totalGastosFijos = Object.values(detalle.gastosFijos).reduce((a,b)=>a+b, 0);
-    const totalGastosVar = Object.values(detalle.gastosVariables).reduce((a,b)=>a+b, 0);
+    const totalGastosFijos = Object.values(detalle.gastosFijos).reduce((a: number, b: any) => a + (Number(b) || 0), 0) as number;
+    const totalGastosVar = Object.values(detalle.gastosVariables).reduce((a: number, b: any) => a + (Number(b) || 0), 0) as number;
     const resultColor = utilidadNetaFlujo >= 0 ? [16, 185, 129] : [244, 63, 94];
 
     autoTable(doc, {
